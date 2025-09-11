@@ -1,0 +1,315 @@
+const express = require('express');
+const { body, validationResult } = require('express-validator');
+const { query } = require('../database');
+const router = express.Router();
+
+// 获取所有版本记录
+router.get('/', async (req, res) => {
+  try {
+    const { page = 1, limit = 10, module_id, version_type } = req.query;
+    
+    // 参数验证
+    const pageNum = Number.isInteger(parseInt(page)) ? parseInt(page) : 1;
+    const limitNum = Number.isInteger(parseInt(limit)) ? parseInt(limit) : 10;
+    const offset = (pageNum - 1) * limitNum;
+    
+    let whereConditions = [];
+    let params = [];
+    
+    if (module_id) {
+      whereConditions.push('mv.module_id = ?');
+      params.push(module_id);
+    }
+    
+    if (version_type) {
+      whereConditions.push('mv.version_type = ?');
+      params.push(version_type);
+    }
+    
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    
+    const versionsQuery = `
+      SELECT 
+        mv.*,
+        mt.name as module_type,
+        d.id as device_id,
+        d.name as device_name,
+        dt.name as device_type
+      FROM module_versions mv
+      LEFT JOIN modules m ON mv.module_id = m.id
+      LEFT JOIN module_types mt ON m.type_id = mt.id
+      LEFT JOIN devices d ON m.device_id = d.id
+      LEFT JOIN device_types dt ON d.type_id = dt.id
+      ${whereClause}
+      ORDER BY mv.created_at DESC
+      LIMIT ${parseInt(limitNum)} OFFSET ${parseInt(offset)}
+    `;
+    
+    const versions = await query(versionsQuery, params);
+    
+    // 获取总数
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM module_versions mv
+      ${whereClause}
+    `;
+    
+    const countResult = await query(countQuery, params);
+    const { total } = countResult[0];
+    
+    res.json({
+      success: true,
+      data: versions,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: total,
+        pages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error) {
+    console.error('获取版本列表失败:', error);
+    res.status(500).json({ success: false, error: '获取版本列表失败' });
+  }
+});
+
+// 获取单个版本详情
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const versionQuery = `
+      SELECT 
+        mv.*,
+        m.category as module_category,
+        d.id as device_id,
+        d.name as device_name,
+        d.type as device_type
+      FROM module_versions mv
+      LEFT JOIN modules m ON mv.module_id = m.id
+      LEFT JOIN devices d ON m.device_id = d.id
+      WHERE mv.id = ?
+    `;
+    
+    const versionResult = await query(versionQuery, [id]);
+    const version = versionResult[0];
+    
+    if (!version) {
+      return res.status(404).json({ success: false, error: '版本记录不存在' });
+    }
+    
+    res.json({
+      success: true,
+      data: version
+    });
+  } catch (error) {
+    console.error('获取版本详情失败:', error);
+    res.status(500).json({ success: false, error: '获取版本详情失败' });
+  }
+});
+
+// 创建版本记录
+router.post('/', [
+  body('module_id').notEmpty().withMessage('模块ID不能为空'),
+  body('version_number').notEmpty().withMessage('版本号不能为空'),
+  body('version_type').isIn(['factory', 'update']).withMessage('版本类型无效'),
+  body('release_date').optional().isISO8601().withMessage('发布日期格式无效'),
+  body('description').optional().isString(),
+  body('updated_by').optional().isString()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false, 
+        error: '输入数据无效',
+        details: errors.array()
+      });
+    }
+    
+    const { module_id, version_number, version_type, release_date, description, updated_by } = req.body;
+    
+    // 检查模块是否存在
+    const module = await query('SELECT id FROM modules WHERE id = ?', [module_id]);
+    if (module.length === 0) {
+      return res.status(400).json({ success: false, error: '模块不存在' });
+    }
+    
+    // 检查同一模块的版本号是否已存在
+    const existingVersion = await query(
+      'SELECT id FROM module_versions WHERE module_id = ? AND version_number = ?',
+      [module_id, version_number]
+    );
+    if (existingVersion.length > 0) {
+      return res.status(400).json({ success: false, error: '该模块的此版本号已存在' });
+    }
+    
+    // 生成6位随机ID
+    const IDGenerator = require('../../id-generator');
+    const idGenerator = new IDGenerator();
+    const versionId = idGenerator.generate();
+    
+    const insertQuery = `
+      INSERT INTO module_versions (id, module_id, version_number, version_type, release_date, description, updated_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    await query(insertQuery, [versionId, module_id, version_number, version_type, release_date, description, updated_by]);
+    
+    res.status(201).json({
+      success: true,
+      message: '版本记录创建成功',
+      data: { id: versionId }
+    });
+  } catch (error) {
+    console.error('创建版本记录失败:', error);
+    res.status(500).json({ success: false, error: '创建版本记录失败' });
+  }
+});
+
+// 更新版本记录
+router.put('/:id', [
+  body('version_number').optional().notEmpty().withMessage('版本号不能为空'),
+  body('version_type').optional().isIn(['factory', 'update']).withMessage('版本类型无效'),
+  body('release_date').optional().isISO8601().withMessage('发布日期格式无效'),
+  body('description').optional().isString(),
+  body('updated_by').optional().isString()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false, 
+        error: '输入数据无效',
+        details: errors.array()
+      });
+    }
+    
+    const { id } = req.params;
+    const updates = req.body;
+    
+    // 检查版本记录是否存在
+    const existingVersion = await query('SELECT id FROM module_versions WHERE id = ?', [id]);
+    if (existingVersion.length === 0) {
+      return res.status(404).json({ success: false, error: '版本记录不存在' });
+    }
+    
+    // 构建更新语句
+    const updateFields = [];
+    const updateValues = [];
+    
+    Object.keys(updates).forEach(key => {
+      if (updates[key] !== undefined) {
+        updateFields.push(`${key} = ?`);
+        updateValues.push(updates[key]);
+      }
+    });
+    
+    if (updateFields.length === 0) {
+      return res.status(400).json({ success: false, error: '没有要更新的字段' });
+    }
+    
+    updateValues.push(id);
+    
+    const updateQuery = `
+      UPDATE module_versions 
+      SET ${updateFields.join(', ')}
+      WHERE id = ?
+    `;
+    
+    await query(updateQuery, updateValues);
+    
+    res.json({
+      success: true,
+      message: '版本记录更新成功'
+    });
+  } catch (error) {
+    console.error('更新版本记录失败:', error);
+    res.status(500).json({ success: false, error: '更新版本记录失败' });
+  }
+});
+
+// 删除版本记录
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // 检查版本记录是否存在
+    const existingVersion = await query('SELECT id FROM module_versions WHERE id = ?', [id]);
+    if (existingVersion.length === 0) {
+      return res.status(404).json({ success: false, error: '版本记录不存在' });
+    }
+    
+    // 删除版本记录
+    await query('DELETE FROM module_versions WHERE id = ?', [id]);
+    
+    res.json({
+      success: true,
+      message: '版本记录删除成功'
+    });
+  } catch (error) {
+    console.error('删除版本记录失败:', error);
+    res.status(500).json({ success: false, error: '删除版本记录失败' });
+  }
+});
+
+// 获取版本统计信息
+router.get('/stats/overview', async (req, res) => {
+  try {
+    const statsQuery = `
+      SELECT 
+        COUNT(*) as total_versions,
+        COUNT(DISTINCT module_id) as modules_with_versions,
+        COUNT(CASE WHEN version_type = 'factory' THEN 1 END) as factory_versions,
+        COUNT(CASE WHEN version_type = 'update' THEN 1 END) as update_versions,
+        COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) as today_versions,
+        COUNT(CASE WHEN DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as week_versions
+      FROM module_versions
+    `;
+    
+    const statsResult = await query(statsQuery);
+    const stats = statsResult[0];
+    
+    // 获取版本类型分布
+    const typeDistributionQuery = `
+      SELECT 
+        version_type,
+        COUNT(*) as count
+      FROM module_versions
+      GROUP BY version_type
+    `;
+    
+    const typeDistribution = await query(typeDistributionQuery);
+    
+    // 获取最近版本
+    const recentVersionsQuery = `
+      SELECT 
+        mv.version_number,
+        mv.version_type,
+        mv.created_at,
+        m.category as module_category,
+        d.name as device_name
+      FROM module_versions mv
+      LEFT JOIN modules m ON mv.module_id = m.id
+      LEFT JOIN devices d ON m.device_id = d.id
+      ORDER BY mv.created_at DESC
+      LIMIT 10
+    `;
+    
+    const recentVersions = await query(recentVersionsQuery);
+    
+    res.json({
+      success: true,
+      data: {
+        overview: stats,
+        typeDistribution,
+        recentVersions
+      }
+    });
+  } catch (error) {
+    console.error('获取版本统计失败:', error);
+    res.status(500).json({ success: false, error: '获取版本统计失败' });
+  }
+});
+
+module.exports = router;
