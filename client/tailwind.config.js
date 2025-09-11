@@ -43,4 +43,9 @@ module.exports = {
     },
   },
   plugins: [],
+  // 添加浏览器兼容性配置
+  corePlugins: {
+    // 确保用户选择属性有正确的浏览器前缀
+    userSelect: true,
+  },
 }

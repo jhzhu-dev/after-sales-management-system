@@ -17,7 +17,7 @@ import {
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  baseURL: process.env.REACT_APP_API_URL || `${window.location.protocol}//${window.location.host}/api`,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

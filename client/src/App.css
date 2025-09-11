@@ -36,6 +36,73 @@ code {
   background: #a8a8a8;
 }
 
+/* 修复用户选择兼容性 */
+.select-none {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* 修复backdrop-filter兼容性 */
+.backdrop-blur {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.backdrop-blur-sm {
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.backdrop-blur-md {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.backdrop-blur-lg {
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+/* 修复forced-color-adjust兼容性 */
+.forced-color-adjust-none {
+  -webkit-forced-color-adjust: none;
+  forced-color-adjust: none;
+}
+
+.forced-color-adjust-auto {
+  -webkit-forced-color-adjust: auto;
+  forced-color-adjust: auto;
+}
+
+/* 修复CSS兼容性问题 */
+.width-stretch {
+  width: -webkit-fill-available; /* Edge 79+ */
+  width: stretch; /* 现代浏览器 */
+}
+
+/* 修复滚动条兼容性 */
+.scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+  /* Safari不支持，使用备用方案 */
+  overflow-y: scroll;
+}
+
+.scrollbar-width-thin {
+  scrollbar-width: thin;
+  /* Safari不支持，使用webkit前缀 */
+  -webkit-scrollbar-width: thin;
+}
+
+/* 修复文本换行兼容性 */
+.text-wrap-balance {
+  text-wrap: balance;
+  /* Safari < 17.4 不支持，使用备用方案 */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
 /* 动画效果 */
 @keyframes fadeIn {
   from {

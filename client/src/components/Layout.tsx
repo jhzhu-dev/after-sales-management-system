@@ -16,7 +16,7 @@ interface LayoutProps {
 const navigation = [
   { name: '仪表盘', href: '/', icon: HomeIcon },
   { name: '设备管理', href: '/devices', icon: DevicePhoneMobileIcon },
-  { name: '问题管理', href: '/issues', icon: ExclamationTriangleIcon },
+  { name: '售后问题管理', href: '/issues', icon: ExclamationTriangleIcon },
   { name: '报表统计', href: '/reports', icon: ChartBarIcon },
   { name: '基础设置', href: '/settings', icon: Cog6ToothIcon },
 ];

@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 
-// 延迟导入组件以避免循环依赖
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Devices = React.lazy(() => import('./pages/Devices'));
 const DeviceDetail = React.lazy(() => import('./pages/DeviceDetail'));
