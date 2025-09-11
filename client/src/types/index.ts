@@ -175,6 +175,8 @@ export interface FilterOptions {
   status?: string;
   severity?: string;
   assignee?: string;
+  module?: string;
+  device_type?: string;
   device_id?: string;
   module_id?: string;
   category?: string;

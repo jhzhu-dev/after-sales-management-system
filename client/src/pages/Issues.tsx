@@ -24,17 +24,56 @@ export default function Issues() {
     search: '',
     status: '',
     severity: '',
-    assignee: ''
+    module: '',
+    device_type: ''
   });
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
   const [showIssueForm, setShowIssueForm] = useState(false);
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
+  const [moduleTypes, setModuleTypes] = useState<Array<{id: string, name: string}>>([]);
+  const [deviceTypes, setDeviceTypes] = useState<Array<{id: string, name: string}>>([]);
 
   useEffect(() => {
+    console.log('useEffect触发，当前筛选条件:', filters);
     fetchIssues();
   }, [filters]);
+
+  // 添加一个useEffect来监听筛选条件变化
+  useEffect(() => {
+    console.log('筛选条件已更新:', filters);
+  }, [filters]);
+
+  // 获取模块类型和设备类型列表
+  useEffect(() => {
+    fetchModuleTypes();
+    fetchDeviceTypes();
+  }, []);
+
+  const fetchModuleTypes = async () => {
+    try {
+      const response = await fetch('/api/module-types/active');
+      const result = await response.json();
+      if (result.success) {
+        setModuleTypes(result.data);
+      }
+    } catch (error) {
+      console.error('获取模块类型列表失败:', error);
+    }
+  };
+
+  const fetchDeviceTypes = async () => {
+    try {
+      const response = await fetch('/api/device-types');
+      const result = await response.json();
+      if (result.success) {
+        setDeviceTypes(result.data);
+      }
+    } catch (error) {
+      console.error('获取设备类型列表失败:', error);
+    }
+  };
 
   const fetchIssues = async () => {
     try {
@@ -43,11 +82,29 @@ export default function Issues() {
       const response = await issueApi.getIssues(filters);
       if (response.success) {
         console.log('获取到的问题数据:', response.data.length, '个问题');
-        console.log('问题状态分布:', response.data.reduce((acc: Record<string, number>, issue) => {
+        
+        // 详细的问题信息
+        const issues = response.data;
+        console.log('问题详情:');
+        issues.forEach((issue, index) => {
+          console.log(`  [${index + 1}] ID: ${issue.id}, 描述: ${issue.description}, 严重性: ${issue.severity}, 状态: ${issue.status}`);
+        });
+        
+        // 统计信息
+        const statusStats = issues.reduce((acc: Record<string, number>, issue) => {
           acc[issue.status] = (acc[issue.status] || 0) + 1;
           return acc;
-        }, {} as Record<string, number>));
-        setIssues(response.data);
+        }, {} as Record<string, number>);
+        
+        const severityStats = issues.reduce((acc: Record<string, number>, issue) => {
+          acc[issue.severity] = (acc[issue.severity] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        console.log('问题状态分布:', statusStats);
+        console.log('问题严重性分布:', severityStats);
+        
+        setIssues(issues);
         setPagination({
           current: response.pagination.page,
           pageSize: response.pagination.limit,
@@ -67,7 +124,12 @@ export default function Issues() {
   };
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
+    console.log(`筛选器变化: ${key} = ${value}`);
+    setFilters(prev => {
+      const newFilters = { ...prev, [key]: value, page: 1 };
+      console.log('新的筛选条件:', newFilters);
+      return newFilters;
+    });
   };
 
   const handlePageChange = (page: number, pageSize: number) => {
@@ -336,7 +398,7 @@ export default function Issues() {
       <div className="space-y-6">
         {/* 页面标题和操作 */}
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">问题管理</h1>
+          <h1 className="text-2xl font-bold text-gray-900">售后问题管理</h1>
           <button
             onClick={handleAdd}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
@@ -374,7 +436,7 @@ export default function Issues() {
 
         {/* 筛选器 */}
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 搜索
@@ -389,20 +451,36 @@ export default function Issues() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                状态
+                设备类型
               </label>
               <select
-                value={filters.status || ''}
-                onChange={(e) => {
-                  console.log('状态筛选器变化:', e.target.value);
-                  handleFilterChange('status', e.target.value);
-                }}
+                value={filters.device_type || ''}
+                onChange={(e) => handleFilterChange('device_type', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">全部状态</option>
-                <option value="open">待处理</option>
-                <option value="in_progress">处理中</option>
-                <option value="closed">已解决</option>
+                <option value="">全部设备类型</option>
+                {deviceTypes.map((deviceType) => (
+                  <option key={deviceType.id} value={deviceType.name}>
+                    {deviceType.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                模块类型
+              </label>
+              <select
+                value={filters.module || ''}
+                onChange={(e) => handleFilterChange('module', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">全部模块</option>
+                {moduleTypes.map((moduleType) => (
+                  <option key={moduleType.id} value={moduleType.name}>
+                    {moduleType.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -422,19 +500,25 @@ export default function Issues() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                责任人
+                状态
               </label>
-              <input
-                type="text"
-                placeholder="责任人"
-                value={filters.assignee || ''}
-                onChange={(e) => handleFilterChange('assignee', e.target.value)}
+              <select
+                value={filters.status || ''}
+                onChange={(e) => {
+                  console.log('状态筛选器变化:', e.target.value);
+                  handleFilterChange('status', e.target.value);
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              >
+                <option value="">全部状态</option>
+                <option value="open">待处理</option>
+                <option value="in_progress">处理中</option>
+                <option value="closed">已解决</option>
+              </select>
             </div>
             <div className="flex items-end">
               <button
-                onClick={() => setFilters({ page: 1, limit: 10, search: '', status: '', severity: '', assignee: '' })}
+                onClick={() => setFilters({ page: 1, limit: 10, search: '', status: '', severity: '', module: '', device_type: '' })}
                 className="w-full px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 重置筛选

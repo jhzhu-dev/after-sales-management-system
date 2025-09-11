@@ -332,7 +332,7 @@ export default function IssueDetail() {
               
               {issue.resolution_description && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">处理备注</h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">问题备注</h4>
                   <p className="text-sm text-gray-900 leading-relaxed bg-blue-50 p-4 rounded-lg whitespace-pre-wrap">
                     {issue.resolution_description}
                   </p>

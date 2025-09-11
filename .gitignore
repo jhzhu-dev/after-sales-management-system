@@ -97,3 +97,9 @@ jspm_packages/
 # Temporary files
 tmp/
 temp/
+
+# Project specific
+client/build/
+test-*.js
+debug-*.js
+*.test.js

@@ -13,7 +13,8 @@ router.get('/', async (req, res) => {
       module_id, 
       status, 
       severity, 
-      assignee,
+      module,
+      device_type,
       search 
     } = req.query;
     
@@ -45,9 +46,14 @@ router.get('/', async (req, res) => {
       params.push(severity);
     }
     
-    if (assignee) {
-      whereConditions.push('i.assignee = ?');
-      params.push(assignee);
+    if (module) {
+      whereConditions.push('mt.name = ?');
+      params.push(module);
+    }
+    
+    if (device_type) {
+      whereConditions.push('dt.name = ?');
+      params.push(device_type);
     }
     
     if (search) {
@@ -57,17 +63,26 @@ router.get('/', async (req, res) => {
     
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
     
+    // 根据是否有模块筛选或设备类型筛选来决定使用LEFT JOIN还是INNER JOIN
+    const joinClause = (module || device_type) ? 
+      `FROM issues i
+       INNER JOIN devices d ON i.device_id = d.id
+       INNER JOIN device_types dt ON d.type_id = dt.id
+       INNER JOIN modules m ON i.module_id = m.id
+       INNER JOIN module_types mt ON m.type_id = mt.id` :
+      `FROM issues i
+       LEFT JOIN devices d ON i.device_id = d.id
+       LEFT JOIN device_types dt ON d.type_id = dt.id
+       LEFT JOIN modules m ON i.module_id = m.id
+       LEFT JOIN module_types mt ON m.type_id = mt.id`;
+    
     const issuesQuery = `
       SELECT 
         i.*,
         d.name as device_name,
         dt.name as device_type,
         mt.name as module_category
-      FROM issues i
-      LEFT JOIN devices d ON i.device_id = d.id
-      LEFT JOIN device_types dt ON d.type_id = dt.id
-      LEFT JOIN modules m ON i.module_id = m.id
-      LEFT JOIN module_types mt ON m.type_id = mt.id
+      ${joinClause}
       ${whereClause}
       ORDER BY i.created_at DESC
       LIMIT ${parseInt(limitNum)} OFFSET ${parseInt(offset)}
@@ -75,11 +90,22 @@ router.get('/', async (req, res) => {
     
     const issues = await query(issuesQuery, params);
     
-    // 获取总数
+    // 获取总数 - 使用相同的JOIN逻辑
+    const countJoinClause = (module || device_type) ? 
+      `FROM issues i
+       INNER JOIN devices d ON i.device_id = d.id
+       INNER JOIN device_types dt ON d.type_id = dt.id
+       INNER JOIN modules m ON i.module_id = m.id
+       INNER JOIN module_types mt ON m.type_id = mt.id` :
+      `FROM issues i
+       LEFT JOIN devices d ON i.device_id = d.id
+       LEFT JOIN device_types dt ON d.type_id = dt.id
+       LEFT JOIN modules m ON i.module_id = m.id
+       LEFT JOIN module_types mt ON m.type_id = mt.id`;
+    
     const countQuery = `
       SELECT COUNT(*) as total
-      FROM issues i
-      LEFT JOIN devices d ON i.device_id = d.id
+      ${countJoinClause}
       ${whereClause}
     `;
     
