@@ -89,14 +89,19 @@ app.use(helmet({
 // 信任代理设置（用于开发环境）
 app.set('trust proxy', 1);
 
-// 限流中间件
+// 限流中间件 - 放宽限制以避免429错误
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15分钟
-  max: 100, // 限制每个IP 15分钟内最多100个请求
-  message: '请求过于频繁，请稍后再试',
+  max: 1000, // 限制每个IP 15分钟内最多1000个请求（大幅放宽）
+  message: JSON.stringify({ success: false, error: '请求过于频繁，请稍后再试' }), // 返回JSON格式
   standardHeaders: true, // 返回速率限制信息在 `RateLimit-*` headers
   legacyHeaders: false, // 禁用 `X-RateLimit-*` headers
-  trustProxy: true // 信任代理
+  trustProxy: true, // 信任代理
+  skip: (req) => {
+    // 跳过静态资源的限流
+    return req.path.startsWith('/static/') || 
+           req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/);
+  }
 });
 app.use(limiter);
 

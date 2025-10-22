@@ -53,9 +53,17 @@ const DeviceDetail: React.FC = () => {
       if (response.success) {
         console.log('设备数据:', response.data);
         setDevice(response.data);
+      } else {
+        // 如果设备不存在，跳转到设备列表页
+        console.log('设备不存在，跳转到设备列表页');
+        navigate('/devices');
       }
     } catch (error) {
       console.error('获取设备详情失败:', error);
+      // 如果是404错误，跳转到设备列表页
+      if (error instanceof Error && error.message.includes('404')) {
+        navigate('/devices');
+      }
     }
   };
 

@@ -42,6 +42,18 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API请求错误:', error);
+    
+    // 处理429错误（请求过于频繁）
+    if (error.response && error.response.status === 429) {
+      console.warn('请求过于频繁，稍后重试');
+      // 可以在这里添加重试逻辑或显示用户友好的提示
+    }
+    
+    // 处理404错误
+    if (error.response && error.response.status === 404) {
+      console.warn('资源不存在');
+    }
+    
     return Promise.reject(error);
   }
 );

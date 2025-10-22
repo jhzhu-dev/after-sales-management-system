@@ -167,12 +167,29 @@ export default function Issues() {
     setIssues(sortedIssues);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, event?: React.MouseEvent) => {
+    // 阻止事件冒泡，防止触发行点击事件
+    if (event) {
+      event.stopPropagation();
+    }
+    
     if (window.confirm('确定要删除这个问题吗？')) {
       try {
         const response = await issueApi.deleteIssue(id);
         if (response.success) {
-          fetchIssues();
+          // 删除成功后，检查当前路径
+          const currentPath = window.location.pathname;
+          
+          // 如果当前在问题详情页，跳转到问题列表页
+          if (currentPath.includes(`/issues/${id}`)) {
+            navigate('/issues');
+          } else if (currentPath === '/issues') {
+            // 如果当前就在问题管理页面，只需要刷新列表
+            await fetchIssues();
+          } else {
+            // 其他情况，也跳转到问题管理页面
+            navigate('/issues');
+          }
         }
       } catch (error) {
         console.error('删除问题失败:', error);
@@ -186,7 +203,11 @@ export default function Issues() {
     setShowIssueForm(true);
   };
 
-  const handleEdit = (issue: Issue) => {
+  const handleEdit = (issue: Issue, event?: React.MouseEvent) => {
+    // 阻止事件冒泡，防止触发行点击事件
+    if (event) {
+      event.stopPropagation();
+    }
     setEditingIssue(issue);
     setShowIssueForm(true);
   };
@@ -375,14 +396,14 @@ export default function Issues() {
             <EyeIcon className="h-4 w-4" />
           </Link>
           <button
-            onClick={() => handleEdit(record)}
+            onClick={(e) => handleEdit(record, e)}
             className="text-yellow-600 hover:text-yellow-800"
             title="编辑"
           >
             <PencilIcon className="h-4 w-4" />
           </button>
           <button
-            onClick={() => handleDelete(record.id)}
+            onClick={(e) => handleDelete(record.id, e)}
             className="text-red-600 hover:text-red-800"
             title="删除"
           >

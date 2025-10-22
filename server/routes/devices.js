@@ -186,14 +186,13 @@ router.post('/', [
     // 生成6位随机ID
     const IDGenerator = require('../../id-generator');
     const idGenerator = new IDGenerator();
-    const deviceId = idGenerator.generate();
+    let deviceId = idGenerator.generate();
     
     // 检查设备ID是否已存在（虽然概率很低，但为了安全起见）
     const existingDevice = await query('SELECT id FROM devices WHERE id = ?', [deviceId]);
     if (existingDevice.length > 0) {
       // 如果ID已存在，重新生成
-      const newDeviceId = idGenerator.generate();
-      deviceId = newDeviceId;
+      deviceId = idGenerator.generate();
     }
     
     // 检查设备类型是否存在

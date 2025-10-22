@@ -189,12 +189,29 @@ export default function Devices() {
     // 排序逻辑现在在applyFilters中处理
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, event?: React.MouseEvent) => {
+    // 阻止事件冒泡，防止触发行点击事件
+    if (event) {
+      event.stopPropagation();
+    }
+    
     if (window.confirm('确定要删除这个设备吗？')) {
       try {
         const response = await deviceApi.deleteDevice(id);
         if (response.success) {
-          fetchAllDevices();
+          // 删除成功后，检查当前路径
+          const currentPath = window.location.pathname;
+          
+          // 如果当前在设备详情页，跳转到设备列表页
+          if (currentPath.includes(`/devices/${id}`)) {
+            navigate('/devices');
+          } else if (currentPath === '/devices') {
+            // 如果当前就在设备管理页面，只需要刷新列表
+            await fetchAllDevices();
+          } else {
+            // 其他情况，也跳转到设备管理页面
+            navigate('/devices');
+          }
         }
       } catch (error) {
         console.error('删除设备失败:', error);
@@ -203,7 +220,11 @@ export default function Devices() {
     }
   };
 
-  const handleEdit = (device: Device) => {
+  const handleEdit = (device: Device, event?: React.MouseEvent) => {
+    // 阻止事件冒泡，防止触发行点击事件
+    if (event) {
+      event.stopPropagation();
+    }
     setEditingDevice(device);
     setShowDeviceForm(true);
   };
@@ -332,14 +353,14 @@ export default function Devices() {
             <EyeIcon className="h-4 w-4" />
           </Link>
           <button
-            onClick={() => handleEdit(record)}
+            onClick={(e) => handleEdit(record, e)}
             className="text-yellow-600 hover:text-yellow-800"
             title="编辑"
           >
             <PencilIcon className="h-4 w-4" />
           </button>
           <button
-            onClick={() => handleDelete(record.id)}
+            onClick={(e) => handleDelete(record.id, e)}
             className="text-red-600 hover:text-red-800"
             title="删除"
           >

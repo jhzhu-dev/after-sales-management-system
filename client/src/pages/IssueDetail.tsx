@@ -41,13 +41,18 @@ export default function IssueDetail() {
         setIssue(response.data);
       } else {
         console.error('获取问题详情失败:', response.error);
-        // 不直接跳转，而是显示错误状态
-        setIssue(null);
+        // 如果问题不存在，跳转到问题列表页
+        console.log('问题不存在，跳转到问题列表页');
+        navigate('/issues');
       }
     } catch (error) {
       console.error('获取问题详情失败:', error);
-      // 不直接跳转，而是显示错误状态
-      setIssue(null);
+      // 如果是404错误，跳转到问题列表页
+      if (error instanceof Error && error.message.includes('404')) {
+        navigate('/issues');
+      } else {
+        setIssue(null);
+      }
     } finally {
       setLoading(false);
     }
