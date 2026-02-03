@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { 
-  Device, 
-  Module, 
-  Issue, 
+import {
+  Device,
+  Module,
+  Issue,
   DashboardStats,
   DeviceFormData,
   ModuleFormData,
@@ -12,7 +12,8 @@ import {
   PaginatedResponse,
   Submodule,
   SubmoduleFormData,
-  SubmoduleVersion
+  SubmoduleVersion,
+  VersionRelease
 } from '../types';
 
 // 创建axios实例
@@ -42,18 +43,18 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API请求错误:', error);
-    
+
     // 处理429错误（请求过于频繁）
     if (error.response && error.response.status === 429) {
       console.warn('请求过于频繁，稍后重试');
       // 可以在这里添加重试逻辑或显示用户友好的提示
     }
-    
+
     // 处理404错误
     if (error.response && error.response.status === 404) {
       console.warn('资源不存在');
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -256,21 +257,45 @@ export const submoduleApi = {
 export const submoduleVersionApi = {
   getSubmoduleVersions: (params?: any): Promise<PaginatedResponse<SubmoduleVersion>> =>
     api.get('/submodule-versions', { params }).then(res => res.data),
-  
+
   getSubmoduleVersion: (id: string): Promise<ApiResponse<SubmoduleVersion>> =>
     api.get(`/submodule-versions/${id}`).then(res => res.data),
-  
+
   createSubmoduleVersion: (data: Partial<SubmoduleVersion>): Promise<ApiResponse<SubmoduleVersion>> =>
     api.post('/submodule-versions', data).then(res => res.data),
-  
+
   updateSubmoduleVersion: (id: string, data: Partial<SubmoduleVersion>): Promise<ApiResponse<SubmoduleVersion>> =>
     api.put(`/submodule-versions/${id}`, data).then(res => res.data),
-  
+
   deleteSubmoduleVersion: (id: string): Promise<ApiResponse<void>> =>
     api.delete(`/submodule-versions/${id}`).then(res => res.data),
-  
+
   getSubmoduleVersionsBySubmodule: (submoduleId: string, params?: any): Promise<PaginatedResponse<SubmoduleVersion>> =>
     api.get(`/submodule-versions/submodule/${submoduleId}`, { params }).then(res => res.data),
+};
+
+// 模块版本管理API (新增)
+export const moduleVersionApi = {
+  getModuleVersions: (params?: any): Promise<PaginatedResponse<any>> =>
+    api.get('/versions', { params }).then(res => res.data),
+
+  createModuleVersion: (data: any): Promise<ApiResponse<any>> =>
+    api.post('/versions', data).then(res => res.data),
+};
+
+// 版本发布库相关API (新增)
+export const versionReleaseApi = {
+  // 获取发布记录列表
+  getReleases: (params?: { module_type_id?: number }): Promise<ApiResponse<VersionRelease[]>> =>
+    api.get('/version-releases', { params }).then(res => res.data),
+
+  // 获取单个发布记录
+  getRelease: (id: number): Promise<ApiResponse<VersionRelease>> =>
+    api.get(`/version-releases/${id}`).then(res => res.data),
+
+  // 创建发布记录
+  createRelease: (data: Partial<VersionRelease>): Promise<ApiResponse<VersionRelease>> =>
+    api.post('/version-releases', data).then(res => res.data),
 };
 
 // 健康检查API

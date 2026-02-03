@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeftIcon, 
-  PencilIcon, 
+import {
+  ArrowLeftIcon,
+  PencilIcon,
   PlusIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
@@ -10,10 +10,11 @@ import {
   XCircleIcon,
   TrashIcon,
   EyeIcon,
-  EyeSlashIcon
+  EyeSlashIcon,
+  TagIcon
 } from '@heroicons/react/24/outline';
-import { Device, Module, Submodule, Issue, ModuleFormData, SubmoduleFormData, DeviceFormData } from '../types';
-import { deviceApi, moduleApi, submoduleApi, issueApi, submoduleVersionApi } from '../services/api';
+import { Device, Module, Submodule, Issue, ModuleFormData, SubmoduleFormData, DeviceFormData, VersionRelease } from '../types';
+import { deviceApi, moduleApi, submoduleApi, issueApi, submoduleVersionApi, versionReleaseApi, moduleVersionApi } from '../services/api';
 import Layout from '../components/Layout';
 import ModuleForm from '../components/ModuleForm';
 import SubmoduleForm from '../components/SubmoduleForm';
@@ -22,13 +23,13 @@ import DeviceForm from '../components/DeviceForm';
 const DeviceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [device, setDevice] = useState<Device | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
   const [submodules, setSubmodules] = useState<Submodule[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'modules' | 'submodules' | 'versions' | 'issues'>('modules');
+  const [activeTab, setActiveTab] = useState<'modules' | 'submodules' | 'versions' | 'issues'>('modules');
   const [showModuleForm, setShowModuleForm] = useState(false);
   const [showSubmoduleForm, setShowSubmoduleForm] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
@@ -43,6 +44,8 @@ const DeviceDetail: React.FC = () => {
   const [showResolveForm, setShowResolveForm] = useState(false);
   const [selectedIssueForResolve, setSelectedIssueForResolve] = useState<Issue | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [moduleReleases, setModuleReleases] = useState<VersionRelease[]>([]);
+  const [selectedModuleForVersion, setSelectedModuleForVersion] = useState<Module | null>(null);
 
   // 获取设备详情
   const fetchDevice = async () => {
@@ -92,8 +95,8 @@ const DeviceDetail: React.FC = () => {
           allSubmodules.push(...response.data);
         }
       }
-      // 根据ID去重，避免重复显示
-      const uniqueSubmodules = allSubmodules.filter((submodule, index, self) => 
+      // 根据ID去重,避免重复显示
+      const uniqueSubmodules = allSubmodules.filter((submodule, index, self) =>
         index === self.findIndex(s => s.id === submodule.id)
       );
       setSubmodules(uniqueSubmodules);
@@ -155,9 +158,9 @@ const DeviceDetail: React.FC = () => {
     }
   }, [id]);
 
-  // 筛选子模块
-  const filteredSubmodules = selectedModuleId 
-    ? submodules.filter(sub => sub.module_id === selectedModuleId)
+  // 筛选子模块 - 使用 == 进行比较以处理字符串/数字类型转换
+  const filteredSubmodules = selectedModuleId
+    ? submodules.filter(sub => sub.module_id == selectedModuleId)
     : submodules;
 
 
@@ -245,7 +248,7 @@ const DeviceDetail: React.FC = () => {
       if (versionDescription && versionDescription.trim()) {
         description += `\n更新说明: ${versionDescription.trim()}`;
       }
-      
+
       await submoduleVersionApi.createSubmoduleVersion({
         submodule_id: submoduleId,
         version_number: newVersion,
@@ -266,37 +269,77 @@ const DeviceDetail: React.FC = () => {
     setShowVersionHistory(true);
   };
 
-  // 修改当前版本
+  // 获取指定模块类型的发布库版本
+  const fetchModuleReleases = async (typeId: string) => {
+    try {
+      const response = await versionReleaseApi.getReleases({ module_type_id: parseInt(typeId) });
+      if (response.success) {
+        setModuleReleases(response.data);
+      }
+    } catch (error) {
+      console.error('获取发布版本失败:', error);
+    }
+  };
+
+  // 修改当前版本 (模块)
+  const handleUpdateModuleVersion = async (module: Module) => {
+    setSelectedModuleForVersion(module);
+    await fetchModuleReleases(module.type_id);
+    setShowVersionUpdateForm(true);
+  };
+
+  // 修改当前版本 (子模块 - 保留原有逻辑但支持强制登记)
   const handleUpdateCurrentVersion = (submodule: Submodule) => {
     setSelectedSubmoduleForVersion(submodule);
     setShowVersionUpdateForm(true);
   };
 
-  // 版本更新提交
-  const handleVersionUpdateSubmit = async (newVersion: string, versionDescription?: string) => {
-    if (!selectedSubmoduleForVersion) return;
-    
+  // 版本更新提交 (模块/子模块)
+  const handleVersionUpdateSubmit = async (versionData: {
+    version_number: string,
+    release_id?: number,
+    description: string,
+    updated_by: string
+  }) => {
     try {
-      const oldVersion = selectedSubmoduleForVersion.current_version;
-      
-      // 更新子模块的当前版本
-      await submoduleApi.updateSubmodule(selectedSubmoduleForVersion.id, {
-        ...selectedSubmoduleForVersion,
-        current_version: newVersion
-      });
-      
-      // 记录版本变更
-      await recordVersionChange(selectedSubmoduleForVersion.id, oldVersion || '', newVersion, versionDescription);
-      
-      // 刷新数据
-      await fetchSubmodules();
-      await fetchSubmoduleVersions(selectedSubmoduleForVersion.id);
-      
+      const { version_number, release_id, description, updated_by } = versionData;
+
+      if (selectedModuleForVersion) {
+        // 更新模块版本
+        await moduleVersionApi.createModuleVersion({
+          module_id: selectedModuleForVersion.id,
+          version_number,
+          release_id,
+          version_type: 'update',
+          description,
+          updated_by
+        });
+        await fetchModules();
+      } else if (selectedSubmoduleForVersion) {
+        // 更新子模块版本
+        await submoduleApi.updateSubmodule(selectedSubmoduleForVersion.id, {
+          ...selectedSubmoduleForVersion,
+          current_version: version_number
+        });
+
+        await submoduleVersionApi.createSubmoduleVersion({
+          submodule_id: selectedSubmoduleForVersion.id,
+          version_number,
+          version_type: 'update',
+          release_date: new Date().toISOString().split('T')[0],
+          updated_by,
+          description
+        });
+        await fetchSubmodules();
+      }
+
       setShowVersionUpdateForm(false);
+      setSelectedModuleForVersion(null);
       setSelectedSubmoduleForVersion(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('更新版本失败:', error);
-      alert('更新版本失败');
+      const errorMsg = error.response?.data?.error || '更新版本失败';
+      alert(errorMsg);
     }
   };
 
@@ -339,7 +382,7 @@ const DeviceDetail: React.FC = () => {
 
   const handleResolveSubmit = async (resolutionDescription: string) => {
     if (!selectedIssueForResolve) return;
-    
+
     try {
       await issueApi.updateIssue(selectedIssueForResolve.id, {
         status: 'closed',
@@ -540,7 +583,7 @@ const DeviceDetail: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -554,8 +597,8 @@ const DeviceDetail: React.FC = () => {
               </div>
             </div>
           </div>
-          
-          
+
+
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -583,18 +626,16 @@ const DeviceDetail: React.FC = () => {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === tab.key
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.key
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   {tab.label}
-                  <span className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
-                    activeTab === tab.key
-                      ? 'bg-blue-100 text-blue-600'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
+                  <span className={`ml-2 py-0.5 px-2 rounded-full text-xs ${activeTab === tab.key
+                    ? 'bg-blue-100 text-blue-600'
+                    : 'bg-gray-100 text-gray-600'
+                    }`}>
                     {tab.count}
                   </span>
                 </button>
@@ -608,7 +649,7 @@ const DeviceDetail: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">模块列表</h3>
-                  <button 
+                  <button
                     onClick={() => setShowModuleForm(true)}
                     className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-colors"
                   >
@@ -626,6 +667,13 @@ const DeviceDetail: React.FC = () => {
                             {module.status}
                           </span>
                           <div className="flex space-x-1">
+                            <button
+                              onClick={() => handleUpdateModuleVersion(module)}
+                              className="text-purple-600 hover:text-purple-800 transition-colors"
+                              title="更新版本"
+                            >
+                              <span className="text-xs font-bold">V</span>
+                            </button>
                             <button
                               onClick={() => handleEditModule(module)}
                               className="text-blue-600 hover:text-blue-800 transition-colors"
@@ -685,7 +733,7 @@ const DeviceDetail: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">子模块列表</h3>
-                  <button 
+                  <button
                     onClick={() => setShowSubmoduleForm(true)}
                     className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-colors"
                   >
@@ -693,7 +741,7 @@ const DeviceDetail: React.FC = () => {
                     添加子模块
                   </button>
                 </div>
-                
+
                 {/* 模块筛选 */}
                 <div className="flex items-center space-x-4">
                   <label className="text-sm font-medium text-gray-700">筛选模块:</label>
@@ -792,7 +840,7 @@ const DeviceDetail: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">问题列表</h3>
-                  <button 
+                  <button
                     onClick={handleAddIssue}
                     className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-colors"
                   >
@@ -812,11 +860,10 @@ const DeviceDetail: React.FC = () => {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            issue.severity === 'high' ? 'bg-red-100 text-red-800' :
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${issue.severity === 'high' ? 'bg-red-100 text-red-800' :
                             issue.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
+                              'bg-green-100 text-green-800'
+                            }`}>
                             {issue.severity === 'high' ? '高' : issue.severity === 'medium' ? '中' : '低'}
                           </span>
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(issue.status)}`}>
@@ -908,9 +955,8 @@ const DeviceDetail: React.FC = () => {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-3">
                           <span className="text-lg font-semibold text-gray-900">{version.version_number}</span>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            version.version_type === 'factory' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                          }`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${version.version_type === 'factory' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                            }`}>
                             {version.version_type === 'factory' ? '出厂版本' : '更新版本'}
                           </span>
                         </div>
@@ -942,73 +988,130 @@ const DeviceDetail: React.FC = () => {
         </div>
       )}
 
-      {/* 版本更新弹窗 */}
-      {showVersionUpdateForm && selectedSubmoduleForVersion && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
-                修改当前版本 - {selectedSubmoduleForVersion.name}
+      {/* 版本更新弹窗 (重构) */}
+      {showVersionUpdateForm && (selectedModuleForVersion || selectedSubmoduleForVersion) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="text-lg font-bold text-gray-900">
+                强制版本更新登记 - {selectedModuleForVersion ? selectedModuleForVersion.module_type : selectedSubmoduleForVersion?.name}
               </h3>
               <button
                 onClick={() => {
                   setShowVersionUpdateForm(false);
+                  setSelectedModuleForVersion(null);
                   setSelectedSubmoduleForVersion(null);
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600"
               >
                 <XCircleIcon className="h-6 w-6" />
               </button>
             </div>
-            <div className="p-6">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  当前版本: {selectedSubmoduleForVersion.current_version || '未设置'}
-                </label>
-                <input
-                  type="text"
-                  id="newVersion"
-                  placeholder="请输入新版本号"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+            <div className="p-6 space-y-5">
+              {/* 版本库选填区 */}
+              {moduleReleases.length > 0 && (
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
+                  <label className="block text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                    <TagIcon className="h-4 w-4" /> 从发布库勾选正式版本 (可选)
+                  </label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                    {moduleReleases.map((rel) => (
+                      <label key={rel.id} className="flex items-center justify-between p-2 bg-white rounded border border-blue-200 hover:bg-blue-50 cursor-pointer transition-colors group">
+                        <div className="flex items-center">
+                          <input
+                            type="radio"
+                            name="releaseSelection"
+                            className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            onChange={() => {
+                              const versionInput = document.getElementById('newVersion') as HTMLInputElement;
+                              const releaseIdInput = document.getElementById('releaseId') as HTMLInputElement;
+                              if (versionInput) versionInput.value = rel.version_number;
+                              if (releaseIdInput) releaseIdInput.value = rel.id.toString();
+                            }}
+                          />
+                          <span className="ml-3 text-sm font-bold font-mono text-gray-900">{rel.version_number}</span>
+                        </div>
+                        <span className="text-xs text-gray-500 group-hover:text-blue-600">{rel.title}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">目标版本号</label>
+                  <input
+                    type="text"
+                    id="newVersion"
+                    required
+                    placeholder="V1.x.x"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    defaultValue={selectedModuleForVersion ? '' : selectedSubmoduleForVersion?.current_version || ''}
+                  />
+                  <input type="hidden" id="releaseId" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">更新执行人 (强制)</label>
+                  <input
+                    type="text"
+                    id="updatedBy"
+                    required
+                    placeholder="请输入你的姓名"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
               </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  版本描述
-                </label>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">变更记录说明 (强制 - 至少5字)</label>
                 <textarea
                   id="versionDescription"
-                  placeholder="请输入版本描述（可选）"
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  required
+                  rows={4}
+                  placeholder="由于发生了[什么]，我们对该模块执行了[什么]操作，以实现[什么]..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                 />
               </div>
-              <div className="flex justify-end space-x-3">
+
+              <div className="flex gap-3 pt-4">
                 <button
                   onClick={() => {
                     setShowVersionUpdateForm(false);
+                    setSelectedModuleForVersion(null);
                     setSelectedSubmoduleForVersion(null);
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 >
                   取消
                 </button>
                 <button
                   onClick={() => {
-                    const newVersionInput = document.getElementById('newVersion') as HTMLInputElement;
-                    const versionDescriptionInput = document.getElementById('versionDescription') as HTMLTextAreaElement;
-                    const newVersion = newVersionInput.value.trim();
-                    const versionDescription = versionDescriptionInput.value.trim();
-                    
-                    if (newVersion) {
-                      handleVersionUpdateSubmit(newVersion, versionDescription);
-                    } else {
-                      alert('请输入新版本号');
+                    const versionInput = document.getElementById('newVersion') as HTMLInputElement;
+                    const descriptionInput = document.getElementById('versionDescription') as HTMLTextAreaElement;
+                    const updatedByInput = document.getElementById('updatedBy') as HTMLInputElement;
+                    const releaseIdInput = document.getElementById('releaseId') as HTMLInputElement;
+
+                    const version_number = versionInput.value.trim();
+                    const description = descriptionInput.value.trim();
+                    const updated_by = updatedByInput.value.trim();
+                    const release_id = releaseIdInput.value ? parseInt(releaseIdInput.value) : undefined;
+
+                    if (!version_number || !description || !updated_by) {
+                      alert('所有字段均为必填项');
+                      return;
                     }
+
+                    if (description.length < 5) {
+                      alert('说明过短，请提供更详细的执行记录');
+                      return;
+                    }
+
+                    handleVersionUpdateSubmit({ version_number, description, updated_by, release_id });
                   }}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
                 >
-                  确认更新
+                  确认并保存记录
                 </button>
               </div>
             </div>

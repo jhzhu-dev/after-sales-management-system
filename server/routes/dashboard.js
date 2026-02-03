@@ -60,17 +60,35 @@ router.get('/stats', async (req, res) => {
     
     const versionTypeDistribution = await query(versionTypeQuery);
     
-    // 设备类型分布
+    // 设备类型分布（带百分比）
     const deviceTypeQuery = `
       SELECT 
-        dt.name as type,
-        COUNT(*) as count
+        COALESCE(dt.name, '未分类') as type,
+        COUNT(*) as count,
+        ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM devices), 2) as percentage
       FROM devices d
       LEFT JOIN device_types dt ON d.type_id = dt.id
       GROUP BY d.type_id, dt.name
+      ORDER BY count DESC
     `;
     
     const deviceTypeDistribution = await query(deviceTypeQuery);
+    
+    // 位置统计（带状态分解）
+    const locationStatsQuery = `
+      SELECT 
+        COALESCE(location, '未指定') as location,
+        COUNT(*) as total,
+        SUM(CASE WHEN status = '正常' THEN 1 ELSE 0 END) as normal,
+        SUM(CASE WHEN status = '异常' THEN 1 ELSE 0 END) as abnormal,
+        SUM(CASE WHEN status = '维护中' THEN 1 ELSE 0 END) as maintenance
+      FROM devices
+      GROUP BY location
+      ORDER BY total DESC
+      LIMIT 10
+    `;
+    
+    const locationStats = await query(locationStatsQuery);
     
     // 模块类别分布
     const moduleCategoryQuery = `
@@ -162,14 +180,13 @@ router.get('/stats', async (req, res) => {
       success: true,
       data: {
         basicStats,
-        distributions: {
-          deviceStatus: deviceStatusDistribution,
-          issueStatus: issueStatusDistribution,
-          issueSeverity: issueSeverityDistribution,
-          versionType: versionTypeDistribution,
-          deviceType: deviceTypeDistribution,
-          moduleCategory: moduleCategoryDistribution
-        },
+        deviceStatusDistribution,
+        issueStatusDistribution,
+        issueSeverityDistribution,
+        versionTypeDistribution,
+        deviceTypeDistribution,
+        locationStats,
+        moduleCategoryDistribution,
         recentActivities,
         monthlyTrends
       }

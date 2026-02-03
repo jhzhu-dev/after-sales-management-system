@@ -58,6 +58,18 @@ export interface SubmoduleVersion {
   device_name?: string;
 }
 
+// 版本发布库类型
+export interface VersionRelease {
+  id: number;
+  module_type_id: number;
+  module_type_name?: string;
+  version_number: string;
+  title: string;
+  change_log?: string;
+  release_date: string;
+  created_at: string;
+}
+
 // 问题类型
 export interface Issue {
   id: string;
@@ -106,14 +118,23 @@ export interface DashboardStats {
     version_types: number;
     resolved_this_month: number;
   };
-  distributions: {
-    deviceStatus: Array<{ status: string; count: number }>;
-    issueStatus: Array<{ status: string; count: number }>;
-    issueSeverity: Array<{ severity: string; count: number }>;
-    versionType: Array<{ version_type: string; count: number }>;
-    deviceType: Array<{ type: string; count: number }>;
-    moduleCategory: Array<{ category: string; count: number }>;
-  };
+  deviceStatusDistribution: Array<{ status: string; count: number }>;
+  issueStatusDistribution: Array<{ status: string; count: number }>;
+  issueSeverityDistribution: Array<{ severity: string; count: number }>;
+  versionTypeDistribution: Array<{ version_type: string; count: number }>;
+  deviceTypeDistribution: Array<{
+    type: string;
+    count: number;
+    percentage: number;
+  }>;
+  locationStats: Array<{
+    location: string;
+    total: number;
+    normal: number;
+    abnormal: number;
+    maintenance: number;
+  }>;
+  moduleCategoryDistribution: Array<{ category: string; count: number }>;
   recentActivities: Array<{
     type: string;
     id: number;

@@ -17,6 +17,7 @@ const deviceTypeRoutes = require('./routes/device-types');
 const moduleTypeRoutes = require('./routes/module-types');
 const submoduleRoutes = require('./routes/submodules');
 const submoduleVersionRoutes = require('./routes/submodule-versions');
+const versionReleaseRoutes = require('./routes/version-releases');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,7 +26,7 @@ const PORT = process.env.PORT || 5000;
 app.use((req, res, next) => {
   // 设置安全性头
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  
+
   // 设置缓存控制头
   if (req.path.startsWith('/static/') || req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
     res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1年缓存
@@ -34,7 +35,7 @@ app.use((req, res, next) => {
   } else {
     res.setHeader('Cache-Control', 'no-cache');
   }
-  
+
   // 设置内容类型
   if (req.path === '/' || req.path.match(/\.html$/)) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -53,7 +54,7 @@ app.use((req, res, next) => {
   } else if (req.path.match(/\.eot$/)) {
     res.setHeader('Content-Type', 'application/vnd.ms-fontobject');
   }
-  
+
   next();
 });
 
@@ -99,8 +100,8 @@ const limiter = rateLimit({
   trustProxy: true, // 信任代理
   skip: (req) => {
     // 跳过静态资源的限流
-    return req.path.startsWith('/static/') || 
-           req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/);
+    return req.path.startsWith('/static/') ||
+      req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/);
   }
 });
 app.use(limiter);
@@ -117,9 +118,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static('uploads'));
 
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static('client/build'));
-}
+// 提供前端静态文件（开发和生产环境都支持）
+app.use(express.static(path.join(__dirname, '../client/build')));
+
 app.use('/api/devices', deviceRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/versions', versionRoutes);
@@ -129,59 +130,27 @@ app.use('/api/device-types', deviceTypeRoutes);
 app.use('/api/module-types', moduleTypeRoutes);
 app.use('/api/submodules', submoduleRoutes);
 app.use('/api/submodule-versions', submoduleVersionRoutes);
+app.use('/api/version-releases', versionReleaseRoutes);
 
 // 健康检查端点
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     message: '设备管理系统API运行正常'
   });
 });
 
-// 生产环境：处理前端路由
-if (process.env.NODE_ENV === 'production') {
-  // 所有非API路由都返回前端应用
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
-  });
-} else {
-  // 开发环境：API文档
-  app.get('/', (req, res) => {
-    res.json({
-      message: '设备管理系统 API',
-      version: '1.0.0',
-      description: '支持多类型设备管理、版本追踪、售后问题记录',
-      endpoints: {
-        devices: '/api/devices',
-        modules: '/api/modules',
-        versions: '/api/versions',
-        issues: '/api/issues',
-        dashboard: '/api/dashboard',
-        deviceTypes: '/api/device-types',
-        moduleTypes: '/api/module-types',
-        submodules: '/api/submodules',
-        submoduleVersions: '/api/submodule-versions'
-      },
-      health: '/api/health'
-    });
-  });
-
-  // 开发环境：404处理
-  app.use('*', (req, res) => {
-    res.status(404).json({ 
-      error: '接口不存在',
-      path: req.originalUrl,
-      message: '请检查API路径是否正确'
-    });
-  });
-}
+// 所有非API路由都返回前端应用
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
+});
 
 // 全局错误处理
 app.use((err, req, res, next) => {
   console.error('服务器错误:', err);
-  res.status(500).json({ 
+  res.status(500).json({
     error: '服务器内部错误',
     message: process.env.NODE_ENV === 'development' ? err.message : '请稍后重试',
     timestamp: new Date().toISOString()
@@ -192,7 +161,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     console.log('🚀 正在启动设备管理系统...');
-    
+
     // 初始化数据库
     const dbInitialized = await initializeDatabase();
     if (!dbInitialized) {
@@ -205,7 +174,7 @@ async function startServer() {
     const networkInterfaces = os.networkInterfaces();
     let localIP = 'localhost';
     let allIPs = [];
-    
+
     // 收集所有可用的IPv4地址
     for (const interfaceName in networkInterfaces) {
       const interfaces = networkInterfaces[interfaceName];
@@ -215,7 +184,7 @@ async function startServer() {
         }
       }
     }
-    
+
     // 使用第一个可用IP作为主要显示IP
     localIP = allIPs[0] || 'localhost';
 
@@ -241,7 +210,7 @@ async function startServer() {
     httpServer.maxConnections = 100;
 
     const httpsServer = https.createServer(sslOptions, app);
-    
+
     httpsServer.on('error', (error) => {
       console.error('❌ HTTPS服务器启动失败:', error.message);
       if (error.code === 'EADDRINUSE') {
@@ -252,13 +221,13 @@ async function startServer() {
         console.error('   权限不足，无法绑定端口', PORT + 1);
       }
     });
-    
+
     httpsServer.listen(PORT + 1, '0.0.0.0', () => {
       console.log('✅ HTTPS服务器启动成功!');
       console.log(`🔒 本地HTTPS访问地址: https://localhost:${PORT + 1}`);
       console.log('💡 按 Ctrl+C 停止服务');
       console.log('');
-      
+
       // 显示所有可用的IP地址
       if (allIPs.length > 0) {
         console.log('🌐 局域网访问地址 (HTTP - 所有IP都可访问):');
@@ -266,20 +235,20 @@ async function startServer() {
           console.log(`   ${index + 1}. http://${ip}:${PORT}`);
         });
         console.log('');
-        
+
         console.log('🔒 局域网访问地址 (HTTPS - 所有IP都可访问):');
         allIPs.forEach((ip, index) => {
           console.log(`   ${index + 1}. https://${ip}:${PORT + 1}`);
         });
         console.log('');
-        
+
         console.log('🔍 健康检查地址:');
         allIPs.forEach((ip, index) => {
           console.log(`   HTTP: http://${ip}:${PORT}/api/health`);
           console.log(`   HTTPS: https://${ip}:${PORT + 1}/api/health`);
         });
         console.log('');
-        
+
         console.log('📖 系统访问地址:');
         allIPs.forEach((ip, index) => {
           console.log(`   HTTP: http://${ip}:${PORT}`);
@@ -287,7 +256,7 @@ async function startServer() {
         });
         console.log('');
       }
-      
+
       console.log('📋 其他设备访问说明:');
       console.log(`   1. 确保设备与服务器在同一局域网`);
       console.log(`   2. 在浏览器中访问上述任意一个IP地址`);

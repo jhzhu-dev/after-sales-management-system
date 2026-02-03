@@ -24,18 +24,18 @@ const pool = mysql.createPool({
 async function initializeDatabase() {
   try {
     console.log('🔗 正在连接MySQL数据库...');
-    
+
     // 先创建数据库（如果不存在）
     await createDatabase();
-    
+
     // 测试连接
     const connection = await pool.getConnection();
     console.log('✅ MySQL数据库连接成功!');
     connection.release();
-    
+
     // 创建表结构
     await createTables();
-    
+
     console.log('🎉 数据库初始化完成!');
     return true;
   } catch (error) {
@@ -54,10 +54,10 @@ async function createDatabase() {
       password: dbConfig.password,
       charset: 'utf8mb4'
     });
-    
+
     await connection.execute(`CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
     console.log(`✅ 数据库 '${dbConfig.database}' 创建成功`);
-    
+
     await connection.end();
   } catch (error) {
     console.error('❌ 创建数据库失败:', error.message);
@@ -81,7 +81,7 @@ async function createTables() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    
+
     // 模块类型管理表
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS module_types (
@@ -94,7 +94,7 @@ async function createTables() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    
+
     // 设备表 - 使用外键关联设备类型
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS devices (
@@ -108,7 +108,7 @@ async function createTables() {
         FOREIGN KEY (type_id) REFERENCES device_types(id) ON DELETE RESTRICT
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    
+
     // 模块表 - 使用外键关联模块类型
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS modules (
@@ -123,7 +123,7 @@ async function createTables() {
         UNIQUE KEY unique_device_module (device_id, type_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    
+
     // 模块版本表 - 版本追踪
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS module_versions (
@@ -138,7 +138,7 @@ async function createTables() {
         FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    
+
     // 子模块表 - 模块的子组件
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS submodules (
@@ -155,7 +155,7 @@ async function createTables() {
         FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    
+
     // 子模块版本历史表 - 版本迭代追踪
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS submodule_versions (
@@ -170,7 +170,7 @@ async function createTables() {
         FOREIGN KEY (submodule_id) REFERENCES submodules(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    
+
     // 问题表 - 售后问题管理
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS issues (
@@ -189,7 +189,21 @@ async function createTables() {
         FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    
+
+    // 版本发布库表 - 用于存储可供选择的正式发布的版本
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS version_releases (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        module_type_id INT NOT NULL,
+        version_number VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        change_log TEXT,
+        release_date DATE DEFAULT (CURRENT_DATE),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (module_type_id) REFERENCES module_types(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     console.log('✅ 数据库表结构创建成功');
   } catch (error) {
     console.error('❌ 创建表结构失败:', error.message);

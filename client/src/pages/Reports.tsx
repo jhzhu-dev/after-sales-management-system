@@ -138,7 +138,7 @@ export default function Reports() {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={stats.distributions.deviceStatus}
+                  data={stats.deviceStatusDistribution}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -147,7 +147,7 @@ export default function Reports() {
                   fill="#8884d8"
                   dataKey="count"
                 >
-                  {stats.distributions.deviceStatus.map((entry, index) => (
+                  {stats.deviceStatusDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -160,7 +160,7 @@ export default function Reports() {
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">问题状态分布</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stats.distributions.issueStatus}>
+              <BarChart data={stats.issueStatusDistribution}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="status" />
                 <YAxis />
@@ -174,7 +174,7 @@ export default function Reports() {
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">问题严重性分布</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stats.distributions.issueSeverity}>
+              <BarChart data={stats.issueSeverityDistribution}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="severity" />
                 <YAxis />
@@ -190,7 +190,7 @@ export default function Reports() {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={stats.distributions.versionType}
+                  data={stats.versionTypeDistribution}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -199,7 +199,7 @@ export default function Reports() {
                   fill="#8884d8"
                   dataKey="count"
                 >
-                  {stats.distributions.versionType.map((entry, index) => (
+                  {stats.versionTypeDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -233,7 +233,7 @@ export default function Reports() {
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">设备类型分布</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={stats.distributions.deviceType}>
+            <BarChart data={stats.deviceTypeDistribution}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="type" />
               <YAxis />
@@ -247,7 +247,7 @@ export default function Reports() {
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">模块类别分布</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={stats.distributions.moduleCategory}>
+            <BarChart data={stats.moduleCategoryDistribution}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="category" />
               <YAxis />

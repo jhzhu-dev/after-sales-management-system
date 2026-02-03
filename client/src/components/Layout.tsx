@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  HomeIcon, 
-  DevicePhoneMobileIcon, 
+import {
+  HomeIcon,
+  DevicePhoneMobileIcon,
   ExclamationTriangleIcon,
   ChartBarIcon,
   Cog6ToothIcon
@@ -17,7 +17,7 @@ const navigation = [
   { name: '仪表盘', href: '/', icon: HomeIcon },
   { name: '设备管理', href: '/devices', icon: DevicePhoneMobileIcon },
   { name: '售后问题管理', href: '/issues', icon: ExclamationTriangleIcon },
-  { name: '报表统计', href: '/reports', icon: ChartBarIcon },
+  { name: '版本库中心', href: '/releases', icon: ChartBarIcon },
   { name: '基础设置', href: '/settings', icon: Cog6ToothIcon },
 ];
 
@@ -31,7 +31,7 @@ export default function Layout({ children }: LayoutProps) {
         <div className="flex h-16 items-center justify-center border-b border-gray-200">
           <h1 className="text-xl font-bold text-gray-900">设备管理系统</h1>
         </div>
-        
+
         <nav className="mt-8 px-4">
           <ul className="space-y-2">
             {navigation.map((item) => {
@@ -67,7 +67,7 @@ export default function Layout({ children }: LayoutProps) {
                 {navigation.find(item => item.href === location.pathname)?.name || '设备管理系统'}
               </h2>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-500">
                 {new Date().toLocaleDateString('zh-CN')}
