@@ -1,0 +1,12 @@
+{
+  "registry-mirrors": [
+    "https://docker.rainbond.cc",
+    "https://docker.1panel.live",
+    "https://docker.nju.edu.cn",
+    "https://dockerhub.icu",
+    "https://docker.chenby.cn",
+    "https://docker.m.daocloud.io"
+  ],
+  "dns": ["8.8.8.8", "8.8.4.4"],
+  "experimental": false
+}

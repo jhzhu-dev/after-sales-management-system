@@ -9,6 +9,10 @@ const Issues = React.lazy(() => import('./pages/Issues'));
 const IssueDetail = React.lazy(() => import('./pages/IssueDetail'));
 const Settings = React.lazy(() => import('./pages/Settings'));
 const ReleaseLibrary = React.lazy(() => import('./pages/ReleaseLibrary'));
+const ProductLines = React.lazy(() => import('./pages/ProductLines'));
+const ProductDetail = React.lazy(() => import('./pages/ProductDetail'));
+const AfterSales = React.lazy(() => import('./pages/AfterSales'));
+const Products = React.lazy(() => import('./pages/Products'));
 
 function App() {
   return (
@@ -18,12 +22,16 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/devices" element={<Devices />} />
+            <Route path="/devices/new" element={<Devices />} />
             <Route path="/devices/:id" element={<DeviceDetail />} />
-            <Route path="/devices/new" element={<div>新增设备页面</div>} />
             <Route path="/issues" element={<Issues />} />
             <Route path="/issues/:id" element={<IssueDetail />} />
             <Route path="/releases" element={<ReleaseLibrary />} />
-            <Route path="/reports" element={<Navigate to="/" replace />} />
+            <Route path="/product-lines" element={<ProductLines />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/products/:id" element={<ProductDetail />} />
+            <Route path="/after-sales" element={<AfterSales />} />
+            <Route path="/upgrades" element={<Navigate to="/after-sales?tab=upgrades" replace />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </React.Suspense>

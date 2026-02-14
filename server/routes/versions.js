@@ -34,12 +34,12 @@ router.get('/', async (req, res) => {
         mt.name as module_type,
         d.id as device_id,
         d.name as device_name,
-        dt.name as device_type
+        pl.name as device_type
       FROM module_versions mv
       LEFT JOIN modules m ON mv.module_id = m.id
       LEFT JOIN module_types mt ON m.type_id = mt.id
       LEFT JOIN devices d ON m.device_id = d.id
-      LEFT JOIN device_types dt ON d.type_id = dt.id
+      LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       ${whereClause}
       ORDER BY mv.created_at DESC
       LIMIT ${parseInt(limitNum)} OFFSET ${parseInt(offset)}
@@ -81,13 +81,15 @@ router.get('/:id', async (req, res) => {
     const versionQuery = `
       SELECT 
         mv.*,
-        m.category as module_category,
+        mt.name as module_type,
         d.id as device_id,
         d.name as device_name,
-        d.type as device_type
+        pl.name as device_type
       FROM module_versions mv
       LEFT JOIN modules m ON mv.module_id = m.id
+      LEFT JOIN module_types mt ON m.type_id = mt.id
       LEFT JOIN devices d ON m.device_id = d.id
+      LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       WHERE mv.id = ?
     `;
 
@@ -119,8 +121,11 @@ router.post('/', [
   body('updated_by').notEmpty().withMessage('更新执行人不能为空（强制登记）')
 ], async (req, res) => {
   try {
+    console.log('📝 收到创建版本请求:', JSON.stringify(req.body, null, 2));
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.error('❌ 验证失败:', errors.array());
       return res.status(400).json({
         success: false,
         error: '输入数据无效',
@@ -164,7 +169,8 @@ router.post('/', [
       [module_id, version_number]
     );
     if (existingVersion.length > 0) {
-      return res.status(400).json({ success: false, error: '该模块的此版本号已存在' });
+      console.error(`❌ 版本号冲突: 模块${module_id}已有版本${version_number}`);
+      return res.status(400).json({ success: false, error: `该模块的版本${version_number}已存在，请使用不同的版本号` });
     }
 
     // 生成6位随机ID

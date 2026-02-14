@@ -127,11 +127,15 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
     setLoading(true);
     try {
       // 将notes字段映射到resolution_description
-      const submitData = {
+      const submitData: any = {
         ...formData,
         resolution_description: formData.notes,
         notes: undefined
       };
+      // 当状态变为已解决时，自动记录处理时间
+      if (formData.status === 'closed' && issue?.status !== 'closed') {
+        submitData.resolved_at = new Date().toISOString();
+      }
       await onSubmit(submitData);
       onClose();
     } catch (error) {
@@ -276,10 +280,10 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
             )}
           </div>
 
-          {/* 责任人 */}
+          {/* 跟进人 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              责任人
+              跟进人
             </label>
             <input
               type="text"
@@ -287,7 +291,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               value={formData.assignee}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="请输入责任人"
+              placeholder="请输入跟进人"
             />
           </div>
 

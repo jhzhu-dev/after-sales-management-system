@@ -32,16 +32,25 @@ router.get('/', async (req, res) => {
       SELECT 
         m.*,
         d.name as device_name,
-        dt.name as device_type,
+        pl.name as device_type,
         mt.name as module_type,
         mv.version_number as current_version,
         mv.version_type as current_version_type,
         mv.release_date as current_version_date
       FROM modules m
       LEFT JOIN devices d ON m.device_id = d.id
-      LEFT JOIN device_types dt ON d.type_id = dt.id
+      LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       LEFT JOIN module_types mt ON m.type_id = mt.id
-      LEFT JOIN module_versions mv ON m.id = mv.module_id
+      LEFT JOIN (
+        SELECT module_id, version_number, version_type, release_date
+        FROM module_versions mv1
+        WHERE id = (
+          SELECT id FROM module_versions mv2
+          WHERE mv2.module_id = mv1.module_id
+          ORDER BY mv2.created_at DESC
+          LIMIT 1
+        )
+      ) mv ON m.id = mv.module_id
       ${whereClause}
       ORDER BY m.created_at DESC
       LIMIT ${parseInt(limitNum)} OFFSET ${parseInt(offset)}
@@ -137,7 +146,7 @@ router.post('/', [
       });
     }
     
-    const { device_id, type_id, status = '正常' } = req.body;
+    const { device_id, type_id, version_id, status = '正常' } = req.body;
     
     // 检查设备是否存在
     const device = await query('SELECT id FROM devices WHERE id = ?', [device_id]);
@@ -149,6 +158,17 @@ router.post('/', [
     const moduleType = await query('SELECT id FROM module_types WHERE id = ?', [type_id]);
     if (moduleType.length === 0) {
       return res.status(400).json({ success: false, error: '模块类型不存在' });
+    }
+    
+    // 如果提供了version_id，检查版本是否存在且匹配模块类型
+    if (version_id) {
+      const versionRelease = await query(
+        'SELECT id, version_number, title FROM version_releases WHERE id = ? AND module_type_id = ?',
+        [version_id, type_id]
+      );
+      if (versionRelease.length === 0) {
+        return res.status(400).json({ success: false, error: '版本不存在或与模块类型不匹配' });
+      }
     }
     
     // 检查同一设备的模块类型是否已存在
@@ -171,6 +191,22 @@ router.post('/', [
         'INSERT INTO modules (id, device_id, type_id, status) VALUES (?, ?, ?, ?)',
         [moduleId, device_id, type_id, status]
       );
+      
+      // 如果提供了版本ID，创建初始版本记录
+      if (version_id) {
+        const versionRelease = await query(
+          'SELECT version_number, title FROM version_releases WHERE id = ?',
+          [version_id]
+        );
+        
+        if (versionRelease.length > 0) {
+          await connection.execute(
+            `INSERT INTO module_versions (module_id, version_number, version_type, description) 
+             VALUES (?, ?, 'factory', ?)`,
+            [moduleId, versionRelease[0].version_number, versionRelease[0].title || '初始版本']
+          );
+        }
+      }
     });
     
     res.status(201).json({

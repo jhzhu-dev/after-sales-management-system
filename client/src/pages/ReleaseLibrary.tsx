@@ -8,24 +8,29 @@ import {
     PlusIcon,
     CalendarDaysIcon,
     TagIcon,
-    DocumentTextIcon
+    DocumentTextIcon,
+    Squares2X2Icon,
+    ListBulletIcon,
+    PencilIcon,
+    TrashIcon
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
+import VersionReleaseForm from '../components/VersionReleaseForm';
 import { versionReleaseApi, moduleTypeApi } from '../services/api';
 import { VersionRelease } from '../types';
+import axios from 'axios';
 
 const ReleaseLibrary: React.FC = () => {
     const [releases, setReleases] = useState<VersionRelease[]>([]);
     const [moduleTypes, setModuleTypes] = useState<any[]>([]);
     const [activeTypeId, setActiveTypeId] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [newRelease, setNewRelease] = useState({
-        module_type_id: 0,
-        version_number: '',
-        title: '',
-        change_log: ''
-    });
+    const [showForm, setShowForm] = useState(false);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [selectedRelease, setSelectedRelease] = useState<VersionRelease | null>(null);
+    const [editingRelease, setEditingRelease] = useState<VersionRelease | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const fetchModuleTypes = async () => {
         try {
@@ -67,22 +72,71 @@ const ReleaseLibrary: React.FC = () => {
         }
     }, [activeTypeId]);
 
-    const handleCreateRelease = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleAddRelease = () => {
+        setEditingRelease(null);
+        setShowForm(true);
+    };
+
+    const handleEditRelease = (release: VersionRelease) => {
+        setEditingRelease(release);
+        setShowForm(true);
+    };
+
+    const handleCloseForm = () => {
+        setShowForm(false);
+        setEditingRelease(null);
+    };
+
+    const handleSubmit = async (formData: any) => {
         try {
-            const response = await versionReleaseApi.createRelease({
-                ...newRelease,
-                module_type_id: activeTypeId || newRelease.module_type_id
-            });
-            if (response.success) {
-                setShowAddModal(false);
-                setNewRelease({ module_type_id: 0, version_number: '', title: '', change_log: '' });
-                fetchReleases();
+            if (editingRelease) {
+                // 更新版本
+                const response = await axios.put(`/api/version-releases/${editingRelease.id}`, formData);
+                if (response.data.success) {
+                    setSuccessMessage('版本更新成功');
+                    await fetchReleases();
+                }
+            } else {
+                // 创建版本
+                const response = await versionReleaseApi.createRelease({
+                    ...formData,
+                    module_type_id: activeTypeId || formData.module_type_id
+                });
+                if (response.success) {
+                    setSuccessMessage('版本发布成功');
+                    await fetchReleases();
+                }
             }
-        } catch (error) {
-            console.error('创建发布版本失败:', error);
-            alert('创建失败，请检查输入');
+            
+            // 3秒后清除成功消息
+            setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (error: any) {
+            console.error('操作失败:', error);
+            throw error;
         }
+    };
+
+    const handleDeleteRelease = async (release: VersionRelease) => {
+        if (!window.confirm(`确定要删除版本"${release.version_number}"吗？此操作不可恢复。`)) {
+            return;
+        }
+
+        try {
+            const response = await axios.delete(`/api/version-releases/${release.id}`);
+            if (response.data.success) {
+                setSuccessMessage('版本删除成功');
+                await fetchReleases();
+                setTimeout(() => setSuccessMessage(null), 3000);
+            }
+        } catch (error: any) {
+            console.error('删除失败:', error);
+            alert(error.response?.data?.error || '删除失败，请稍后重试');
+        }
+    };
+
+    const handleViewDetail = (release: VersionRelease) => {
+        setSelectedRelease(release);
+        setShowDetailModal(true);
     };
 
     const getTypeIcon = (typeName: string) => {
@@ -104,17 +158,40 @@ const ReleaseLibrary: React.FC = () => {
                         <h1 className="text-3xl font-bold text-gray-900">版本发布中心</h1>
                         <p className="text-gray-600 mt-1">管理各模块类型的正式发布版本</p>
                     </div>
-                    <button
-                        onClick={() => {
-                            setNewRelease({ ...newRelease, module_type_id: activeTypeId || 0 });
-                            setShowAddModal(true);
-                        }}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                    >
-                        <PlusIcon className="h-5 w-5" />
-                        发布新版本
-                    </button>
+                    <div className="flex items-center gap-3">
+                        {/* 视图切换按钮 */}
+                        <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                title="方块视图"
+                            >
+                                <Squares2X2Icon className="h-5 w-5" />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('list')}
+                                className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                title="列表视图"
+                            >
+                                <ListBulletIcon className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <button
+                            onClick={handleAddRelease}
+                            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                            <PlusIcon className="h-5 w-5" />
+                            发布新版本
+                        </button>
+                    </div>
                 </div>
+
+                {/* 成功消息提示 */}
+                {successMessage && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-green-700">{successMessage}</p>
+                    </div>
+                )}
 
                 {/* 模块类型 Tabs */}
                 <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -140,39 +217,113 @@ const ReleaseLibrary: React.FC = () => {
                         {loading ? (
                             <div className="text-center py-12">加载中...</div>
                         ) : releases.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {releases.map((release) => (
-                                    <div key={release.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold font-mono">
-                                                {release.version_number}
+                            viewMode === 'grid' ? (
+                                // 方块视图 - 突出版本描述
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {releases.map((release) => (
+                                        <div key={release.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold font-mono">
+                                                    {release.version_number}
+                                                </div>
+                                                <div className="flex items-center text-xs text-gray-400">
+                                                    <CalendarDaysIcon className="h-4 w-4 mr-1" />
+                                                    {new Date(release.release_date).toLocaleDateString()}
+                                                </div>
                                             </div>
-                                            <div className="flex items-center text-xs text-gray-400">
-                                                <CalendarDaysIcon className="h-4 w-4 mr-1" />
-                                                {new Date(release.release_date).toLocaleDateString()}
+                                            <h3 className="text-lg font-bold text-gray-900 mb-2 truncate" title={release.title}>
+                                                {release.title}
+                                            </h3>
+                                            <div className="text-sm text-gray-600 line-clamp-3 mb-4 min-h-[4.5rem] whitespace-pre-wrap">
+                                                {release.change_log || '无变更说明'}
+                                            </div>
+                                            <div className="pt-4 border-t border-gray-100">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-xs text-gray-400">ID: {release.id}</span>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button 
+                                                        onClick={() => handleViewDetail(release)}
+                                                        className="flex-1 text-center px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded text-sm font-medium transition-colors"
+                                                    >
+                                                        查看详情
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleEditRelease(release)}
+                                                        className="px-3 py-1.5 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded transition-colors"
+                                                        title="编辑"
+                                                    >
+                                                        <PencilIcon className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteRelease(release)}
+                                                        className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
+                                                        title="删除"
+                                                    >
+                                                        <TrashIcon className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                        <h3 className="text-lg font-bold text-gray-900 mb-2 truncate" title={release.title}>
-                                            {release.title}
-                                        </h3>
-                                        <div className="text-sm text-gray-600 line-clamp-3 mb-4 min-h-[4.5rem] whitespace-pre-wrap">
-                                            {release.change_log || '无变更说明'}
+                                    ))}
+                                </div>
+                            ) : (
+                                // 列表视图 - 突出版本号、名称、发布时间
+                                <div className="divide-y divide-gray-200">
+                                    {releases.map((release) => (
+                                        <div key={release.id} className="py-4 px-4 hover:bg-gray-50 transition-colors rounded-lg">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4 flex-1">
+                                                    {/* 版本号 - 突出显示 */}
+                                                    <div className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold font-mono text-base min-w-[100px] text-center shadow-md">
+                                                        {release.version_number}
+                                                    </div>
+                                                    {/* 版本名称 - 突出显示 */}
+                                                    <div className="flex-1">
+                                                        <h3 className="text-lg font-bold text-gray-900 mb-1">{release.title}</h3>
+                                                        <p className="text-sm text-gray-500 line-clamp-1">{release.change_log || '无变更说明'}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    {/* 发布时间 - 突出显示 */}
+                                                    <div className="flex items-center gap-2 text-gray-600">
+                                                        <CalendarDaysIcon className="h-5 w-5" />
+                                                        <span className="font-medium">{new Date(release.release_date).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })}</span>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button 
+                                                            onClick={() => handleViewDetail(release)}
+                                                            className="text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        >
+                                                            详情
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleEditRelease(release)}
+                                                            className="px-3 py-1.5 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded transition-colors"
+                                                            title="编辑"
+                                                        >
+                                                            <PencilIcon className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteRelease(release)}
+                                                            className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
+                                                            title="删除"
+                                                        >
+                                                            <TrashIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="pt-4 border-t border-gray-100 flex justify-between items-center bg-transparent">
-                                            <span className="text-xs text-gray-400">ID: {release.id}</span>
-                                            <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                                                查看详情 →
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )
                         ) : (
                             <div className="text-center py-20 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
                                 <TagIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                                 <p className="text-gray-500">该分类下暂无已发布的版本记录</p>
                                 <button
-                                    onClick={() => setShowAddModal(true)}
+                                    onClick={handleAddRelease}
                                     className="mt-4 text-blue-600 font-medium hover:underline"
                                 >
                                     立即发布第一个版本
@@ -183,65 +334,117 @@ const ReleaseLibrary: React.FC = () => {
                 </div>
             </div>
 
-            {/* 新增发布版本 Modal */}
-            {showAddModal && (
+            {/* 版本发布表单 */}
+            {showForm && (
+                <VersionReleaseForm
+                    versionRelease={editingRelease}
+                    moduleType={moduleTypes.find(t => t.id === (editingRelease?.module_type_id || activeTypeId)) || null}
+                    onClose={handleCloseForm}
+                    onSubmit={handleSubmit}
+                />
+            )}
+
+            {/* 版本详情 Modal */}
+            {showDetailModal && selectedRelease && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                            <h3 className="text-lg font-bold text-gray-900">发布新版本 - {moduleTypes.find(t => t.id === activeTypeId)?.name}</h3>
-                            <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-blue-50 to-purple-50">
+                            <div className="flex items-center gap-3">
+                                <h3 className="text-xl font-bold text-gray-900">版本详情</h3>
+                                <span className="px-3 py-1 bg-blue-600 text-white text-sm font-bold font-mono rounded-md shadow-sm">
+                                    {selectedRelease.version_number}
+                                </span>
+                            </div>
+                            <button 
+                                onClick={() => setShowDetailModal(false)} 
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
                                 <PlusIcon className="h-6 w-6 rotate-45" />
                             </button>
                         </div>
-                        <form onSubmit={handleCreateRelease} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">版本号</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="例如: V1.2.0"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                    value={newRelease.version_number}
-                                    onChange={e => setNewRelease({ ...newRelease, version_number: e.target.value })}
-                                />
+                        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                            {/* 基本信息 */}
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">版本号</label>
+                                    <div className="flex items-center gap-2">
+                                        <TagIcon className="h-5 w-5 text-blue-600" />
+                                        <p className="text-lg font-bold text-gray-900 font-mono">{selectedRelease.version_number}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">发布日期</label>
+                                    <div className="flex items-center gap-2">
+                                        <CalendarDaysIcon className="h-5 w-5 text-green-600" />
+                                        <p className="text-lg font-medium text-gray-900">
+                                            {new Date(selectedRelease.release_date).toLocaleDateString('zh-CN', { 
+                                                year: 'numeric', 
+                                                month: 'long', 
+                                                day: 'numeric' 
+                                            })}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">版本标题</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="例如: 优化视觉算法，提升识别率"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                    value={newRelease.title}
-                                    onChange={e => setNewRelease({ ...newRelease, title: e.target.value })}
-                                />
+
+                            {/* 模块类型 */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">模块类型</label>
+                                <div className="flex items-center gap-2">
+                                    {getTypeIcon(moduleTypes.find(t => t.id === selectedRelease.module_type_id)?.name || '')}
+                                    <p className="text-lg font-medium text-gray-900">
+                                        {moduleTypes.find(t => t.id === selectedRelease.module_type_id)?.name || '未知'}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">变更日志 (Change Log)</label>
-                                <textarea
-                                    rows={4}
-                                    placeholder="详细说明本次发布的改进内容..."
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
-                                    value={newRelease.change_log}
-                                    onChange={e => setNewRelease({ ...newRelease, change_log: e.target.value })}
-                                />
+
+                            {/* 版本标题 */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">版本标题</label>
+                                <p className="text-lg font-semibold text-gray-900 bg-gray-50 p-3 rounded-lg">
+                                    {selectedRelease.title}
+                                </p>
                             </div>
-                            <div className="flex gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAddModal(false)}
-                                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-                                >
-                                    取消
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
-                                >
-                                    确认发布
-                                </button>
+
+                            {/* 变更日志 */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                                    <DocumentTextIcon className="h-5 w-5" />
+                                    变更日志 (Change Log)
+                                </label>
+                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    {selectedRelease.change_log ? (
+                                        <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+                                            {selectedRelease.change_log}
+                                        </pre>
+                                    ) : (
+                                        <p className="text-gray-400 italic">暂无变更说明</p>
+                                    )}
+                                </div>
                             </div>
-                        </form>
+
+                            {/* 其他信息 */}
+                            <div className="pt-4 border-t border-gray-200 grid grid-cols-2 gap-4">
+                                <div className="text-sm">
+                                    <span className="text-gray-500">版本ID：</span>
+                                    <span className="font-mono text-gray-900 font-medium">{selectedRelease.id}</span>
+                                </div>
+                                <div className="text-sm">
+                                    <span className="text-gray-500">创建时间：</span>
+                                    <span className="text-gray-900">
+                                        {new Date(selectedRelease.created_at).toLocaleString('zh-CN')}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                            <button
+                                onClick={() => setShowDetailModal(false)}
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                            >
+                                关闭
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

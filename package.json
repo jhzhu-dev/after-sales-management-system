@@ -13,7 +13,9 @@
     "init-db": "node -e \"require('./server/database').initializeDatabase().then(() => process.exit(0)).catch(() => process.exit(1))\"",
     "seed": "node server/seed_new.js",
     "view-data": "node view-data.js",
-    "setup": "npm run install-all && npm run init-db && npm run seed"
+    "setup": "npm run install-all && npm run init-db && npm run seed",
+    "test-oss": "node server/test-oss-connection.js",
+    "migrate-to-oss": "node server/migrate-files-to-oss.js"
   },
   "keywords": [
     "device-management",
@@ -36,6 +38,7 @@
     "express-rate-limit": "^7.1.5",
     "express-validator": "^7.0.1",
     "multer": "^1.4.5-lts.1",
+    "ali-oss": "^6.18.0",
     "xlsx": "^0.18.5",
     "moment": "^2.29.4"
   },

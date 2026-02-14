@@ -70,18 +70,22 @@ async function createTables() {
   try {
     // 检查表是否存在，如果不存在才创建
     console.log('🔍 检查数据库表结构...');
-    // 设备类型管理表
+    
+    // ==================== Phase 1: 基础表（无外键依赖） ====================
+    
+    // 产品线管理表 - 必须最先创建，因为其他表依赖它
     await pool.execute(`
-      CREATE TABLE IF NOT EXISTS device_types (
+      CREATE TABLE IF NOT EXISTS product_lines (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL UNIQUE,
+        code VARCHAR(50) NOT NULL UNIQUE,
         description TEXT,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-
+    
     // 模块类型管理表
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS module_types (
@@ -95,21 +99,57 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    // 设备表 - 使用外键关联设备类型
+    // 客户表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        short_name VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_short_name (short_name)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // ==================== Phase 2: 依赖基础表的表 ====================
+    
+    // 产品管理表 - 依赖 product_lines
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_line_id INT NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        model VARCHAR(100),
+        description TEXT,
+        specifications JSON,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_line_id) REFERENCES product_lines(id) ON DELETE RESTRICT
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 设备表 - 依赖 product_lines 和 customers
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS devices (
         id VARCHAR(50) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
-        type_id INT NOT NULL,
+        product_line_id INT NOT NULL,
+        customer_id INT,
         location VARCHAR(255),
         status ENUM('正常', '异常', '维护中') DEFAULT '正常',
+        remote_code VARCHAR(100),
+        password VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (type_id) REFERENCES device_types(id) ON DELETE RESTRICT
+        FOREIGN KEY (product_line_id) REFERENCES product_lines(id) ON DELETE RESTRICT,
+        FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    // 模块表 - 使用外键关联模块类型
+    // ==================== Phase 3: 依赖设备和模块类型的表 ====================
+    
+    // 模块表 - 依赖 devices 和 module_types
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS modules (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -124,7 +164,7 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    // 模块版本表 - 版本追踪
+    // ==================== Phase 4: 依赖模块的表 ====================
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS module_versions (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -204,7 +244,193 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    console.log('✅ 数据库表结构创建成功');
+    // ==================== Phase 5: 产品相关表 ====================
+
+    // 产品资料表 - 依赖 products
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS product_documents (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        doc_type ENUM('规格书', '使用说明', '用户手册', '其他') NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        file_size INT,
+        uploaded_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 产品模块模板表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS product_modules (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        module_type_id INT NOT NULL,
+        is_required BOOLEAN DEFAULT TRUE,
+        default_config JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        FOREIGN KEY (module_type_id) REFERENCES module_types(id) ON DELETE RESTRICT
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 产品子模块规格表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS product_submodule_specs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_module_id INT NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        model VARCHAR(255),
+        specifications TEXT,
+        default_version VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_module_id) REFERENCES product_modules(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 产品模块配置历史表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS product_module_history (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        module_type_id INT NOT NULL,
+        is_required BOOLEAN DEFAULT TRUE,
+        default_config JSON,
+        version_number VARCHAR(50) NOT NULL,
+        change_description TEXT,
+        effective_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deprecated_date TIMESTAMP NULL,
+        is_current BOOLEAN DEFAULT FALSE,
+        created_by VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        FOREIGN KEY (module_type_id) REFERENCES module_types(id) ON DELETE RESTRICT,
+        INDEX idx_product_module_current (product_id, module_type_id, is_current),
+        INDEX idx_current (is_current, effective_date),
+        UNIQUE KEY unique_version (product_id, module_type_id, version_number)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // ==================== 设备维护SOP模板 ====================
+
+    // SOP 模板表 (用于设备维护检查流程)
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS sop_templates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        category ENUM('日常维护', '故障排查', '定期检查', '升级流程', '其他') NOT NULL DEFAULT '日常维护',
+        product_line_id INT DEFAULT NULL,
+        version VARCHAR(20) NOT NULL DEFAULT 'v1.0',
+        content JSON NOT NULL,
+        description TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_line_id) REFERENCES product_lines(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // ==================== Schema Migrations ====================
+
+    // 迁移：将设备类型改为产品线
+    try {
+      const [typeIdCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'type_id'");
+      if (typeIdCols.length > 0) {
+        console.log('🔄 正在迁移 devices 表：type_id -> product_line_id...');
+        
+        // 删除旧的外键约束
+        try {
+          await pool.execute("ALTER TABLE devices DROP FOREIGN KEY devices_ibfk_1");
+        } catch (e) {
+          console.log('⚠️ 外键约束 devices_ibfk_1 不存在或已删除');
+        }
+        
+        // 重命名列
+        await pool.execute("ALTER TABLE devices CHANGE COLUMN type_id product_line_id INT NOT NULL");
+        
+        // 添加新的外键约束
+        await pool.execute("ALTER TABLE devices ADD CONSTRAINT fk_device_product_line FOREIGN KEY (product_line_id) REFERENCES product_lines(id) ON DELETE RESTRICT");
+        
+        console.log('✅ devices 表迁移成功：type_id -> product_line_id');
+      }
+    } catch (err) {
+      console.warn('⚠️ devices 表迁移警告:', err.message);
+    }
+
+    // 检查 devices 表扩展字段
+    try {
+      const [remoteCodeCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'remote_code'");
+      if (remoteCodeCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加 remote_code 字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN remote_code VARCHAR(100) AFTER status");
+      }
+
+      const [pwdCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'password'");
+      if (pwdCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加 password 字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN password VARCHAR(100) AFTER remote_code");
+      }
+      console.log('✅ devices 表字段更新成功');
+
+      // 客户关联和位置字段迁移
+      const [customerIdCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'customer_id'");
+      if (customerIdCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加 customer_id 字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN customer_id INT AFTER product_line_id");
+        try {
+          await pool.execute("ALTER TABLE devices ADD CONSTRAINT fk_device_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT");
+        } catch (e) {
+          console.warn('⚠️ 添加 customer_id 外键警告:', e.message);
+        }
+        console.log('✅ customer_id 字段添加成功');
+      }
+
+      const [locCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'location'");
+      if (locCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加 location 字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN location VARCHAR(255) AFTER customer_id");
+        console.log('✅ location 字段添加成功');
+      }
+
+      // Phase 4: 扩展 issues 表及创建 device_upgrades 表
+      console.log('🔄 正在执行 Phase 4 数据库迁移...');
+
+      // 检查 issues 表扩展字段
+      const [issueCategoryCols] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'category'");
+      if (issueCategoryCols.length === 0) {
+        await pool.execute("ALTER TABLE issues ADD COLUMN category ENUM('硬件故障', '软件Bug', '操作咨询', '安装调试', '其他') DEFAULT '其他' AFTER module_id");
+        await pool.execute("ALTER TABLE issues ADD COLUMN contact_person VARCHAR(100) AFTER description");
+        await pool.execute("ALTER TABLE issues ADD COLUMN contact_phone VARCHAR(50) AFTER contact_person");
+        await pool.execute("ALTER TABLE issues ADD COLUMN is_visit_required BOOLEAN DEFAULT FALSE AFTER contact_phone");
+        await pool.execute("ALTER TABLE issues ADD COLUMN visit_at TIMESTAMP NULL AFTER is_visit_required");
+        await pool.execute("ALTER TABLE issues ADD COLUMN attachments JSON AFTER visit_at");
+        console.log('✅ issues 表扩展字段成功');
+      }
+
+      // 创建 device_upgrades 表
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS device_upgrades (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          device_id VARCHAR(50) NOT NULL,
+          upgrade_type ENUM('硬件升级', '软件更新', '系统重装') NOT NULL,
+          description TEXT,
+          old_version VARCHAR(100),
+          new_version VARCHAR(100),
+          operator_id VARCHAR(100),
+          upgrade_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log('✅ device_upgrades 表就绪');
+
+    } catch (err) {
+      console.warn('⚠️ 数据库迁移警告:', err.message);
+    }
+
+    console.log('✅ 数据库表结构创建/更新成功');
   } catch (error) {
     console.error('❌ 创建表结构失败:', error.message);
     throw error;
@@ -219,10 +445,13 @@ function getPool() {
 // 执行查询
 async function query(sql, params = []) {
   try {
-    const [rows] = await pool.execute(sql, params);
+    // 使用 query 而不是 execute，query 更宽容参数类型
+    const [rows] = await pool.query(sql, params);
     return rows;
   } catch (error) {
     console.error('❌ 数据库查询失败:', error.message);
+    console.error('SQL:', sql);
+    console.error('Params:', params);
     throw error;
   }
 }

@@ -11,7 +11,7 @@ import { dashboardApi } from '../services/api';
 import { DashboardStats } from '../types';
 import Layout from '../components/Layout';
 import StatsCard from '../components/StatsCard';
-import DeviceTypeChart from '../components/DeviceTypeChart';
+import ProductLineChart from '../components/ProductLineChart';
 import LocationStatsChart from '../components/LocationStatsChart';
 import ChartCard from '../components/ChartCard';
 import { formatDate } from '../utils';
@@ -150,8 +150,8 @@ export default function Dashboard() {
           
           {expandedSections.distribution && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* 设备类型分布 */}
-              <DeviceTypeChart data={stats.deviceTypeDistribution} />
+              {/* 产品线分布 */}
+              <ProductLineChart data={stats.deviceTypeDistribution} />
 
               {/* 位置统计 */}
               <LocationStatsChart data={stats.locationStats} />

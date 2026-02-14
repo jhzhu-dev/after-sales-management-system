@@ -22,6 +22,7 @@ interface DataTableProps<T> {
   rowKey: keyof T;
   onRowClick?: (record: T) => void;
   className?: string;
+  compact?: boolean;
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -31,7 +32,8 @@ export default function DataTable<T extends Record<string, any>>({
   pagination,
   rowKey,
   onRowClick,
-  className
+  className,
+  compact = false
 }: DataTableProps<T>) {
   const [sortConfig, setSortConfig] = useState<{
     key: keyof T | null;
@@ -90,7 +92,8 @@ export default function DataTable<T extends Record<string, any>>({
                 <th
                   key={String(column.key)}
                   className={cn(
-                    'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                    'text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap',
+                    compact ? 'px-3 py-2' : 'px-6 py-3',
                     column.sortable && 'cursor-pointer hover:bg-gray-100'
                   )}
                   style={{ width: column.width }}
@@ -142,7 +145,10 @@ export default function DataTable<T extends Record<string, any>>({
                 onClick={() => onRowClick?.(record)}
               >
                 {columns.map((column) => (
-                  <td key={String(column.key)} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td key={String(column.key)} className={cn(
+                    'whitespace-nowrap text-sm text-gray-900',
+                    compact ? 'px-3 py-2.5' : 'px-6 py-4'
+                  )}>
                     {column.render
                       ? column.render(record[column.key], record)
                       : record[column.key]}

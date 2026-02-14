@@ -13,11 +13,23 @@ const moduleRoutes = require('./routes/modules');
 const versionRoutes = require('./routes/versions');
 const issueRoutes = require('./routes/issues');
 const dashboardRoutes = require('./routes/dashboard');
-const deviceTypeRoutes = require('./routes/device-types');
 const moduleTypeRoutes = require('./routes/module-types');
-const submoduleRoutes = require('./routes/submodules');
-const submoduleVersionRoutes = require('./routes/submodule-versions');
 const versionReleaseRoutes = require('./routes/version-releases');
+
+// Phase 1: 基础数据模块路由
+const productLineRoutes = require('./routes/product-lines');
+const productRoutes = require('./routes/products');
+const productModuleRoutes = require('./routes/product-modules');
+const productDocumentRoutes = require('./routes/product-documents');
+const uploadRoutes = require('./routes/uploads');
+
+// SOP模板路由 (设备维护SOP)
+const sopTemplateRoutes = require('./routes/sop-templates');
+
+// Phase 4: 售后管理集成路由
+const afterSalesRoutes = require('./routes/after-sales');
+const deviceUpgradeRoutes = require('./routes/device-upgrades');
+const customerRoutes = require('./routes/customers');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -121,16 +133,29 @@ app.use('/uploads', express.static('uploads'));
 // 提供前端静态文件（开发和生产环境都支持）
 app.use(express.static(path.join(__dirname, '../client/build')));
 
+// 现有路由
 app.use('/api/devices', deviceRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/versions', versionRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/device-types', deviceTypeRoutes);
 app.use('/api/module-types', moduleTypeRoutes);
-app.use('/api/submodules', submoduleRoutes);
-app.use('/api/submodule-versions', submoduleVersionRoutes);
 app.use('/api/version-releases', versionReleaseRoutes);
+
+// Phase 1: 基础数据模块路由
+app.use('/api/product-lines', productLineRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/product-modules', productModuleRoutes);
+app.use('/api/product-documents', productDocumentRoutes);
+app.use('/api/sop-templates', sopTemplateRoutes);
+app.use('/api/uploads', uploadRoutes);
+
+// 客户管理路由
+app.use('/api/customers', customerRoutes);
+
+// Phase 4: 售后管理集成路由
+app.use('/api/after-sales', afterSalesRoutes);
+app.use('/api/device-upgrades', deviceUpgradeRoutes);
 
 // 健康检查端点
 app.get('/api/health', (req, res) => {
@@ -189,82 +214,74 @@ async function startServer() {
     localIP = allIPs[0] || 'localhost';
 
     let sslOptions;
+    let sslEnabled = false;
     try {
-      sslOptions = {
-        key: fs.readFileSync(path.join(__dirname, '../ssl/server-key.pem')),
-        cert: fs.readFileSync(path.join(__dirname, '../ssl/server-cert.pem'))
-      };
-      console.log('✅ SSL证书加载成功');
+      const keyPath = path.join(__dirname, '../ssl/server-key.pem');
+      const certPath = path.join(__dirname, '../ssl/server-cert.pem');
+      
+      if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+        sslOptions = {
+          key: fs.readFileSync(keyPath),
+          cert: fs.readFileSync(certPath)
+        };
+        sslEnabled = true;
+        console.log('✅ SSL证书加载成功，HTTPS服务将启动');
+      } else {
+        console.log('ℹ️  SSL证书文件不存在，仅启动HTTP服务');
+      }
     } catch (error) {
-      console.error('❌ SSL证书加载失败:', error.message);
-      process.exit(1);
+      console.log('ℹ️  SSL证书加载失败，仅启动HTTP服务:', error.message);
     }
 
     const httpServer = app.listen(PORT, '0.0.0.0', () => {
       console.log('✅ HTTP服务器启动成功!');
       console.log(`📊 本地HTTP访问地址: http://localhost:${PORT}`);
+      
+      if (allIPs.length > 0) {
+        console.log('🌐 局域网访问地址 (HTTP):');
+        allIPs.forEach((ip, index) => {
+          console.log(`   ${index + 1}. http://${ip}:${PORT}`);
+        });
+      }
+      
+      console.log('💡 按 Ctrl+C 停止服务');
+      console.log('');
     });
 
     httpServer.keepAliveTimeout = 5000;
     httpServer.headersTimeout = 6000;
     httpServer.maxConnections = 100;
 
-    const httpsServer = https.createServer(sslOptions, app);
+    // 如果SSL证书可用，启动HTTPS服务器
+    if (sslEnabled && sslOptions) {
+      const httpsServer = https.createServer(sslOptions, app);
 
-    httpsServer.on('error', (error) => {
-      console.error('❌ HTTPS服务器启动失败:', error.message);
-      if (error.code === 'EADDRINUSE') {
-        console.error('   端口被占用，请检查是否有其他服务在使用端口', PORT + 1);
-      } else if (error.code === 'ENOTFOUND') {
-        console.error('   SSL证书文件未找到');
-      } else if (error.code === 'EACCES') {
-        console.error('   权限不足，无法绑定端口', PORT + 1);
-      }
-    });
+      httpsServer.on('error', (error) => {
+        console.error('❌ HTTPS服务器启动失败:', error.message);
+        if (error.code === 'EADDRINUSE') {
+          console.error('   端口被占用，请检查是否有其他服务在使用端口', PORT + 1);
+        } else if (error.code === 'EACCES') {
+          console.error('   权限不足，无法绑定端口', PORT + 1);
+        }
+      });
 
-    httpsServer.listen(PORT + 1, '0.0.0.0', () => {
-      console.log('✅ HTTPS服务器启动成功!');
-      console.log(`🔒 本地HTTPS访问地址: https://localhost:${PORT + 1}`);
-      console.log('💡 按 Ctrl+C 停止服务');
-      console.log('');
+      httpsServer.listen(PORT + 1, '0.0.0.0', () => {
+        console.log('✅ HTTPS服务器启动成功!');
+        console.log(`🔒 本地HTTPS访问地址: https://localhost:${PORT + 1}`);
+        
+        if (allIPs.length > 0) {
+          console.log('🌐 局域网访问地址 (HTTPS):');
+          allIPs.forEach((ip, index) => {
+            console.log(`   ${index + 1}. https://${ip}:${PORT + 1}`);
+          });
+        }
+      });
 
-      // 显示所有可用的IP地址
-      if (allIPs.length > 0) {
-        console.log('🌐 局域网访问地址 (HTTP - 所有IP都可访问):');
-        allIPs.forEach((ip, index) => {
-          console.log(`   ${index + 1}. http://${ip}:${PORT}`);
-        });
-        console.log('');
+      httpsServer.keepAliveTimeout = 5000;
+      httpsServer.headersTimeout = 6000;
+      httpsServer.maxConnections = 100;
+    }
 
-        console.log('🔒 局域网访问地址 (HTTPS - 所有IP都可访问):');
-        allIPs.forEach((ip, index) => {
-          console.log(`   ${index + 1}. https://${ip}:${PORT + 1}`);
-        });
-        console.log('');
-
-        console.log('🔍 健康检查地址:');
-        allIPs.forEach((ip, index) => {
-          console.log(`   HTTP: http://${ip}:${PORT}/api/health`);
-          console.log(`   HTTPS: https://${ip}:${PORT + 1}/api/health`);
-        });
-        console.log('');
-
-        console.log('📖 系统访问地址:');
-        allIPs.forEach((ip, index) => {
-          console.log(`   HTTP: http://${ip}:${PORT}`);
-          console.log(`   HTTPS: https://${ip}:${PORT + 1}`);
-        });
-        console.log('');
-      }
-
-      console.log('📋 其他设备访问说明:');
-      console.log(`   1. 确保设备与服务器在同一局域网`);
-      console.log(`   2. 在浏览器中访问上述任意一个IP地址`);
-      console.log(`   3. 如果无法访问，请检查防火墙设置`);
-      console.log(`   4. HTTP推荐使用: http://192.168.0.136:${PORT}`);
-      console.log(`   5. HTTPS推荐使用: https://192.168.0.136:${PORT + 1}`);
-      console.log(`   6. 首次访问HTTPS会提示证书不安全，点击"高级"→"继续访问"`);
-    });
   } catch (error) {
     console.error('❌ 服务器启动失败:', error);
     process.exit(1);

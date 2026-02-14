@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Module, ModuleFormData } from '../types';
 import { moduleTypeApi } from '../services/api';
+import axios from 'axios';
 
 interface ModuleFormProps {
   module?: Module | null;
@@ -14,9 +15,12 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
   const [formData, setFormData] = useState<ModuleFormData>({
     device_id: deviceId,
     type_id: '',
+    version_id: '',
     status: '正常'
   });
   const [moduleTypes, setModuleTypes] = useState<any[]>([]);
+  const [versions, setVersions] = useState<any[]>([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -25,8 +29,12 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
       setFormData({
         device_id: module.device_id,
         type_id: module.type_id,
+        version_id: '',
         status: module.status as '正常' | '异常' | '维护中'
       });
+      if (module.type_id) {
+        fetchVersions(module.type_id);
+      }
     }
   }, [module, deviceId]);
 
@@ -38,6 +46,25 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
       }
     } catch (error) {
       console.error('获取模块类型失败:', error);
+    }
+  };
+
+  const fetchVersions = async (moduleTypeId: string) => {
+    if (!moduleTypeId) {
+      setVersions([]);
+      return;
+    }
+    setLoadingVersions(true);
+    try {
+      const response = await axios.get(`/api/version-releases?module_type_id=${moduleTypeId}`);
+      if (response.data.success) {
+        setVersions(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('获取版本列表失败:', error);
+      setVersions([]);
+    } finally {
+      setLoadingVersions(false);
     }
   };
 
@@ -60,6 +87,12 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
       ...prev,
       [name]: value
     }));
+    
+    // 当模块类型改变时，重新加载版本列表并清空已选版本
+    if (name === 'type_id') {
+      setFormData(prev => ({ ...prev, version_id: '' }));
+      fetchVersions(value);
+    }
   };
 
   return (
@@ -96,6 +129,29 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              初始版本
+            </label>
+            <select
+              name="version_id"
+              value={formData.version_id || ''}
+              onChange={handleInputChange}
+              disabled={!formData.type_id || loadingVersions}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              <option value="">{loadingVersions ? '加载中...' : '请选择版本（可选）'}</option>
+              {versions.map((version) => (
+                <option key={version.id} value={version.id}>
+                  {version.version_number} - {version.title || ''}
+                </option>
+              ))}
+            </select>
+            {!formData.type_id && (
+              <p className="mt-1 text-xs text-gray-500">请先选择模块类型</p>
+            )}
           </div>
 
           <div>

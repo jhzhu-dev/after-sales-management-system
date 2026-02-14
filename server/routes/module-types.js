@@ -8,8 +8,8 @@ router.get('/', async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', is_active } = req.query;
     
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
     const offset = (pageNum - 1) * limitNum;
     
     // 构建查询条件
@@ -333,16 +333,43 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // 检查是否有模块使用此类型
+    // 检查1：设备模块使用情况
     const modulesUsingType = await query(
       'SELECT COUNT(*) as count FROM modules WHERE type_id = ?',
       [id]
     );
     
-    if (modulesUsingType[0].count > 0) {
+    // 检查2：产品模块配置使用情况
+    const productModulesUsingType = await query(
+      'SELECT COUNT(*) as count FROM product_modules WHERE module_type_id = ?',
+      [id]
+    );
+    
+    // 检查3：产品模块历史记录使用情况
+    const historyUsingType = await query(
+      'SELECT COUNT(*) as count FROM product_module_history WHERE module_type_id = ?',
+      [id]
+    );
+    
+    const deviceCount = modulesUsingType[0].count;
+    const productConfigCount = productModulesUsingType[0].count;
+    const historyCount = historyUsingType[0].count;
+    
+    // 如果有任何使用记录，阻止删除
+    if (deviceCount > 0 || productConfigCount > 0 || historyCount > 0) {
+      const messages = [];
+      if (deviceCount > 0) messages.push(`${deviceCount} 个设备模块`);
+      if (productConfigCount > 0) messages.push(`${productConfigCount} 个产品配置`);
+      if (historyCount > 0) messages.push(`${historyCount} 条历史记录`);
+      
       return res.status(400).json({
         success: false,
-        message: '无法删除：有模块正在使用此类型'
+        message: `无法删除：有 ${messages.join('、')} 正在使用此模块类型`,
+        usage: {
+          device_modules: deviceCount,
+          product_configs: productConfigCount,
+          history_records: historyCount
+        }
       });
     }
     

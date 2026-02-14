@@ -33,7 +33,7 @@ export default function Issues() {
   const [showIssueForm, setShowIssueForm] = useState(false);
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
   const [moduleTypes, setModuleTypes] = useState<Array<{id: string, name: string}>>([]);
-  const [deviceTypes, setDeviceTypes] = useState<Array<{id: string, name: string}>>([]);
+  const [productLines, setProductLines] = useState<Array<{id: string, name: string}>>([]);
 
   useEffect(() => {
     console.log('useEffect触发，当前筛选条件:', filters);
@@ -45,10 +45,10 @@ export default function Issues() {
     console.log('筛选条件已更新:', filters);
   }, [filters]);
 
-  // 获取模块类型和设备类型列表
+  // 获取模块类型和产品线列表
   useEffect(() => {
     fetchModuleTypes();
-    fetchDeviceTypes();
+    fetchProductLines();
   }, []);
 
   const fetchModuleTypes = async () => {
@@ -63,15 +63,15 @@ export default function Issues() {
     }
   };
 
-  const fetchDeviceTypes = async () => {
+  const fetchProductLines = async () => {
     try {
-      const response = await fetch('/api/device-types');
+      const response = await fetch('/api/product-lines?is_active=1');
       const result = await response.json();
       if (result.success) {
-        setDeviceTypes(result.data);
+        setProductLines(result.data);
       }
     } catch (error) {
-      console.error('获取设备类型列表失败:', error);
+      console.error('获取产品线列表失败:', error);
     }
   };
 
@@ -371,7 +371,7 @@ export default function Issues() {
     },
     {
       key: 'assignee' as keyof Issue,
-      title: <SortableHeader field="assignee" title="责任人" />,
+      title: <SortableHeader field="assignee" title="跟进人" />,
       render: (value: string) => (
         <div className="text-gray-900">{value || '-'}</div>
       )
@@ -472,17 +472,17 @@ export default function Issues() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                设备类型
+                产品线
               </label>
               <select
                 value={filters.device_type || ''}
                 onChange={(e) => handleFilterChange('device_type', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">全部设备类型</option>
-                {deviceTypes.map((deviceType) => (
-                  <option key={deviceType.id} value={deviceType.name}>
-                    {deviceType.name}
+                <option value="">全部产品线</option>
+                {productLines.map((productLine) => (
+                  <option key={productLine.id} value={productLine.name}>
+                    {productLine.name}
                   </option>
                 ))}
               </select>

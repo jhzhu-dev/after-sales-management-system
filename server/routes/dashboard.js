@@ -60,35 +60,36 @@ router.get('/stats', async (req, res) => {
     
     const versionTypeDistribution = await query(versionTypeQuery);
     
-    // 设备类型分布（带百分比）
-    const deviceTypeQuery = `
+    // 产品线分布（带百分比）
+    const productLineQuery = `
       SELECT 
-        COALESCE(dt.name, '未分类') as type,
+        COALESCE(pl.name, '未分类') as type,
         COUNT(*) as count,
         ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM devices), 2) as percentage
       FROM devices d
-      LEFT JOIN device_types dt ON d.type_id = dt.id
-      GROUP BY d.type_id, dt.name
+      LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+      GROUP BY d.product_line_id, pl.name
       ORDER BY count DESC
     `;
     
-    const deviceTypeDistribution = await query(deviceTypeQuery);
+    const deviceTypeDistribution = await query(productLineQuery);
     
-    // 位置统计（带状态分解）
-    const locationStatsQuery = `
+    // 产品线分布统计
+    const productLineStatsQuery = `
       SELECT 
-        COALESCE(location, '未指定') as location,
+        COALESCE(pl.name, '未指定') as product_line,
         COUNT(*) as total,
-        SUM(CASE WHEN status = '正常' THEN 1 ELSE 0 END) as normal,
-        SUM(CASE WHEN status = '异常' THEN 1 ELSE 0 END) as abnormal,
-        SUM(CASE WHEN status = '维护中' THEN 1 ELSE 0 END) as maintenance
-      FROM devices
-      GROUP BY location
+        SUM(CASE WHEN d.status = '正常' THEN 1 ELSE 0 END) as normal,
+        SUM(CASE WHEN d.status = '异常' THEN 1 ELSE 0 END) as abnormal,
+        SUM(CASE WHEN d.status = '维护中' THEN 1 ELSE 0 END) as maintenance
+      FROM devices d
+      LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+      GROUP BY d.product_line_id, pl.name
       ORDER BY total DESC
       LIMIT 10
     `;
     
-    const locationStats = await query(locationStatsQuery);
+    const locationStats = await query(productLineStatsQuery);
     
     // 模块类别分布
     const moduleCategoryQuery = `

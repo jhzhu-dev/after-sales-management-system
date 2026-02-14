@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowLeftIcon, 
-  PencilIcon, 
+import {
+  ArrowLeftIcon,
+  PencilIcon,
   CheckIcon,
   ExclamationTriangleIcon,
   ClockIcon,
   UserIcon,
   DevicePhoneMobileIcon,
-  CogIcon
+  CogIcon,
+  PrinterIcon
 } from '@heroicons/react/24/outline';
 import { Issue, IssueFormData } from '../types';
 import { issueApi } from '../services/api';
@@ -19,7 +20,7 @@ import { formatDate, getStatusColor, getSeverityColor } from '../utils';
 export default function IssueDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -149,10 +150,10 @@ export default function IssueDetail() {
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
           <div className="text-gray-500 text-lg">问题不存在或已被删除</div>
           <button
-            onClick={() => navigate('/issues')}
+            onClick={() => navigate('/after-sales?tab=issues')}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            返回问题列表
+            返回售后服务中心
           </button>
         </div>
       </Layout>
@@ -163,6 +164,11 @@ export default function IssueDetail() {
     return null; // 这个情况已经在上面处理了，但为了TypeScript安全
   }
 
+  // 打印页面
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -170,18 +176,25 @@ export default function IssueDetail() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link
-              to="/issues"
-              className="flex items-center text-gray-600 hover:text-gray-900"
+              to="/after-sales?tab=issues"
+              className="flex items-center text-gray-600 hover:text-gray-900 no-print"
             >
               <ArrowLeftIcon className="h-5 w-5 mr-2" />
-              返回问题列表
+              返回售后服务中心
             </Link>
-            <div className="h-6 w-px bg-gray-300" />
+            <div className="h-6 w-px bg-gray-300 no-print" />
             <h1 className="text-2xl font-bold text-gray-900">
               问题详情 #{issue.id}
             </h1>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 no-print">
+            <button
+              onClick={handlePrint}
+              className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+            >
+              <PrinterIcon className="h-4 w-4 mr-2" />
+              打印
+            </button>
             {issue.status !== 'closed' && (
               <button
                 onClick={handleResolve}
@@ -238,77 +251,77 @@ export default function IssueDetail() {
         </div>
 
         {/* 详细信息网格 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2 print:gap-4">
           {/* 设备信息卡片 */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-lg shadow print:shadow-none print:border">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-sm font-medium text-gray-700 flex items-center">
+              <h3 className="text-sm font-medium text-gray-700 flex items-center print:text-xs">
                 <DevicePhoneMobileIcon className="h-4 w-4 mr-2" />
                 设备信息
               </h3>
             </div>
-            <div className="px-6 py-4">
-              <div className="space-y-4">
+            <div className="px-6 py-4 print:px-4 print:py-3">
+              <div className="space-y-4 print:space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">设备名称</span>
-                  <span className="text-sm font-medium text-gray-900">{issue.device_name}</span>
+                  <span className="text-sm text-gray-500 print:text-xs">设备名称</span>
+                  <span className="text-sm font-medium text-gray-900 print:text-xs">{issue.device_name}</span>
                 </div>
                 {issue.device_type && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">设备类型</span>
-                    <span className="text-sm font-medium text-gray-900">{issue.device_type}</span>
+                    <span className="text-sm text-gray-500 print:text-xs">设备类型</span>
+                    <span className="text-sm font-medium text-gray-900 print:text-xs">{issue.device_type}</span>
                   </div>
                 )}
                 {issue.module_category && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">模块</span>
-                    <span className="text-sm font-medium text-gray-900">{issue.module_category}</span>
+                    <span className="text-sm text-gray-500 print:text-xs">模块</span>
+                    <span className="text-sm font-medium text-gray-900 print:text-xs">{issue.module_category}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">责任人</span>
-                  <span className="text-sm font-medium text-gray-900">{issue.assignee || '未分配'}</span>
+                  <span className="text-sm text-gray-500 print:text-xs">跟进人</span>
+                  <span className="text-sm font-medium text-gray-900 print:text-xs">{issue.assignee || '未分配'}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* 时间信息卡片 */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-lg shadow print:shadow-none print:border">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-sm font-medium text-gray-700 flex items-center">
+              <h3 className="text-sm font-medium text-gray-700 flex items-center print:text-xs">
                 <ClockIcon className="h-4 w-4 mr-2" />
                 时间信息
               </h3>
             </div>
-            <div className="px-6 py-4">
-              <div className="space-y-4">
+            <div className="px-6 py-4 print:px-4 print:py-3">
+              <div className="space-y-4 print:space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">创建时间</span>
-                  <span className="text-sm font-medium text-gray-900">
+                  <span className="text-sm text-gray-500 print:text-xs">创建时间</span>
+                  <span className="text-sm font-medium text-gray-900 print:text-xs">
                     {formatDate(issue.created_at, 'yyyy-MM-dd HH:mm')}
                   </span>
                 </div>
                 {issue.updated_at && issue.updated_at !== issue.created_at && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">更新时间</span>
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm text-gray-500 print:text-xs">更新时间</span>
+                    <span className="text-sm font-medium text-gray-900 print:text-xs">
                       {formatDate(issue.updated_at, 'yyyy-MM-dd HH:mm')}
                     </span>
                   </div>
                 )}
                 {issue.resolved_at && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">解决时间</span>
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm text-gray-500 print:text-xs">解决时间</span>
+                    <span className="text-sm font-medium text-gray-900 print:text-xs">
                       {formatDate(issue.resolved_at, 'yyyy-MM-dd HH:mm')}
                     </span>
                   </div>
                 )}
                 {issue.resolved_at && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">处理时长</span>
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm text-gray-500 print:text-xs">处理时长</span>
+                    <span className="text-sm font-medium text-gray-900 print:text-xs">
                       {Math.ceil((new Date(issue.resolved_at).getTime() - new Date(issue.created_at).getTime()) / (1000 * 60 * 60 * 24))} 天
                     </span>
                   </div>
@@ -319,22 +332,22 @@ export default function IssueDetail() {
         </div>
 
         {/* 问题描述和备注 */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-white rounded-lg shadow print:shadow-none print:border">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-sm font-medium text-gray-700 flex items-center">
+            <h3 className="text-sm font-medium text-gray-700 flex items-center print:text-xs">
               <ExclamationTriangleIcon className="h-4 w-4 mr-2" />
               问题详情
             </h3>
           </div>
-          <div className="px-6 py-4">
-            <div className="space-y-6">
+          <div className="px-6 py-4 print:px-4 print:py-3">
+            <div className="space-y-6 print:space-y-3">
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">问题描述</h4>
-                <p className="text-sm text-gray-900 leading-relaxed bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-700 mb-2 print:text-xs print:mb-1">问题描述</h4>
+                <p className="text-sm text-gray-900 leading-relaxed bg-gray-50 p-4 rounded-lg print:text-xs print:p-2">
                   {issue.description}
                 </p>
               </div>
-              
+
               {issue.resolution_description && (
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-2">问题备注</h4>

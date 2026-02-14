@@ -10,15 +10,20 @@ import {
   FilterOptions,
   ApiResponse,
   PaginatedResponse,
-  Submodule,
-  SubmoduleFormData,
-  SubmoduleVersion,
-  VersionRelease
+  VersionRelease,
+  DeviceUpgrade,
+  DeviceUpgradeFormData,
+  ProductLine,
+  Product,
+  ProductModule,
+  ProductModuleHistory,
+  ModuleType,
+  Customer
 } from '../types';
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || `${window.location.protocol}//${window.location.host}/api`,
+  baseURL: process.env.REACT_APP_API_URL || '/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -118,6 +123,48 @@ export const issueApi = {
     api.patch('/issues/batch/status', { issue_ids: issueIds, status }).then(res => res.data),
 };
 
+// 售后统计相关API
+export const afterSalesApi = {
+  // 获取售后趋势
+  getTrend: (): Promise<ApiResponse<any[]>> =>
+    api.get('/after-sales/stats/trend').then(res => res.data),
+
+  // 获取分类统计
+  getCategories: (): Promise<ApiResponse<any[]>> =>
+    api.get('/after-sales/stats/categories').then(res => res.data),
+
+  // 获取严重性统计
+  getSeverities: (): Promise<ApiResponse<any[]>> =>
+    api.get('/after-sales/stats/severities').then(res => res.data),
+
+  // 获取成本统计
+  getCosts: (): Promise<ApiResponse<any>> =>
+    api.get('/after-sales/stats/costs').then(res => res.data),
+
+  // 获取售后概览
+  getOverview: (): Promise<ApiResponse<any>> =>
+    api.get('/after-sales/overview').then(res => res.data),
+};
+
+// 设备升级相关API
+export const deviceUpgradeApi = {
+  // 获取升级记录
+  getUpgrades: (params?: any): Promise<PaginatedResponse<DeviceUpgrade>> =>
+    api.get('/device-upgrades', { params }).then(res => res.data),
+
+  // 创建升级记录
+  createUpgrade: (data: DeviceUpgradeFormData): Promise<ApiResponse<any>> =>
+    api.post('/device-upgrades', data).then(res => res.data),
+
+  // 更新审计记录
+  updateUpgrade: (id: number, data: Partial<DeviceUpgradeFormData>): Promise<ApiResponse<any>> =>
+    api.put(`/device-upgrades/${id}`, data).then(res => res.data),
+
+  // 删除升级记录
+  deleteUpgrade: (id: number): Promise<ApiResponse<void>> =>
+    api.delete(`/device-upgrades/${id}`).then(res => res.data),
+};
+
 // 仪表盘相关API
 export const dashboardApi = {
   // 获取仪表盘统计
@@ -133,7 +180,7 @@ export const dashboardApi = {
     api.get('/dashboard/issues/overview').then(res => res.data),
 
   // 获取版本概览
-  getVersionsOverview: (): Promise<ApiResponse<SubmoduleVersion[]>> =>
+  getVersionsOverview: (): Promise<ApiResponse<any[]>> =>
     api.get('/dashboard/versions/overview').then(res => res.data),
 
   // 获取性能指标
@@ -169,34 +216,6 @@ export const deviceTypeApi = {
     api.delete(`/device-types/${id}`).then(res => res.data),
 };
 
-// 模块类型API
-export const moduleTypeApi = {
-  // 获取模块类型列表
-  getModuleTypes: (params?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    status?: string;
-  }): Promise<PaginatedResponse<any>> =>
-    api.get('/module-types', { params }).then(res => res.data),
-
-  // 获取单个模块类型
-  getModuleType: (id: number): Promise<ApiResponse<any>> =>
-    api.get(`/module-types/${id}`).then(res => res.data),
-
-  // 创建模块类型
-  createModuleType: (data: any): Promise<ApiResponse<any>> =>
-    api.post('/module-types', data).then(res => res.data),
-
-  // 更新模块类型
-  updateModuleType: (id: number, data: any): Promise<ApiResponse<any>> =>
-    api.put(`/module-types/${id}`, data).then(res => res.data),
-
-  // 删除模块类型
-  deleteModuleType: (id: number): Promise<ApiResponse<void>> =>
-    api.delete(`/module-types/${id}`).then(res => res.data),
-};
-
 // 模块相关API (仅用于设备详情页面)
 export const moduleApi = {
   // 获取模块列表
@@ -220,59 +239,7 @@ export const moduleApi = {
     api.delete(`/modules/${id}`).then(res => res.data),
 };
 
-// 子模块API (仅用于设备详情页面)
-export const submoduleApi = {
-  // 获取子模块列表
-  getSubmodules: (params?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    status?: string;
-    module_id?: string;
-  }): Promise<PaginatedResponse<Submodule>> =>
-    api.get('/submodules', { params }).then(res => res.data),
 
-  // 获取单个子模块
-  getSubmodule: (id: string): Promise<ApiResponse<Submodule>> =>
-    api.get(`/submodules/${id}`).then(res => res.data),
-
-  // 创建子模块
-  createSubmodule: (data: SubmoduleFormData): Promise<ApiResponse<Submodule>> =>
-    api.post('/submodules', data).then(res => res.data),
-
-  // 更新子模块
-  updateSubmodule: (id: string, data: SubmoduleFormData): Promise<ApiResponse<Submodule>> =>
-    api.put(`/submodules/${id}`, data).then(res => res.data),
-
-  // 删除子模块
-  deleteSubmodule: (id: string): Promise<ApiResponse<void>> =>
-    api.delete(`/submodules/${id}`).then(res => res.data),
-
-  // 获取指定模块的子模块列表
-  getSubmodulesByModule: (moduleId: string): Promise<ApiResponse<Submodule[]>> =>
-    api.get(`/submodules/module/${moduleId}`).then(res => res.data),
-};
-
-// 子模块版本管理API (仅用于设备详情页面)
-export const submoduleVersionApi = {
-  getSubmoduleVersions: (params?: any): Promise<PaginatedResponse<SubmoduleVersion>> =>
-    api.get('/submodule-versions', { params }).then(res => res.data),
-
-  getSubmoduleVersion: (id: string): Promise<ApiResponse<SubmoduleVersion>> =>
-    api.get(`/submodule-versions/${id}`).then(res => res.data),
-
-  createSubmoduleVersion: (data: Partial<SubmoduleVersion>): Promise<ApiResponse<SubmoduleVersion>> =>
-    api.post('/submodule-versions', data).then(res => res.data),
-
-  updateSubmoduleVersion: (id: string, data: Partial<SubmoduleVersion>): Promise<ApiResponse<SubmoduleVersion>> =>
-    api.put(`/submodule-versions/${id}`, data).then(res => res.data),
-
-  deleteSubmoduleVersion: (id: string): Promise<ApiResponse<void>> =>
-    api.delete(`/submodule-versions/${id}`).then(res => res.data),
-
-  getSubmoduleVersionsBySubmodule: (submoduleId: string, params?: any): Promise<PaginatedResponse<SubmoduleVersion>> =>
-    api.get(`/submodule-versions/submodule/${submoduleId}`, { params }).then(res => res.data),
-};
 
 // 模块版本管理API (新增)
 export const moduleVersionApi = {
@@ -296,6 +263,167 @@ export const versionReleaseApi = {
   // 创建发布记录
   createRelease: (data: Partial<VersionRelease>): Promise<ApiResponse<VersionRelease>> =>
     api.post('/version-releases', data).then(res => res.data),
+};
+
+// 产品线相关API
+export const productLineApi = {
+  getProductLines: (params?: { is_active?: boolean }): Promise<ApiResponse<ProductLine[]>> =>
+    api.get('/product-lines', { params }).then(res => res.data),
+
+  getProductsByLine: (id: number): Promise<ApiResponse<Product[]>> =>
+    api.get(`/product-lines/${id}/products`).then(res => res.data),
+
+  getProductLine: (id: number): Promise<ApiResponse<ProductLine>> =>
+    api.get(`/product-lines/${id}`).then(res => res.data),
+
+  createProductLine: (data: any): Promise<ApiResponse<ProductLine>> =>
+    api.post('/product-lines', data).then(res => res.data),
+
+  updateProductLine: (id: number, data: any): Promise<ApiResponse<any>> =>
+    api.put(`/product-lines/${id}`, data).then(res => res.data),
+
+  deleteProductLine: (id: number): Promise<ApiResponse<void>> =>
+    api.delete(`/product-lines/${id}`).then(res => res.data),
+};
+
+// 产品相关API
+export const productApi = {
+  getProducts: (params?: { product_line_id?: number; is_active?: boolean }): Promise<ApiResponse<Product[]>> =>
+    api.get('/products', { params }).then(res => res.data),
+
+  getProduct: (id: string | number): Promise<ApiResponse<Product>> =>
+    api.get(`/products/${id}`).then(res => res.data),
+
+  createProduct: (data: any): Promise<ApiResponse<Product>> =>
+    api.post('/products', data).then(res => res.data),
+
+  updateProduct: (id: number, data: any): Promise<ApiResponse<any>> =>
+    api.put(`/products/${id}`, data).then(res => res.data),
+
+  deleteProduct: (id: number): Promise<ApiResponse<void>> =>
+    api.delete(`/products/${id}`).then(res => res.data),
+};
+
+// 产品模块配置相关API
+export const productModuleApi = {
+  // 获取产品的模块配置
+  getProductModules: (productId: number): Promise<ApiResponse<ProductModule[]>> =>
+    api.get(`/product-modules/${productId}/modules`).then(res => res.data),
+
+  // 获取模块配置历史
+  getModuleHistory: (productId: number, moduleTypeId: number, params?: { limit?: number }): Promise<ApiResponse<ProductModuleHistory[]>> =>
+    api.get(`/product-modules/${productId}/modules/${moduleTypeId}/history`, { params }).then(res => res.data),
+
+  // 添加模块到产品
+  createProductModule: (productId: number, data: {
+    module_type_id: number;
+    is_required?: boolean;
+    default_config?: any;
+    version_number?: string;
+    change_description?: string;
+    created_by?: string;
+  }): Promise<ApiResponse<ProductModule>> =>
+    api.post(`/product-modules/${productId}/modules`, data).then(res => res.data),
+
+  // 更新产品模块配置（创建新版本）
+  updateProductModule: (productId: number, moduleId: number, data: {
+    is_required?: boolean;
+    default_config?: any;
+    version_number: string;
+    change_description: string;
+    created_by?: string;
+  }): Promise<ApiResponse<any>> =>
+    api.put(`/product-modules/${productId}/modules/${moduleId}`, data).then(res => res.data),
+
+  // 删除产品模块配置
+  deleteProductModule: (productId: number, moduleId: number, created_by?: string): Promise<ApiResponse<void>> =>
+    api.delete(`/product-modules/${productId}/modules/${moduleId}`, { data: { created_by } }).then(res => res.data),
+
+  // 批量添加模块配置（带冲突检测）
+  batchAdd: (data: {
+    product_ids: number[];
+    modules: Array<{
+      module_type_id: number;
+      is_required?: boolean;
+      default_config?: any;
+    }>;
+    version_number?: string;
+    created_by?: string;
+  }): Promise<ApiResponse<any>> =>
+    api.post('/product-modules/batch', data).then(res => res.data),
+
+  // 批量覆盖模块配置
+  batchOverwrite: (data: {
+    product_ids: number[];
+    modules: Array<{
+      module_type_id: number;
+      is_required?: boolean;
+      default_config?: any;
+    }>;
+    version_number?: string;
+    created_by?: string;
+  }): Promise<ApiResponse<any>> =>
+    api.post('/product-modules/batch-overwrite', data).then(res => res.data),
+};
+
+// 模块类型相关API
+export const moduleTypeApi = {
+  // 获取所有模块类型
+  getModuleTypes: (params?: { search?: string; is_active?: boolean; page?: number; limit?: number }): Promise<ApiResponse<ModuleType[]>> =>
+    api.get('/module-types', { params }).then(res => res.data),
+
+  // 获取活跃的模块类型（用于下拉选择）
+  getActiveModuleTypes: (): Promise<ApiResponse<ModuleType[]>> =>
+    api.get('/module-types/active').then(res => res.data),
+
+  // 获取单个模块类型
+  getModuleType: (id: number): Promise<ApiResponse<ModuleType>> =>
+    api.get(`/module-types/${id}`).then(res => res.data),
+
+  // 创建模块类型
+  createModuleType: (data: {
+    name: string;
+    code: string;
+    description?: string;
+    is_active?: boolean;
+  }): Promise<ApiResponse<ModuleType>> =>
+    api.post('/module-types', data).then(res => res.data),
+
+  // 更新模块类型
+  updateModuleType: (id: number, data: {
+    name?: string;
+    code?: string;
+    description?: string;
+    is_active?: boolean;
+  }): Promise<ApiResponse<any>> =>
+    api.put(`/module-types/${id}`, data).then(res => res.data),
+
+  // 删除模块类型
+  deleteModuleType: (id: number): Promise<ApiResponse<void>> =>
+    api.delete(`/module-types/${id}`).then(res => res.data),
+};
+
+// 客户管理API
+export const customerApi = {
+  // 获取客户列表
+  getCustomers: (params?: { search?: string }): Promise<ApiResponse<Customer[]>> =>
+    api.get('/customers', { params }).then(res => res.data),
+
+  // 获取单个客户
+  getCustomer: (id: number): Promise<ApiResponse<Customer>> =>
+    api.get(`/customers/${id}`).then(res => res.data),
+
+  // 创建客户
+  createCustomer: (data: { name: string; short_name: string }): Promise<ApiResponse<Customer>> =>
+    api.post('/customers', data).then(res => res.data),
+
+  // 更新客户
+  updateCustomer: (id: number, data: { name?: string; short_name?: string }): Promise<ApiResponse<Customer>> =>
+    api.put(`/customers/${id}`, data).then(res => res.data),
+
+  // 删除客户
+  deleteCustomer: (id: number): Promise<ApiResponse<void>> =>
+    api.delete(`/customers/${id}`).then(res => res.data),
 };
 
 // 健康检查API

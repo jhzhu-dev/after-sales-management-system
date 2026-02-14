@@ -94,20 +94,139 @@ router.post('/', [
         }
 
         const insertQuery = `
-      INSERT INTO version_releases (module_type_id, version_number, title, change_log)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO version_releases (module_type_id, version_number, title, change_log, release_date)
+      VALUES (?, ?, ?, ?, ?)
     `;
 
-        const result = await query(insertQuery, [module_type_id, version_number, title, change_log]);
+        const releaseDate = req.body.release_date || new Date().toISOString().split('T')[0];
+        const result = await query(insertQuery, [module_type_id, version_number, title, change_log, releaseDate]);
 
         res.status(201).json({
             success: true,
             message: '版本发布记录创建成功',
-            data: { id: result.insertId, module_type_id, version_number, title, change_log }
+            data: { id: result.insertId, module_type_id, version_number, title, change_log, release_date: releaseDate }
         });
     } catch (error) {
         console.error('创建版本发布记录失败:', error);
         res.status(500).json({ success: false, error: '创建版本发布记录失败' });
+    }
+});
+
+// 更新版本发布记录
+router.put('/:id', [
+    body('version_number').optional().notEmpty().withMessage('版本号不能为空'),
+    body('title').optional().notEmpty().withMessage('标题不能为空'),
+    body('change_log').optional().isString(),
+    body('release_date').optional().isString()
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                error: '输入数据无效',
+                details: errors.array()
+            });
+        }
+
+        const { id } = req.params;
+        const { version_number, title, change_log, release_date } = req.body;
+
+        // 检查版本发布记录是否存在
+        const existing = await query('SELECT id FROM version_releases WHERE id = ?', [id]);
+        if (existing.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: '版本发布记录不存在'
+            });
+        }
+
+        const updates = [];
+        const params = [];
+
+        if (version_number !== undefined) {
+            updates.push('version_number = ?');
+            params.push(version_number);
+        }
+        if (title !== undefined) {
+            updates.push('title = ?');
+            params.push(title);
+        }
+        if (change_log !== undefined) {
+            updates.push('change_log = ?');
+            params.push(change_log);
+        }
+        if (release_date !== undefined) {
+            updates.push('release_date = ?');
+            params.push(release_date);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: '没有提供要更新的字段'
+            });
+        }
+
+        params.push(id);
+
+        await query(
+            `UPDATE version_releases SET ${updates.join(', ')}, updated_at = NOW() WHERE id = ?`,
+            params
+        );
+
+        res.json({
+            success: true,
+            message: '版本发布记录更新成功'
+        });
+    } catch (error) {
+        console.error('更新版本发布记录失败:', error);
+        res.status(500).json({
+            success: false,
+            error: '更新版本发布记录失败',
+            message: error.message
+        });
+    }
+});
+
+// 删除版本发布记录
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 检查是否有模块使用该版本
+        const modulesUsingVersion = await query(
+            'SELECT COUNT(*) as count FROM modules WHERE version_id = ?',
+            [id]
+        );
+
+        if (modulesUsingVersion[0].count > 0) {
+            return res.status(400).json({
+                success: false,
+                error: `无法删除：有 ${modulesUsingVersion[0].count} 个模块正在使用该版本`
+            });
+        }
+
+        const result = await query('DELETE FROM version_releases WHERE id = ?', [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                error: '版本发布记录不存在'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: '版本发布记录删除成功'
+        });
+    } catch (error) {
+        console.error('删除版本发布记录失败:', error);
+        res.status(500).json({
+            success: false,
+            error: '删除版本发布记录失败',
+            message: error.message
+        });
     }
 });
 
