@@ -62,8 +62,7 @@ export default function Devices() {
         device.name.toLowerCase().includes(searchLower) ||
         device.id.toLowerCase().includes(searchLower) ||
         (device.customer_name && device.customer_name.toLowerCase().includes(searchLower)) ||
-        (device.customer_short_name && device.customer_short_name.toLowerCase().includes(searchLower)) ||
-        (device.location && device.location.toLowerCase().includes(searchLower))
+        (device.customer_short_name && device.customer_short_name.toLowerCase().includes(searchLower))
       );
     }
 
@@ -258,7 +257,12 @@ export default function Devices() {
           try {
             const modulesResponse = await productModuleApi.getProductModules(data.product_id);
             if (modulesResponse.success && modulesResponse.data.length > 0) {
-              const moduleCreationPromises = modulesResponse.data.map(async (productModule) => {
+              // 根据选中的模块类型ID过滤
+              const selectedIds = data.selectedModuleTypeIds;
+              const modulesToCreate = selectedIds
+                ? modulesResponse.data.filter(m => selectedIds.includes(m.module_type_id))
+                : modulesResponse.data;
+              const moduleCreationPromises = modulesToCreate.map(async (productModule) => {
                 try {
                   await moduleApi.createModule({
                     device_id: newDeviceId,
@@ -321,7 +325,7 @@ export default function Devices() {
   const columns = [
     {
       key: 'id' as keyof Device,
-      title: <SortableHeader field="id" title="设备编号" />,
+      title: <SortableHeader field="id" title="生产序列号" />,
       render: (value: string, record: Device) => (
         <Link
           to={`/devices/${value}`}
@@ -333,19 +337,25 @@ export default function Devices() {
     },
     {
       key: 'name' as keyof Device,
-      title: <SortableHeader field="name" title="设备名称" />,
+      title: <SortableHeader field="name" title="名称" />,
       render: (value: string) => (
         <div className="font-medium text-gray-900">{value}</div>
       )
     },
     {
-      key: 'product_line_name' as keyof Device,
-      title: <SortableHeader field="product_line_name" title="产品线" />,
-      render: (value: string) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDeviceTypeColor(value)}`}>
-          {value}
-        </span>
-      )
+      key: 'product_name' as keyof Device,
+      title: <SortableHeader field="product_name" title="产品" />,
+      render: (value: string, record: Device) => {
+        // 如果有产品信息，显示产品名称，否则显示产品线名称
+        const displayText = value ? 
+          (record.product_model ? `${value} (${record.product_model})` : value) : 
+          (record.product_line_name || '-');
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDeviceTypeColor(record.product_line_name || '')}`}>
+            {displayText}
+          </span>
+        );
+      }
     },
     {
       key: 'customer_name' as keyof Device,
@@ -357,13 +367,6 @@ export default function Devices() {
             <div className="text-xs text-gray-400">{record.customer_short_name}</div>
           )}
         </div>
-      )
-    },
-    {
-      key: 'location' as keyof Device,
-      title: <SortableHeader field="location" title="位置" />,
-      render: (value: string) => (
-        <div className="text-gray-600 text-sm">{value || '-'}</div>
       )
     },
     {
@@ -433,7 +436,7 @@ export default function Devices() {
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
-            创建设备
+            新增设备
           </button>
         </div>
 

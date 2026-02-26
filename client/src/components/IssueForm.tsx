@@ -280,10 +280,10 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
             )}
           </div>
 
-          {/* 跟进人 */}
+          {/* 登记人 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              跟进人
+              登记人
             </label>
             <input
               type="text"
@@ -291,7 +291,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               value={formData.assignee}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="请输入跟进人"
+              placeholder="请输入登记人"
             />
           </div>
 

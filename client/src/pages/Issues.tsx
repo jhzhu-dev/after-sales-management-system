@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { PlusIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon, ChatBubbleLeftRightIcon, ArrowPathIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { issueApi } from '../services/api';
 import { Issue, FilterOptions, IssueFormData } from '../types';
 import Layout from '../components/Layout';
@@ -10,6 +10,18 @@ import { formatDate, getStatusColor, getSeverityColor } from '../utils';
 
 export default function Issues() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<'issues' | 'upgrades'>('issues');
+
+  // 从URL参数读取tab
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab === 'issues' || tab === 'upgrades') {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
+
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
@@ -31,14 +43,35 @@ export default function Issues() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
   const [showIssueForm, setShowIssueForm] = useState(false);
-  const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
   const [moduleTypes, setModuleTypes] = useState<Array<{id: string, name: string}>>([]);
   const [productLines, setProductLines] = useState<Array<{id: string, name: string}>>([]);
 
+  // 版本演进 State
+  const [upgrades, setUpgrades] = useState<any[]>([]);
+  const [upgradeTotal, setUpgradeTotal] = useState(0);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [upgradeFilters, setUpgradeFilters] = useState({
+    search: '',
+    module_type: '',
+    version_type: '',
+    customer: ''
+  });
+  const [customers, setCustomers] = useState<any[]>([]);
+
   useEffect(() => {
-    console.log('useEffect触发，当前筛选条件:', filters);
-    fetchIssues();
-  }, [filters]);
+    if (activeTab === 'issues') {
+      console.log('useEffect触发，当前筛选条件:', filters);
+      fetchIssues();
+    }
+  }, [filters, activeTab]);
+
+  // 版本演进数据
+  useEffect(() => {
+    if (activeTab === 'upgrades') {
+      fetchUpgrades();
+      if (customers.length === 0) fetchCustomers();
+    }
+  }, [activeTab, upgradeFilters]);
 
   // 添加一个useEffect来监听筛选条件变化
   useEffect(() => {
@@ -50,6 +83,65 @@ export default function Issues() {
     fetchModuleTypes();
     fetchProductLines();
   }, []);
+
+  const fetchCustomers = async () => {
+    try {
+      const res = await fetch('/api/customers');
+      const result = await res.json();
+      if (result.success) {
+        setCustomers(result.data);
+      }
+    } catch (error) {
+      console.error('获取客户列表失败:', error);
+    }
+  };
+
+  const fetchUpgrades = async () => {
+    try {
+      setUpgradeLoading(true);
+      const params = new URLSearchParams({ page: '1', limit: '200' });
+      if (upgradeFilters.search) params.append('search', upgradeFilters.search);
+      if (upgradeFilters.version_type) params.append('version_type', upgradeFilters.version_type);
+
+      const res = await fetch(`/api/versions?${params.toString()}`);
+      const result = await res.json();
+      if (result.success) {
+        let allData = result.data;
+        // 按模块分组，计算每条update记录的旧版本号
+        const byModule: Record<string, any[]> = {};
+        allData.forEach((v: any) => {
+          const key = v.module_id;
+          if (!byModule[key]) byModule[key] = [];
+          byModule[key].push(v);
+        });
+        Object.values(byModule).forEach(arr =>
+          arr.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        );
+        allData = allData.map((v: any) => {
+          if (v.version_type === 'update') {
+            const moduleVersions = byModule[v.module_id] || [];
+            const idx = moduleVersions.findIndex((mv: any) => mv.id === v.id);
+            const oldVersion = idx > 0 ? moduleVersions[idx - 1].version_number : null;
+            return { ...v, old_version: oldVersion };
+          }
+          return v;
+        });
+        let filteredData = allData;
+        if (upgradeFilters.module_type) {
+          filteredData = filteredData.filter((item: any) => item.module_type === upgradeFilters.module_type);
+        }
+        if (upgradeFilters.customer) {
+          filteredData = filteredData.filter((item: any) => item.customer_name === upgradeFilters.customer);
+        }
+        setUpgrades(filteredData);
+        setUpgradeTotal(filteredData.length);
+      }
+    } catch (error) {
+      console.error('获取版本升级历史失败:', error);
+    } finally {
+      setUpgradeLoading(false);
+    }
+  };
 
   const fetchModuleTypes = async () => {
     try {
@@ -199,42 +291,22 @@ export default function Issues() {
   };
 
   const handleAdd = () => {
-    setEditingIssue(null);
     setShowIssueForm(true);
-  };
-
-  const handleEdit = (issue: Issue, event?: React.MouseEvent) => {
-    // 阻止事件冒泡，防止触发行点击事件
-    if (event) {
-      event.stopPropagation();
-    }
-    setEditingIssue(issue);
-    setShowIssueForm(true);
-  };
-
-  const handleRowClick = (issue: Issue) => {
-    navigate(`/issues/${issue.id}`);
-  };
-
-  const handleCloseIssueForm = () => {
-    setShowIssueForm(false);
-    setEditingIssue(null);
   };
 
   const handleIssueSubmit = async (data: IssueFormData) => {
     try {
-      if (editingIssue) {
-        await issueApi.updateIssue(editingIssue.id, data);
-      } else {
-        await issueApi.createIssue(data);
-      }
+      await issueApi.createIssue(data);
       await fetchIssues();
       setShowIssueForm(false);
-      setEditingIssue(null);
     } catch (error) {
       console.error('保存问题失败:', error);
       throw error;
     }
+  };
+
+  const handleRowClick = (issue: Issue) => {
+    navigate(`/issues/${issue.id}`);
   };
 
   const handleBatchStatusUpdate = async (status: string) => {
@@ -319,11 +391,12 @@ export default function Issues() {
       render: (value: number, record: Issue) => (
         <Link 
           to={`/issues/${value}`} 
-          className="text-blue-600 hover:text-blue-800 font-medium"
+          className="text-blue-600 hover:text-blue-800 font-medium text-xs font-mono"
         >
           #{value}
         </Link>
-      )
+      ),
+      width: '140px'
     },
     {
       key: 'device_name' as keyof Issue,
@@ -331,16 +404,18 @@ export default function Issues() {
       render: (value: string, record: Issue) => (
         <div>
           <div className="font-medium text-gray-900">{value}</div>
-          <div className="text-sm text-gray-500">{record.device_type}</div>
+          <div className="text-sm text-gray-500">{[record.device_type, record.product_name].filter(Boolean).join('-') || '-'}</div>
         </div>
-      )
+      ),
+      width: '140px'
     },
     {
       key: 'module_category' as keyof Issue,
       title: <SortableHeader field="module_category" title="模块" />,
       render: (value: string) => (
         <div className="text-gray-900">{value || '-'}</div>
-      )
+      ),
+      width: '80px'
     },
     {
       key: 'description' as keyof Issue,
@@ -354,6 +429,7 @@ export default function Issues() {
     {
       key: 'severity' as keyof Issue,
       title: <SortableHeader field="severity" title="严重性" />,
+      width: '80px',
       render: (value: string) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSeverityColor(value)}`}>
           {value === 'low' ? '低' : value === 'medium' ? '中' : '高'}
@@ -363,6 +439,7 @@ export default function Issues() {
     {
       key: 'status' as keyof Issue,
       title: <SortableHeader field="status" title="状态" />,
+      width: '80px',
       render: (value: string) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
           {value === 'open' ? '待处理' : value === 'in_progress' ? '处理中' : '已解决'}
@@ -370,15 +447,9 @@ export default function Issues() {
       )
     },
     {
-      key: 'assignee' as keyof Issue,
-      title: <SortableHeader field="assignee" title="跟进人" />,
-      render: (value: string) => (
-        <div className="text-gray-900">{value || '-'}</div>
-      )
-    },
-    {
       key: 'created_at' as keyof Issue,
       title: <SortableHeader field="created_at" title="创建时间" />,
+      width: '110px',
       render: (value: string) => (
         <div className="text-gray-500">{formatDate(value, 'yyyy-MM-dd')}</div>
       )
@@ -386,22 +457,17 @@ export default function Issues() {
     {
       key: 'actions' as keyof Issue,
       title: '操作',
+      width: '70px',
       render: (value: any, record: Issue) => (
         <div className="flex items-center space-x-2">
           <Link
             to={`/issues/${record.id}`}
             className="text-blue-600 hover:text-blue-800"
             title="查看详情"
+            onClick={(e) => e.stopPropagation()}
           >
             <EyeIcon className="h-4 w-4" />
           </Link>
-          <button
-            onClick={(e) => handleEdit(record, e)}
-            className="text-yellow-600 hover:text-yellow-800"
-            title="编辑"
-          >
-            <PencilIcon className="h-4 w-4" />
-          </button>
           <button
             onClick={(e) => handleDelete(record.id, e)}
             className="text-red-600 hover:text-red-800"
@@ -414,12 +480,181 @@ export default function Issues() {
     }
   ];
 
+  const renderUpgrades = () => {
+    const upgradeColumns = [
+      {
+        key: 'device_name',
+        title: '设备名称',
+        render: (_: any, item: any) => (
+          <div>
+            <div className="font-medium text-gray-900">{item.device_name}</div>
+            <div className="text-xs text-gray-500">{item.device_id}</div>
+          </div>
+        )
+      },
+      {
+        key: 'module_type',
+        title: '模块类型',
+        render: (val: string) => (
+          <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+            {val}
+          </span>
+        )
+      },
+      {
+        key: 'module_name',
+        title: '模块',
+        render: (_: any, item: any) => (
+          <div>
+            <div className="font-medium text-gray-900">{item.module_type || '-'}</div>
+            <div className="text-xs text-gray-500">{item.device_name || '-'}</div>
+          </div>
+        )
+      },
+      {
+        key: 'version_number',
+        title: '版本号',
+        render: (val: string, item: any) => (
+          <div className="flex items-center gap-2">
+            {item.version_type === 'update' && item.old_version && (
+              <>
+                <span className="font-mono text-gray-400">{item.old_version}</span>
+                <span className="text-gray-400">→</span>
+              </>
+            )}
+            <span className="font-mono font-bold text-blue-600">{val}</span>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+              item.version_type === 'factory'
+                ? 'bg-gray-100 text-gray-600'
+                : 'bg-green-100 text-green-700'
+            }`}>
+              {item.version_type === 'factory' ? '出厂' : '更新'}
+            </span>
+          </div>
+        )
+      },
+      {
+        key: 'description',
+        title: '变更说明',
+        render: (val: string) => (
+          <div className="text-sm text-gray-600 max-w-xs truncate" title={val}>
+            {val || '-'}
+          </div>
+        )
+      },
+      {
+        key: 'updated_by',
+        title: '操作人',
+        render: (val: string) => val || '-'
+      },
+      {
+        key: 'release_date',
+        title: '发布日期',
+        render: (val: string) => val ? new Date(val).toLocaleDateString() : '-'
+      }
+    ];
+
+    return (
+      <div className="space-y-4">
+        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="搜索设备、子模块名称..."
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500"
+                value={upgradeFilters.search}
+                onChange={e => setUpgradeFilters(f => ({ ...f, search: e.target.value }))}
+              />
+            </div>
+            <select
+              className="bg-gray-50 border-none rounded-lg py-2 pl-3 pr-8 focus:ring-2 focus:ring-blue-500"
+              value={upgradeFilters.module_type}
+              onChange={e => setUpgradeFilters(f => ({ ...f, module_type: e.target.value }))}
+            >
+              <option value="">所有模块类型</option>
+              <option value="机械">机械</option>
+              <option value="电气">电气</option>
+              <option value="上位机">上位机</option>
+              <option value="服务器">服务器</option>
+              <option value="视觉">视觉</option>
+            </select>
+            <select
+              className="bg-gray-50 border-none rounded-lg py-2 pl-3 pr-8 focus:ring-2 focus:ring-blue-500"
+              value={upgradeFilters.version_type}
+              onChange={e => setUpgradeFilters(f => ({ ...f, version_type: e.target.value }))}
+            >
+              <option value="">所有版本类型</option>
+              <option value="factory">出厂版本</option>
+              <option value="update">更新版本</option>
+            </select>
+            <select
+              className="bg-gray-50 border-none rounded-lg py-2 pl-3 pr-8 focus:ring-2 focus:ring-blue-500"
+              value={upgradeFilters.customer}
+              onChange={e => setUpgradeFilters(f => ({ ...f, customer: e.target.value }))}
+            >
+              <option value="">所有客户</option>
+              {customers.map(c => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+            <div className="flex-1"></div>
+            <p className="text-sm text-gray-500 whitespace-nowrap">共 {upgradeTotal} 条</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <DataTable
+            columns={upgradeColumns as any}
+            data={upgrades}
+            loading={upgradeLoading}
+            rowKey="id"
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
-        {/* 页面标题和操作 */}
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">售后问题管理</h1>
+        {/* 顶部标题与Tab切换 */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-black text-gray-900 tracking-tight">故障与升级</h1>
+              <p className="text-gray-500 text-sm mt-1 font-medium">统一管理全生命周期的故障报修与升级演进</p>
+            </div>
+            <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
+              {[
+                { id: 'issues' as const, label: '故障管理', icon: ChatBubbleLeftRightIcon },
+                { id: 'upgrades' as const, label: '版本演进', icon: ArrowPathIcon }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <tab.icon className={`w-4 h-4 mr-2 ${activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'}`} />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 版本演进内容 */}
+        {activeTab === 'upgrades' && renderUpgrades()}
+
+        {/* 故障管理内容 */}
+        {activeTab === 'issues' && (<>
+
+        {/* 批量操作按钮 */}
+        <div className="flex justify-end">
           <button
             onClick={handleAdd}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
@@ -563,11 +798,12 @@ export default function Issues() {
           onRowClick={handleRowClick}
         />
 
-        {/* 问题表单弹窗 */}
+        </>)}
+
+        {/* 新增问题表单弹窗 */}
         {showIssueForm && (
           <IssueForm
-            issue={editingIssue}
-            onClose={handleCloseIssueForm}
+            onClose={() => setShowIssueForm(false)}
             onSubmit={handleIssueSubmit}
           />
         )}

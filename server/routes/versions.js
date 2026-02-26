@@ -6,7 +6,7 @@ const router = express.Router();
 // 获取所有版本记录
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 10, module_id, version_type } = req.query;
+    const { page = 1, limit = 10, module_id, version_type, device_id } = req.query;
 
     // 参数验证
     const pageNum = Number.isInteger(parseInt(page)) ? parseInt(page) : 1;
@@ -24,6 +24,11 @@ router.get('/', async (req, res) => {
     if (version_type) {
       whereConditions.push('mv.version_type = ?');
       params.push(version_type);
+    }
+
+    if (device_id) {
+      whereConditions.push('m.device_id = ?');
+      params.push(device_id);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
@@ -51,6 +56,7 @@ router.get('/', async (req, res) => {
     const countQuery = `
       SELECT COUNT(*) as total
       FROM module_versions mv
+      LEFT JOIN modules m ON mv.module_id = m.id
       ${whereClause}
     `;
 

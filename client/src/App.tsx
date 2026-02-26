@@ -30,8 +30,8 @@ function App() {
             <Route path="/product-lines" element={<ProductLines />} />
             <Route path="/products" element={<Products />} />
             <Route path="/products/:id" element={<ProductDetail />} />
-            <Route path="/after-sales" element={<AfterSales />} />
-            <Route path="/upgrades" element={<Navigate to="/after-sales?tab=upgrades" replace />} />
+            <Route path="/after-sales" element={<Navigate to="/issues" replace />} />
+            <Route path="/upgrades" element={<Navigate to="/issues" replace />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </React.Suspense>

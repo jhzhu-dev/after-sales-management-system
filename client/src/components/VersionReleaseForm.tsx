@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect, useRef } from 'react';
+import { XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 
 interface ModuleType {
   id: number;
@@ -14,26 +14,34 @@ interface VersionRelease {
   version_number: string;
   title: string;
   change_log?: string;
+  category?: string;
   release_date: string;
 }
 
 interface VersionReleaseFormProps {
   versionRelease?: VersionRelease | null;
   moduleType?: ModuleType | null;
+  productLines?: { id: number; name: string }[];
+  existingCategories?: string[];
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: any, files?: File[]) => Promise<void>;
 }
 
-const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease, moduleType, onClose, onSubmit }) => {
+const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease, moduleType, productLines = [], existingCategories = [], onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
     module_type_id: 0,
     version_number: '',
     title: '',
     change_log: '',
+    category: '',
     release_date: new Date().toISOString().split('T')[0]
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [categoryMode, setCategoryMode] = useState<'select' | 'custom'>('select');
+  const [customCategory, setCustomCategory] = useState('');
 
   useEffect(() => {
     if (versionRelease) {
@@ -42,15 +50,22 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
         version_number: versionRelease.version_number || '',
         title: versionRelease.title || '',
         change_log: versionRelease.change_log || '',
+        category: versionRelease.category || '',
         release_date: versionRelease.release_date ? versionRelease.release_date.split('T')[0] : new Date().toISOString().split('T')[0]
       });
+      // 判断是已有分类还是自定义
+      const allOptions = [...(productLines || []).map(pl => pl.name), ...(existingCategories || [])];
+      if (versionRelease.category && !allOptions.includes(versionRelease.category)) {
+        setCategoryMode('custom');
+        setCustomCategory(versionRelease.category);
+      }
     } else if (moduleType) {
       setFormData(prev => ({
         ...prev,
         module_type_id: moduleType.id
       }));
     }
-  }, [versionRelease, moduleType]);
+  }, [versionRelease, moduleType, productLines, existingCategories]);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -80,7 +95,11 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
 
     setLoading(true);
     try {
-      await onSubmit(formData);
+      const submitData = {
+        ...formData,
+        category: categoryMode === 'custom' ? customCategory.trim() : formData.category
+      };
+      await onSubmit(submitData, files.length > 0 ? files : undefined);
       onClose();
     } catch (error: any) {
       console.error('提交失败:', error);
@@ -171,6 +190,70 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
             )}
           </div>
 
+          {/* 分类 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              分类
+            </label>
+            <div className="flex items-center gap-3 mb-2">
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  checked={categoryMode === 'select'}
+                  onChange={() => setCategoryMode('select')}
+                  className="text-blue-600"
+                />
+                选择分类
+              </label>
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  checked={categoryMode === 'custom'}
+                  onChange={() => setCategoryMode('custom')}
+                  className="text-blue-600"
+                />
+                自定义分类
+              </label>
+            </div>
+            {categoryMode === 'select' ? (
+              <select
+                name="category"
+                value={formData.category}
+                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">不选择分类</option>
+                {productLines.length > 0 && (
+                  <optgroup label="按产品线">
+                    {productLines.map(pl => (
+                      <option key={`pl-${pl.id}`} value={pl.name}>{pl.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {existingCategories.filter(c => !productLines.some(pl => pl.name === c)).length > 0 && (
+                  <optgroup label="已有分类">
+                    {existingCategories
+                      .filter(c => !productLines.some(pl => pl.name === c))
+                      .map(c => (
+                        <option key={`cat-${c}`} value={c}>{c}</option>
+                      ))}
+                  </optgroup>
+                )}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="输入自定义分类名称"
+              />
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              可按产品线选择分类，也可自定义分类名称
+            </p>
+          </div>
+
           {/* 发布日期 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -216,6 +299,64 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
             <p className="mt-1 text-xs text-gray-500">
               建议按 新增功能、优化改进、Bug修复 分类描述
             </p>
+          </div>
+
+          {/* 附件上传 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              附件
+            </label>
+            <div
+              className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const droppedFiles = Array.from(e.dataTransfer.files);
+                setFiles(prev => [...prev, ...droppedFiles]);
+              }}
+            >
+              <ArrowUpTrayIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">点击或拖拽文件到此处上传</p>
+              <p className="text-xs text-gray-400 mt-1">支持任意格式，单个文件最大100MB</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                    e.target.value = '';
+                  }
+                }}
+              />
+            </div>
+            {files.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {files.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <PaperClipIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                      <span className="text-xs text-gray-400 flex-shrink-0">
+                        {file.size < 1024 * 1024
+                          ? `${(file.size / 1024).toFixed(1)} KB`
+                          : `${(file.size / 1024 / 1024).toFixed(1)} MB`}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFiles(prev => prev.filter((_, i) => i !== index))}
+                      className="text-red-400 hover:text-red-600 flex-shrink-0"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 错误提示 */}

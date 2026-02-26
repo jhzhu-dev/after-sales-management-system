@@ -202,6 +202,19 @@ router.delete('/:id', async (req, res) => {
             });
         }
 
+        // 检查是否有关联的设备
+        const devices = await query(
+            'SELECT COUNT(*) as count FROM devices WHERE product_line_id = ?',
+            [id]
+        );
+
+        if (devices[0].count > 0) {
+            return res.status(400).json({
+                success: false,
+                error: '该产品线下还有设备，无法删除'
+            });
+        }
+
         const result = await query('DELETE FROM product_lines WHERE id = ?', [id]);
 
         if (result.affectedRows === 0) {

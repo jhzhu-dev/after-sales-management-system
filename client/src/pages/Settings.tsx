@@ -10,7 +10,6 @@ import {
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import { formatDate } from '../utils';
-import SOPConfig from '../components/SOPConfig';
 import { moduleTypeApi, customerApi } from '../services/api';
 import { ModuleType, Customer } from '../types';
 
@@ -23,7 +22,7 @@ interface ModuleTypeFormData {
 }
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'module-types' | 'customers' | 'sop-templates'>('module-types');
+  const [activeTab, setActiveTab] = useState<'module-types' | 'customers'>('module-types');
   const [moduleTypes, setModuleTypes] = useState<ModuleType[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -242,7 +241,6 @@ export default function Settings() {
           <nav className="-mb-px flex space-x-8">
             <button onClick={() => setActiveTab('module-types')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'module-types' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>模块类型管理</button>
             <button onClick={() => setActiveTab('customers')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'customers' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>客户管理</button>
-            <button onClick={() => setActiveTab('sop-templates')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'sop-templates' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>SOP 模版管理</button>
           </nav>
         </div>
 
@@ -273,7 +271,6 @@ export default function Settings() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">代码</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">描述</th>
@@ -285,7 +282,6 @@ export default function Settings() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {moduleTypes.map((moduleType) => (
                       <tr key={moduleType.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{moduleType.id}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{moduleType.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{moduleType.code}</td>
                         <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{moduleType.description || '-'}</td>
@@ -417,8 +413,6 @@ export default function Settings() {
             )}
           </div>
         )}
-
-        {activeTab === 'sop-templates' && <SOPConfig />}
 
         {activeTab === 'customers' && (
           <div>

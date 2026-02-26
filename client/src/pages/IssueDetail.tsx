@@ -15,6 +15,7 @@ import { Issue, IssueFormData } from '../types';
 import { issueApi } from '../services/api';
 import Layout from '../components/Layout';
 import IssueForm from '../components/IssueForm';
+import IssueLogTimeline from '../components/IssueLogTimeline';
 import { formatDate, getStatusColor, getSeverityColor } from '../utils';
 
 export default function IssueDetail() {
@@ -150,10 +151,10 @@ export default function IssueDetail() {
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
           <div className="text-gray-500 text-lg">问题不存在或已被删除</div>
           <button
-            onClick={() => navigate('/after-sales?tab=issues')}
+            onClick={() => navigate('/issues')}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            返回售后服务中心
+            返回售后问题管理
           </button>
         </div>
       </Layout>
@@ -176,11 +177,11 @@ export default function IssueDetail() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link
-              to="/after-sales?tab=issues"
+              to="/issues"
               className="flex items-center text-gray-600 hover:text-gray-900 no-print"
             >
               <ArrowLeftIcon className="h-5 w-5 mr-2" />
-              返回售后服务中心
+              返回售后问题管理
             </Link>
             <div className="h-6 w-px bg-gray-300 no-print" />
             <h1 className="text-2xl font-bold text-gray-900">
@@ -279,7 +280,7 @@ export default function IssueDetail() {
                   </div>
                 )}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500 print:text-xs">跟进人</span>
+                  <span className="text-sm text-gray-500 print:text-xs">登记人</span>
                   <span className="text-sm font-medium text-gray-900 print:text-xs">{issue.assignee || '未分配'}</span>
                 </div>
               </div>
@@ -357,6 +358,19 @@ export default function IssueDetail() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* 处理记录时间线 - 不打印 */}
+        <div className="bg-white rounded-lg shadow print:hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-sm font-medium text-gray-700 flex items-center">
+              <ClockIcon className="h-4 w-4 mr-2" />
+              处理流程
+            </h3>
+          </div>
+          <div className="px-6 py-4">
+            <IssueLogTimeline issueId={id!} onLogAdded={fetchIssue} />
           </div>
         </div>
 

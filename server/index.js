@@ -12,6 +12,7 @@ const deviceRoutes = require('./routes/devices');
 const moduleRoutes = require('./routes/modules');
 const versionRoutes = require('./routes/versions');
 const issueRoutes = require('./routes/issues');
+const issueLogRoutes = require('./routes/issue-logs');
 const dashboardRoutes = require('./routes/dashboard');
 const moduleTypeRoutes = require('./routes/module-types');
 const versionReleaseRoutes = require('./routes/version-releases');
@@ -21,10 +22,10 @@ const productLineRoutes = require('./routes/product-lines');
 const productRoutes = require('./routes/products');
 const productModuleRoutes = require('./routes/product-modules');
 const productDocumentRoutes = require('./routes/product-documents');
+const deviceDocumentRoutes = require('./routes/device-documents');
 const uploadRoutes = require('./routes/uploads');
 
-// SOP模板路由 (设备维护SOP)
-const sopTemplateRoutes = require('./routes/sop-templates');
+
 
 // Phase 4: 售后管理集成路由
 const afterSalesRoutes = require('./routes/after-sales');
@@ -138,6 +139,7 @@ app.use('/api/devices', deviceRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/versions', versionRoutes);
 app.use('/api/issues', issueRoutes);
+app.use('/api/issue-logs', issueLogRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/module-types', moduleTypeRoutes);
 app.use('/api/version-releases', versionReleaseRoutes);
@@ -147,7 +149,7 @@ app.use('/api/product-lines', productLineRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/product-modules', productModuleRoutes);
 app.use('/api/product-documents', productDocumentRoutes);
-app.use('/api/sop-templates', sopTemplateRoutes);
+app.use('/api/device-documents', deviceDocumentRoutes);
 app.use('/api/uploads', uploadRoutes);
 
 // 客户管理路由

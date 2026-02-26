@@ -12,11 +12,13 @@ import {
     Squares2X2Icon,
     ListBulletIcon,
     PencilIcon,
-    TrashIcon
+    TrashIcon,
+    PaperClipIcon,
+    ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import VersionReleaseForm from '../components/VersionReleaseForm';
-import { versionReleaseApi, moduleTypeApi } from '../services/api';
+import { versionReleaseApi, moduleTypeApi, productLineApi } from '../services/api';
 import { VersionRelease } from '../types';
 import axios from 'axios';
 
@@ -31,6 +33,10 @@ const ReleaseLibrary: React.FC = () => {
     const [selectedRelease, setSelectedRelease] = useState<VersionRelease | null>(null);
     const [editingRelease, setEditingRelease] = useState<VersionRelease | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [detailAttachments, setDetailAttachments] = useState<any[]>([]);
+    const [productLines, setProductLines] = useState<{ id: number; name: string }[]>([]);
+    const [existingCategories, setExistingCategories] = useState<string[]>([]);
+    const [activeCategory, setActiveCategory] = useState<string>('');
 
     const fetchModuleTypes = async () => {
         try {
@@ -54,6 +60,9 @@ const ReleaseLibrary: React.FC = () => {
             });
             if (response.success) {
                 setReleases(response.data);
+                // 提取当前 tab 下的所有分类
+                const cats = [...new Set(response.data.map((r: any) => r.category).filter(Boolean))];
+                setExistingCategories(cats as string[]);
             }
         } catch (error) {
             console.error('获取版本发布列表失败:', error);
@@ -62,13 +71,26 @@ const ReleaseLibrary: React.FC = () => {
         }
     };
 
+    const fetchProductLines = async () => {
+        try {
+            const response = await productLineApi.getProductLines();
+            if (response.success) {
+                setProductLines(response.data.map((pl: any) => ({ id: pl.id, name: pl.name })));
+            }
+        } catch (error) {
+            console.error('获取产品线失败:', error);
+        }
+    };
+
     useEffect(() => {
         fetchModuleTypes();
+        fetchProductLines();
     }, []);
 
     useEffect(() => {
         if (activeTypeId !== null) {
             fetchReleases();
+            setActiveCategory('');
         }
     }, [activeTypeId]);
 
@@ -87,12 +109,15 @@ const ReleaseLibrary: React.FC = () => {
         setEditingRelease(null);
     };
 
-    const handleSubmit = async (formData: any) => {
+    const handleSubmit = async (formData: any, files?: File[]) => {
         try {
+            let releaseId: number | null = null;
+
             if (editingRelease) {
                 // 更新版本
                 const response = await axios.put(`/api/version-releases/${editingRelease.id}`, formData);
                 if (response.data.success) {
+                    releaseId = editingRelease.id;
                     setSuccessMessage('版本更新成功');
                     await fetchReleases();
                 }
@@ -103,8 +128,24 @@ const ReleaseLibrary: React.FC = () => {
                     module_type_id: activeTypeId || formData.module_type_id
                 });
                 if (response.success) {
+                    releaseId = response.data?.id;
                     setSuccessMessage('版本发布成功');
                     await fetchReleases();
+                }
+            }
+
+            // 上传附件
+            if (releaseId && files && files.length > 0) {
+                const fd = new FormData();
+                files.forEach(f => fd.append('files', f));
+                try {
+                    await axios.post(`/api/version-releases/${releaseId}/attachments`, fd, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+                    setSuccessMessage(prev => (prev || '') + `，已上传${files.length}个附件`);
+                } catch (uploadErr) {
+                    console.error('附件上传失败:', uploadErr);
+                    setSuccessMessage(prev => (prev || '') + '，但附件上传失败');
                 }
             }
             
@@ -134,9 +175,43 @@ const ReleaseLibrary: React.FC = () => {
         }
     };
 
-    const handleViewDetail = (release: VersionRelease) => {
+    const handleViewDetail = async (release: VersionRelease) => {
         setSelectedRelease(release);
         setShowDetailModal(true);
+        // 获取附件
+        try {
+            const res = await axios.get(`/api/version-releases/${release.id}/attachments`);
+            if (res.data.success) {
+                setDetailAttachments(res.data.data);
+            }
+        } catch (e) {
+            setDetailAttachments([]);
+        }
+    };
+
+    const handleDownloadAttachment = async (attachment: any) => {
+        try {
+            const res = await axios.get(`/api/version-releases/attachments/${attachment.id}/download`);
+            if (res.data.success && res.data.data?.url) {
+                window.open(res.data.data.url, '_blank');
+            }
+        } catch (e) {
+            console.error('下载失败:', e);
+            alert('下载失败');
+        }
+    };
+
+    const handleDeleteAttachment = async (attachment: any) => {
+        if (!window.confirm(`确定要删除附件"${attachment.original_name}"吗？`)) return;
+        try {
+            const res = await axios.delete(`/api/version-releases/attachments/${attachment.id}`);
+            if (res.data.success) {
+                setDetailAttachments(prev => prev.filter(a => a.id !== attachment.id));
+            }
+        } catch (e) {
+            console.error('删除附件失败:', e);
+            alert('删除附件失败');
+        }
     };
 
     const getTypeIcon = (typeName: string) => {
@@ -214,17 +289,57 @@ const ReleaseLibrary: React.FC = () => {
                     </div>
 
                     <div className="p-6">
-                        {loading ? (
+                        {/* 分类过滤 */}
+                        {existingCategories.length > 0 && (
+                            <div className="flex items-center gap-2 mb-4 flex-wrap">
+                                <span className="text-sm text-gray-500 mr-1">分类:</span>
+                                <button
+                                    onClick={() => setActiveCategory('')}
+                                    className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                                        activeCategory === '' 
+                                            ? 'bg-blue-600 text-white' 
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    全部
+                                </button>
+                                {existingCategories.map(cat => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setActiveCategory(cat)}
+                                        className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                                            activeCategory === cat 
+                                                ? 'bg-blue-600 text-white' 
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {(() => {
+                            const filteredReleases = activeCategory
+                                ? releases.filter(r => r.category === activeCategory)
+                                : releases;
+                            return loading ? (
                             <div className="text-center py-12">加载中...</div>
-                        ) : releases.length > 0 ? (
+                        ) : filteredReleases.length > 0 ? (
                             viewMode === 'grid' ? (
                                 // 方块视图 - 突出版本描述
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {releases.map((release) => (
+                                    {filteredReleases.map((release) => (
                                         <div key={release.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50">
                                             <div className="flex justify-between items-start mb-4">
-                                                <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold font-mono">
-                                                    {release.version_number}
+                                                <div className="flex items-center gap-2">
+                                                    <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold font-mono">
+                                                        {release.version_number}
+                                                    </div>
+                                                    {release.category && (
+                                                        <span className="bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full text-xs">
+                                                            {release.category}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center text-xs text-gray-400">
                                                     <CalendarDaysIcon className="h-4 w-4 mr-1" />
@@ -270,7 +385,7 @@ const ReleaseLibrary: React.FC = () => {
                             ) : (
                                 // 列表视图 - 突出版本号、名称、发布时间
                                 <div className="divide-y divide-gray-200">
-                                    {releases.map((release) => (
+                                    {filteredReleases.map((release) => (
                                         <div key={release.id} className="py-4 px-4 hover:bg-gray-50 transition-colors rounded-lg">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4 flex-1">
@@ -280,7 +395,14 @@ const ReleaseLibrary: React.FC = () => {
                                                     </div>
                                                     {/* 版本名称 - 突出显示 */}
                                                     <div className="flex-1">
-                                                        <h3 className="text-lg font-bold text-gray-900 mb-1">{release.title}</h3>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <h3 className="text-lg font-bold text-gray-900">{release.title}</h3>
+                                                            {release.category && (
+                                                                <span className="bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full text-xs">
+                                                                    {release.category}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <p className="text-sm text-gray-500 line-clamp-1">{release.change_log || '无变更说明'}</p>
                                                     </div>
                                                 </div>
@@ -329,7 +451,8 @@ const ReleaseLibrary: React.FC = () => {
                                     立即发布第一个版本
                                 </button>
                             </div>
-                        )}
+                        );
+                        })()}
                     </div>
                 </div>
             </div>
@@ -339,6 +462,8 @@ const ReleaseLibrary: React.FC = () => {
                 <VersionReleaseForm
                     versionRelease={editingRelease}
                     moduleType={moduleTypes.find(t => t.id === (editingRelease?.module_type_id || activeTypeId)) || null}
+                    productLines={productLines}
+                    existingCategories={existingCategories}
                     onClose={handleCloseForm}
                     onSubmit={handleSubmit}
                 />
@@ -395,6 +520,11 @@ const ReleaseLibrary: React.FC = () => {
                                     <p className="text-lg font-medium text-gray-900">
                                         {moduleTypes.find(t => t.id === selectedRelease.module_type_id)?.name || '未知'}
                                     </p>
+                                    {selectedRelease.category && (
+                                        <span className="bg-purple-50 text-purple-600 px-3 py-1 rounded-full text-sm font-medium">
+                                            {selectedRelease.category}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -421,6 +551,53 @@ const ReleaseLibrary: React.FC = () => {
                                         <p className="text-gray-400 italic">暂无变更说明</p>
                                     )}
                                 </div>
+                            </div>
+
+                            {/* 附件 */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                                    <PaperClipIcon className="h-5 w-5" />
+                                    附件 ({detailAttachments.length})
+                                </label>
+                                {detailAttachments.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {detailAttachments.map((att: any) => (
+                                            <div key={att.id} className="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg border border-gray-200">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <PaperClipIcon className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-medium text-gray-900 truncate">{att.original_name}</p>
+                                                        <p className="text-xs text-gray-400">
+                                                            {att.file_size < 1024 * 1024
+                                                                ? `${(att.file_size / 1024).toFixed(1)} KB`
+                                                                : `${(att.file_size / 1024 / 1024).toFixed(1)} MB`}
+                                                            {' · '}
+                                                            {new Date(att.created_at).toLocaleString('zh-CN')}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <button
+                                                        onClick={() => handleDownloadAttachment(att)}
+                                                        className="text-blue-600 hover:text-blue-800 p-1.5 hover:bg-blue-50 rounded transition-colors"
+                                                        title="下载"
+                                                    >
+                                                        <ArrowDownTrayIcon className="h-4 w-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteAttachment(att)}
+                                                        className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded transition-colors"
+                                                        title="删除"
+                                                    >
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-400 italic text-sm bg-gray-50 p-3 rounded-lg">暂无附件</p>
+                                )}
                             </div>
 
                             {/* 其他信息 */}

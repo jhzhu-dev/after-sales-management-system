@@ -155,7 +155,6 @@ async function createTables() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         device_id VARCHAR(50) NOT NULL,
         type_id INT NOT NULL,
-        status ENUM('正常', '异常', '维护中') DEFAULT '正常',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
@@ -238,9 +237,24 @@ async function createTables() {
         version_number VARCHAR(100) NOT NULL,
         title VARCHAR(255) NOT NULL,
         change_log TEXT,
+        category VARCHAR(100) DEFAULT NULL,
         release_date DATE DEFAULT (CURRENT_DATE),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (module_type_id) REFERENCES module_types(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 版本发布附件表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS release_attachments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        release_id INT NOT NULL,
+        file_name VARCHAR(255) NOT NULL,
+        original_name VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        file_size INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (release_id) REFERENCES version_releases(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
@@ -258,6 +272,23 @@ async function createTables() {
         uploaded_by VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 设备出厂资料表 - 依赖 devices
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS device_documents (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        device_id VARCHAR(50) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        original_name VARCHAR(255),
+        file_path VARCHAR(500) NOT NULL,
+        file_size INT,
+        uploaded_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
+        INDEX idx_device_category (device_id, category)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 

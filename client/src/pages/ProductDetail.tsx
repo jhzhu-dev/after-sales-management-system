@@ -127,9 +127,7 @@ const ProductDetail: React.FC = () => {
             for (const moduleTypeId of selectedModuleTypes) {
                 await productModuleApi.createProductModule(parseInt(id), {
                     module_type_id: moduleTypeId,
-                    is_required: isRequired,
-                    version_number: versionNumber || 'v1',
-                    change_description: changeDescription || '初始版本'
+                    is_required: isRequired
                 });
             }
             alert('模块配置添加成功');
@@ -657,33 +655,7 @@ const ProductDetail: React.FC = () => {
                                                 </div>
                                             </div>
 
-                                            {/* 版本号 */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    版本号
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={versionNumber}
-                                                    onChange={(e) => setVersionNumber(e.target.value)}
-                                                    placeholder="默认为 v1"
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                />
-                                            </div>
 
-                                            {/* 变更说明 */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    变更说明
-                                                </label>
-                                                <textarea
-                                                    value={changeDescription}
-                                                    onChange={(e) => setChangeDescription(e.target.value)}
-                                                    placeholder="描述此次配置变更..."
-                                                    rows={3}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                />
-                                            </div>
                                         </div>
 
                                         {/* 按钮 */}

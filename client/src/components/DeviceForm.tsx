@@ -12,6 +12,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
   const [formData, setFormData] = useState<DeviceFormData>({
     id: '',
     name: '',
+    device_code: '',
     product_line_id: '',
     product_id: undefined,
     customer_id: undefined,
@@ -31,6 +32,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerShortName, setNewCustomerShortName] = useState('');
   const [showModulePreview, setShowModulePreview] = useState(false);
+  const [selectedOptionalModules, setSelectedOptionalModules] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -41,6 +43,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       setFormData({
         id: device.id,
         name: device.name,
+        device_code: (device as any).device_code || '',
         product_line_id: device.product_line_id || '',
         product_id: (device as any).product_id,
         customer_id: device.customer_id || undefined,
@@ -99,6 +102,9 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       const result = await response.json();
       if (result.success) {
         setProductModules(result.data);
+        // 默认选中所有可选模块
+        const optionalIds = new Set<number>(result.data.filter((m: ProductModule) => !m.is_required).map((m: ProductModule) => m.module_type_id));
+        setSelectedOptionalModules(optionalIds);
       }
     } catch (error) {
       console.error('获取产品模块配置失败:', error);
@@ -191,6 +197,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       fetchProductModules(value as number);
     } else if (field === 'product_id' && !value) {
       setProductModules([]);
+      setSelectedOptionalModules(new Set());
     }
   };
 
@@ -248,11 +255,19 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
     const processedData: DeviceFormData = {
       ...formData,
       id: formData.id?.trim() || undefined,
+      device_code: formData.device_code?.trim() || null,
       customer_id: formData.customer_id || null,
       location: formData.location?.trim() || null,
       remote_code: formData.remote_code?.trim() || null,
       password: formData.password?.trim() || null
     };
+
+    // 新建时传递选中的模块类型ID
+    if (!device && productModules.length > 0) {
+      const requiredIds = productModules.filter(m => m.is_required).map(m => m.module_type_id);
+      const optionalIds = Array.from(selectedOptionalModules);
+      processedData.selectedModuleTypeIds = [...requiredIds, ...optionalIds];
+    }
 
     // 如果是编辑模式且没有修改ID，不提交ID
     if (device && processedData.id === device.id) {
@@ -276,7 +291,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">
-            {device ? '编辑设备' : '创建设备'}
+            {device ? '编辑设备' : '新增设备'}
           </h2>
           <button
             onClick={onClose}
@@ -289,17 +304,33 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              设备名称 <span className="text-red-500">*</span>
+              名称 <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
-              placeholder="请输入设备名称"
+              placeholder="请输入名称"
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
           </div>
+
+          {device && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                生产序列号
+              </label>
+              <input
+                type="text"
+                value={formData.id}
+                onChange={(e) => handleChange('id', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入生产序列号"
+              />
+              <p className="text-xs text-gray-500 mt-1">修改序列号将更新设备的唯一标识</p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -319,6 +350,79 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
             </select>
             {errors.product_line_id && <p className="text-red-500 text-sm mt-1">{errors.product_line_id}</p>}
           </div>
+
+          {/* 产品选择 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              产品（可选）
+            </label>
+            <select
+              value={formData.product_id || ''}
+              onChange={(e) => handleChange('product_id', e.target.value ? parseInt(e.target.value) : undefined)}
+              disabled={!formData.product_line_id || products.length === 0}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              <option value="">{device ? '未选择产品' : '不选择产品（手动添加模块）'}</option>
+              {products.map((product) => (
+                <option key={product.id} value={product.id}>
+                  {product.name} {product.model ? `(${product.model})` : ''}
+                </option>
+              ))}
+            </select>
+            <p className="text-gray-500 text-xs mt-1">
+              {!formData.product_line_id ? '请先选择产品线' : products.length === 0 ? '该产品线暂无可用产品' : device ? '切换产品不会自动修改已有模块' : '选择产品后将自动创建该产品的模块配置'}
+            </p>
+          </div>
+
+          {/* 模块配置预览 */}
+          {!device && productModules.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <button
+                type="button"
+                onClick={() => setShowModulePreview(!showModulePreview)}
+                className="flex items-center justify-between w-full text-left"
+              >
+                <span className="text-sm font-medium text-blue-900">
+                  将自动创建 {productModules.filter(m => m.is_required || selectedOptionalModules.has(m.module_type_id)).length} 个模块
+                </span>
+                {showModulePreview ? (
+                  <ChevronUpIcon className="h-4 w-4 text-blue-600" />
+                ) : (
+                  <ChevronDownIcon className="h-4 w-4 text-blue-600" />
+                )}
+              </button>
+              {showModulePreview && (
+                <div className="mt-3 space-y-2">
+                  {productModules.map((module, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm bg-white rounded px-3 py-2">
+                      <label className="flex items-center gap-2 cursor-pointer flex-1">
+                        <input
+                          type="checkbox"
+                          checked={module.is_required || selectedOptionalModules.has(module.module_type_id)}
+                          disabled={module.is_required}
+                          onChange={() => {
+                            if (!module.is_required) {
+                              setSelectedOptionalModules(prev => {
+                                const next = new Set(prev);
+                                if (next.has(module.module_type_id)) next.delete(module.module_type_id);
+                                else next.add(module.module_type_id);
+                                return next;
+                              });
+                            }
+                          }}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                        <span className="text-gray-700">{module.module_type_name}</span>
+                      </label>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${module.is_required ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {module.is_required ? '必需' : '可选'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 客户选择 */}
           <div className="relative">
@@ -407,95 +511,37 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
             </div>
           )}
 
-          {/* 位置 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              位置
-            </label>
-            <input
-              type="text"
-              value={formData.location || ''}
-              onChange={(e) => handleChange('location', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="设备安装位置"
-            />
-          </div>
-
-          {/* 产品选择（仅新建时显示） */}
+          {/* 生产序列号 - 新建时可选填，编辑时只读 */}
           {!device && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                选择产品（可选）
-              </label>
-              <select
-                value={formData.product_id || ''}
-                onChange={(e) => handleChange('product_id', e.target.value ? parseInt(e.target.value) : undefined)}
-                disabled={!formData.product_line_id || products.length === 0}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">不选择产品（手动添加模块）</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} {product.model ? `(${product.model})` : ''}
-                  </option>
-                ))}
-              </select>
-              <p className="text-gray-500 text-xs mt-1">
-                {!formData.product_line_id ? '请先选择产品线' : products.length === 0 ? '该产品线暂无可用产品' : '选择产品后将自动创建该产品的模块配置'}
-              </p>
-            </div>
-          )}
-
-          {/* 模块配置预览 */}
-          {!device && productModules.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <button
-                type="button"
-                onClick={() => setShowModulePreview(!showModulePreview)}
-                className="flex items-center justify-between w-full text-left"
-              >
-                <span className="text-sm font-medium text-blue-900">
-                  将自动创建 {productModules.length} 个模块
-                </span>
-                {showModulePreview ? (
-                  <ChevronUpIcon className="h-4 w-4 text-blue-600" />
-                ) : (
-                  <ChevronDownIcon className="h-4 w-4 text-blue-600" />
-                )}
-              </button>
-              {showModulePreview && (
-                <div className="mt-3 space-y-2">
-                  {productModules.map((module, index) => (
-                    <div key={index} className="flex items-center justify-between text-sm bg-white rounded px-3 py-2">
-                      <span className="text-gray-700">{module.module_type_name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        module.is_required ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {module.is_required ? '必需' : '可选'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 设备SN码 - 新建时可选填，编辑时只读 */}
-          {!device && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                设备SN码
+                生产序列号
               </label>
               <input
                 type="text"
                 value={formData.id || ''}
                 onChange={(e) => handleChange('id', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="留空则自动生成6位ID"
+                placeholder="请输入生产序列号"
               />
-              <p className="text-gray-500 text-xs mt-1">可手动输入设备SN码，留空将自动生成</p>
+              <p className="text-gray-500 text-xs mt-1">手动输入生产序列号</p>
             </div>
           )}
+
+          {/* 设备编码 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              设备编码
+            </label>
+            <input
+              type="text"
+              value={formData.device_code || ''}
+              onChange={(e) => handleChange('device_code', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="请输入设备编码"
+            />
+            <p className="text-gray-500 text-xs mt-1">手动输入设备编码，用于软件绑定</p>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -556,7 +602,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
               disabled={loading}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? '保存中...' : (device ? '更新' : '创建')}
+              {loading ? '保存中...' : (device ? '更新' : '新增')}
             </button>
           </div>
         </form>

@@ -105,8 +105,8 @@ router.post('/:productId/modules', [
       module_type_id, 
       is_required = true, 
       default_config, 
-      version_number = 'v1',
-      change_description = '初始版本',
+      version_number,
+      change_description,
       created_by
     } = req.body;
     
@@ -135,17 +135,19 @@ router.post('/:productId/modules', [
       });
     }
     
-    // 检查版本号唯一性
-    const versionExists = await query(
-      'SELECT id FROM product_module_history WHERE product_id = ? AND module_type_id = ? AND version_number = ?',
-      [productId, module_type_id, version_number]
-    );
-    
-    if (versionExists.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `版本号 ${version_number} 已存在`
-      });
+    // 如果提供了版本号，检查版本号唯一性
+    if (version_number) {
+      const versionExists = await query(
+        'SELECT id FROM product_module_history WHERE product_id = ? AND module_type_id = ? AND version_number = ?',
+        [productId, module_type_id, version_number]
+      );
+      
+      if (versionExists.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `版本号 ${version_number} 已存在`
+        });
+      }
     }
     
     // 插入产品模块配置
@@ -155,13 +157,15 @@ router.post('/:productId/modules', [
       [productId, module_type_id, is_required, default_config ? JSON.stringify(default_config) : null]
     );
     
-    // 同时插入历史记录（标记为当前版本）
-    await query(
-      `INSERT INTO product_module_history 
-       (product_id, module_type_id, is_required, default_config, version_number, change_description, is_current, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, TRUE, ?)`,
-      [productId, module_type_id, is_required, default_config ? JSON.stringify(default_config) : null, version_number, change_description, created_by]
-    );
+    // 如果提供了版本号，插入历史记录
+    if (version_number) {
+      await query(
+        `INSERT INTO product_module_history 
+         (product_id, module_type_id, is_required, default_config, version_number, change_description, is_current, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, TRUE, ?)`,
+        [productId, module_type_id, is_required, default_config ? JSON.stringify(default_config) : null, version_number, change_description || '', created_by]
+      );
+    }
     
     res.json({
       success: true,

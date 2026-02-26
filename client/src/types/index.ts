@@ -11,8 +11,12 @@ export interface Customer {
 export interface Device {
   id: string;
   name: string;
+  device_code?: string;
   product_line_id?: number;
   product_line_name?: string;
+  product_id?: number;
+  product_name?: string;
+  product_model?: string;
   customer_id?: number;
   customer_name?: string;
   customer_short_name?: string;
@@ -49,6 +53,7 @@ export interface VersionRelease {
   version_number: string;
   title: string;
   change_log?: string;
+  category?: string;
   release_date: string;
   created_at: string;
 }
@@ -73,12 +78,25 @@ export interface Issue {
   updated_at: string;
   device_name?: string;
   device_type?: string;
+  product_name?: string;
   device_location?: string;
   customer_name?: string;
   customer_short_name?: string;
   module_category?: string;
   resolution_description?: string;
   resolved_at?: string;
+}
+
+// 问题处理记录类型
+export interface IssueLog {
+  id: number;
+  issue_id: string;
+  content: string;
+  handler: string;
+  handled_at: string;
+  attachments?: string[];
+  created_at: string;
+  updated_at: string;
 }
 
 // 设备升级记录类型
@@ -159,6 +177,7 @@ export interface DashboardStats {
 export interface DeviceFormData {
   id?: string; // 可选，新增时可由用户输入或由后端自动生成
   name: string;
+  device_code?: string | null; // 设备编码
   product_line_id: string | number; // 支持字符串和数字类型
   product_id?: number; // 可选，用于自动绑定产品模块配置
   customer_id?: number | null;
@@ -166,6 +185,7 @@ export interface DeviceFormData {
   status: '正常' | '异常' | '维护中';
   remote_code?: string | null;
   password?: string | null;
+  selectedModuleTypeIds?: number[]; // 选中的模块类型ID（用于新建时过滤可选模块）
 }
 
 export interface ModuleFormData {

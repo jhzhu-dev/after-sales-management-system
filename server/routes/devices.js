@@ -39,17 +39,20 @@ router.get('/', async (req, res) => {
       SELECT 
         d.*,
         pl.name as product_line_name,
+        p.name as product_name,
+        p.model as product_model,
         c.name as customer_name,
         c.short_name as customer_short_name,
         COUNT(DISTINCT i.id) as issue_count,
         COUNT(DISTINCT CASE WHEN i.status = 'open' THEN i.id END) as open_issues
       FROM devices d
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+      LEFT JOIN products p ON d.product_id = p.id
       LEFT JOIN customers c ON d.customer_id = c.id
       LEFT JOIN modules m ON d.id = m.device_id
       LEFT JOIN issues i ON d.id = i.device_id
       ${whereClause}
-      GROUP BY d.id, pl.name, c.name, c.short_name
+      GROUP BY d.id, pl.name, p.name, p.model, c.name, c.short_name
       ORDER BY d.created_at DESC
       LIMIT ${parseInt(limitNum)} OFFSET ${parseInt(offset)}
     `;
@@ -96,16 +99,19 @@ router.get('/:id', async (req, res) => {
     SELECT
     d.*,
       pl.name as product_line_name,
+      p.name as product_name,
+      p.model as product_model,
       c.name as customer_name,
       c.short_name as customer_short_name,
       COUNT(DISTINCT i.id) as issue_count
       FROM devices d
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+      LEFT JOIN products p ON d.product_id = p.id
       LEFT JOIN customers c ON d.customer_id = c.id
       LEFT JOIN modules m ON d.id = m.device_id
       LEFT JOIN issues i ON d.id = i.device_id
       WHERE d.id = ?
-      GROUP BY d.id, pl.name, c.name, c.short_name
+      GROUP BY d.id, pl.name, p.name, p.model, c.name, c.short_name
         `;
 
     const deviceResult = await query(deviceQuery, [id]);
@@ -163,7 +169,9 @@ router.get('/:id', async (req, res) => {
 router.post('/', [
   body('id').optional().isString().withMessage('设备ID必须是字符串'),
   body('name').notEmpty().withMessage('设备名称不能为空'),
+  body('device_code').optional().isString().withMessage('设备编码必须是字符串'),
   body('product_line_id').notEmpty().withMessage('产品线ID不能为空'),
+  body('product_id').optional().isInt().withMessage('产品ID必须是整数'),
   body('status').optional().isIn(['正常', '异常', '维护中']),
   body('remote_code').optional().custom((value) => {
     if (value !== undefined && value !== null && typeof value !== 'string') {
@@ -188,7 +196,7 @@ router.post('/', [
       });
     }
 
-    const { id, name, product_line_id, customer_id, status = '正常', remote_code, password } = req.body;
+    const { id, name, device_code, product_line_id, product_id, customer_id, status = '正常', remote_code, password } = req.body;
 
     // 如果提供了ID，使用用户提供的ID，否则自动生成
     let deviceId = id;
@@ -211,16 +219,16 @@ router.post('/', [
     }
 
     const insertQuery = `
-      INSERT INTO devices(id, name, product_line_id, customer_id, status, remote_code, password)
-    VALUES(?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO devices(id, name, device_code, product_line_id, product_id, customer_id, status, remote_code, password)
+    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    await query(insertQuery, [deviceId, name, product_line_id, customer_id || null, status, remote_code || null, password || null]);
+    await query(insertQuery, [deviceId, name, device_code || null, product_line_id, product_id || null, customer_id || null, status, remote_code || null, password || null]);
 
     res.status(201).json({
       success: true,
       message: '设备创建成功',
-      data: { id: deviceId, name, product_line_id, customer_id, status, remote_code, password }
+      data: { id: deviceId, name, device_code, product_line_id, product_id, customer_id, status, remote_code, password }
     });
   } catch (error) {
     console.error('创建设备失败:', error);
@@ -231,15 +239,33 @@ router.post('/', [
 // 更新设备
 router.put('/:id', [
   body('name').optional().notEmpty().withMessage('设备名称不能为空'),
+  body('device_code').optional({ nullable: true }).custom((value) => {
+    if (value !== undefined && value !== null && typeof value !== 'string') {
+      throw new Error('设备编码必须是字符串');
+    }
+    return true;
+  }),
   body('product_line_id').optional().notEmpty().withMessage('产品线ID不能为空'),
+  body('product_id').optional({ nullable: true }).custom((value) => {
+    if (value !== undefined && value !== null && !Number.isInteger(Number(value))) {
+      throw new Error('产品ID必须是整数');
+    }
+    return true;
+  }),
+  body('customer_id').optional({ nullable: true }).custom((value) => {
+    if (value !== undefined && value !== null && !Number.isInteger(Number(value))) {
+      throw new Error('客户ID必须是整数');
+    }
+    return true;
+  }),
   body('status').optional().isIn(['正常', '异常', '维护中']),
-  body('remote_code').optional().custom((value) => {
+  body('remote_code').optional({ nullable: true }).custom((value) => {
     if (value !== undefined && value !== null && typeof value !== 'string') {
       throw new Error('远程码必须是字符串');
     }
     return true;
   }),
-  body('password').optional().custom((value) => {
+  body('password').optional({ nullable: true }).custom((value) => {
     if (value !== undefined && value !== null && typeof value !== 'string') {
       throw new Error('密码必须是字符串');
     }
@@ -273,6 +299,18 @@ router.put('/:id', [
       }
     }
 
+    // 提取new_id（如果要修改序列号）
+    const newId = updates.new_id;
+    delete updates.new_id;
+
+    // 如果要修改序列号，检查新ID是否已存在
+    if (newId && newId !== id) {
+      const existingNew = await query('SELECT id FROM devices WHERE id = ?', [newId]);
+      if (existingNew.length > 0) {
+        return res.status(400).json({ success: false, error: '该生产序列号已存在' });
+      }
+    }
+
     // 构建更新语句
     const updateFields = [];
     const updateValues = [];
@@ -283,6 +321,12 @@ router.put('/:id', [
         updateValues.push(updates[key]);
       }
     });
+
+    // 如果要修改序列号，加入id字段
+    if (newId && newId !== id) {
+      updateFields.push('id = ?');
+      updateValues.push(newId);
+    }
 
     if (updateFields.length === 0) {
       return res.status(400).json({ success: false, error: '没有要更新的字段' });
@@ -300,7 +344,8 @@ router.put('/:id', [
 
     res.json({
       success: true,
-      message: '设备更新成功'
+      message: '设备更新成功',
+      data: { new_id: newId && newId !== id ? newId : id }
     });
   } catch (error) {
     console.error('更新设备失败:', error);

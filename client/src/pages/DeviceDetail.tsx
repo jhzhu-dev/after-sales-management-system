@@ -13,7 +13,11 @@ import {
   EyeSlashIcon,
   TagIcon,
   WrenchScrewdriverIcon,
-  PrinterIcon
+  PrinterIcon,
+  DocumentIcon,
+  ArrowUpTrayIcon,
+  FolderIcon,
+  DocumentArrowDownIcon
 } from '@heroicons/react/24/outline';
 import { Device, Module, Issue, ModuleFormData, DeviceFormData, VersionRelease, DeviceUpgrade } from '../types';
 import { deviceApi, moduleApi, issueApi, versionReleaseApi, moduleVersionApi, deviceUpgradeApi } from '../services/api';
@@ -30,7 +34,7 @@ const DeviceDetail: React.FC = () => {
   const [modules, setModules] = useState<Module[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'modules' | 'versions' | 'issues' | 'after-sales'>('modules');
+  const [activeTab, setActiveTab] = useState<'modules' | 'versions' | 'issues' | 'after-sales' | 'documents'>('modules');
   const [showModuleForm, setShowModuleForm] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
   const [showDeviceForm, setShowDeviceForm] = useState(false);
@@ -43,8 +47,23 @@ const DeviceDetail: React.FC = () => {
   const [selectedModuleForVersion, setSelectedModuleForVersion] = useState<Module | null>(null);
   const [moduleVersions, setModuleVersions] = useState<any[]>([]);
   const [showModuleVersionHistory, setShowModuleVersionHistory] = useState(false);
-  const [deviceUpgrades, setDeviceUpgrades] = useState<DeviceUpgrade[]>([]);
+  const [deviceUpgrades, setDeviceUpgrades] = useState<any[]>([]);
   const [showUpgradeForm, setShowUpgradeForm] = useState(false);
+
+  // 设备出厂资料相关状态
+  const [deviceDocuments, setDeviceDocuments] = useState<any[]>([]);
+  const [deviceDocCategories, setDeviceDocCategories] = useState<string[]>([]);
+  const [showDocUploadModal, setShowDocUploadModal] = useState(false);
+  const [docUploadFiles, setDocUploadFiles] = useState<File[]>([]);
+  const [docUploadCategory, setDocUploadCategory] = useState('');
+  const [docUploadNewCategory, setDocUploadNewCategory] = useState('');
+  const [docUploadBy, setDocUploadBy] = useState('');
+  const [docUploading, setDocUploading] = useState(false);
+  const [docDragOver, setDocDragOver] = useState(false);
+  const [docUploadProgress, setDocUploadProgress] = useState('');
+  const [previewDoc, setPreviewDoc] = useState<{url: string; title: string; type: string} | null>(null);
+  const [selectedDocIds, setSelectedDocIds] = useState<Set<number>>(new Set());
+  const [docSelectMode, setDocSelectMode] = useState(false);
 
   // 获取设备详情
   const fetchDevice = async () => {
@@ -95,13 +114,35 @@ const DeviceDetail: React.FC = () => {
     }
   };
 
-  // 获取设备升级记录
+  // 获取设备模块版本升级记录
   const fetchDeviceUpgrades = async () => {
     if (!id) return;
     try {
-      const response = await deviceUpgradeApi.getUpgrades({ device_id: id, limit: 1000 });
-      if (response.success) {
-        setDeviceUpgrades(response.data);
+      const response = await fetch(`/api/versions?device_id=${id}&limit=200`);
+      const result = await response.json();
+      if (result.success) {
+        const allVersions = result.data;
+        // 按模块分组，按时间排序
+        const byModule: Record<string, any[]> = {};
+        allVersions.forEach((v: any) => {
+          const key = v.module_id;
+          if (!byModule[key]) byModule[key] = [];
+          byModule[key].push(v);
+        });
+        // 每组按创建时间升序
+        Object.values(byModule).forEach(arr => arr.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
+        // 为每个update版本找到前一个版本
+        const updates = allVersions
+          .filter((v: any) => v.version_type === 'update')
+          .map((v: any) => {
+            const moduleVersions = byModule[v.module_id] || [];
+            const idx = moduleVersions.findIndex((mv: any) => mv.id === v.id);
+            const oldVersion = idx > 0 ? moduleVersions[idx - 1].version_number : null;
+            return { ...v, old_version: oldVersion };
+          });
+        // 按时间倒序
+        updates.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setDeviceUpgrades(updates);
       }
     } catch (error) {
       console.error('获取设备升级记录失败:', error);
@@ -120,6 +161,182 @@ const DeviceDetail: React.FC = () => {
     }
   };
 
+  // 获取设备出厂资料
+  const fetchDeviceDocuments = async () => {
+    if (!id) return;
+    try {
+      const res = await fetch(`/api/device-documents?device_id=${id}`);
+      const result = await res.json();
+      if (result.success) {
+        setDeviceDocuments(result.data);
+        // 提取所有分类
+        const cats = [...new Set(result.data.map((d: any) => d.category))] as string[];
+        setDeviceDocCategories(cats);
+      }
+    } catch (error) {
+      console.error('获取设备资料失败:', error);
+    }
+  };
+
+  // 批量上传设备资料
+  const handleDocUpload = async () => {
+    if (docUploadFiles.length === 0) return;
+    const category = docUploadNewCategory.trim() || docUploadCategory;
+    if (!category) {
+      alert('请选择或输入分类');
+      return;
+    }
+    setDocUploading(true);
+    setDocUploadProgress(`正在上传 0/${docUploadFiles.length}...`);
+    try {
+      const formData = new FormData();
+      docUploadFiles.forEach(file => formData.append('files', file));
+      // 每个文件的标题默认为文件名(去掉扩展名)
+      docUploadFiles.forEach(file => formData.append('titles', file.name.replace(/\.[^/.]+$/, '')));
+      formData.append('device_id', id!);
+      formData.append('category', category);
+      if (docUploadBy.trim()) formData.append('uploaded_by', docUploadBy.trim());
+
+      const res = await fetch('/api/device-documents/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await res.json();
+      if (result.success) {
+        setDocUploadProgress('');
+        await fetchDeviceDocuments();
+        resetDocUploadForm();
+      } else {
+        alert(result.error || '上传失败');
+      }
+    } catch (error) {
+      console.error('上传设备资料失败:', error);
+      alert('上传失败');
+    } finally {
+      setDocUploading(false);
+      setDocUploadProgress('');
+    }
+  };
+
+  // 删除设备资料
+  const handleDeleteDocument = async (docId: number) => {
+    if (!window.confirm('确定要删除这个文件吗？')) return;
+    try {
+      const res = await fetch(`/api/device-documents/${docId}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (result.success) {
+        await fetchDeviceDocuments();
+      } else {
+        alert(result.error || '删除失败');
+      }
+    } catch (error) {
+      console.error('删除设备资料失败:', error);
+      alert('删除失败');
+    }
+  };
+
+  // 下载设备资料
+  const handleDownloadDocument = (docId: number) => {
+    window.open(`/api/device-documents/${docId}/download`, '_blank');
+  };
+
+  // 切换文档选择
+  const toggleDocSelect = (docId: number) => {
+    setSelectedDocIds(prev => {
+      const next = new Set(prev);
+      if (next.has(docId)) next.delete(docId);
+      else next.add(docId);
+      return next;
+    });
+  };
+
+  // 全选/取消全选
+  const toggleSelectAllDocs = () => {
+    if (selectedDocIds.size === deviceDocuments.length) {
+      setSelectedDocIds(new Set());
+    } else {
+      setSelectedDocIds(new Set(deviceDocuments.map(d => d.id)));
+    }
+  };
+
+  // 批量删除
+  const handleBatchDeleteDocs = async () => {
+    if (selectedDocIds.size === 0) return;
+    if (!window.confirm(`确定要删除选中的 ${selectedDocIds.size} 个文件吗？`)) return;
+    try {
+      const res = await fetch('/api/device-documents/batch-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedDocIds) })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setSelectedDocIds(new Set());
+        setDocSelectMode(false);
+        await fetchDeviceDocuments();
+      } else {
+        alert(result.error || '批量删除失败');
+      }
+    } catch (error) {
+      console.error('批量删除失败:', error);
+      alert('批量删除失败');
+    }
+  };
+
+  // 批量下载
+  const handleBatchDownloadDocs = () => {
+    if (selectedDocIds.size === 0) return;
+    selectedDocIds.forEach(docId => {
+      setTimeout(() => {
+        window.open(`/api/device-documents/${docId}/download`, '_blank');
+      }, 0);
+    });
+  };
+
+  // 预览文档
+  const handlePreviewDocument = async (docId: number, originalName: string) => {
+    try {
+      const ext = (originalName || '').split('.').pop()?.toLowerCase() || '';
+      const previewableImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
+      const previewablePdf = ext === 'pdf';
+      if (!previewableImage && !previewablePdf) {
+        // 不可预览的文件类型，直接下载
+        handleDownloadDocument(docId);
+        return;
+      }
+      const res = await fetch(`/api/device-documents/${docId}/preview`);
+      const result = await res.json();
+      if (result.success) {
+        const fileType = previewableImage ? 'image' : 'pdf';
+        setPreviewDoc({ url: result.data.url, title: result.data.title || originalName, type: fileType });
+      } else {
+        handleDownloadDocument(docId);
+      }
+    } catch (error) {
+      console.error('预览失败:', error);
+      handleDownloadDocument(docId);
+    }
+  };
+
+  // 重置上传表单
+  const resetDocUploadForm = () => {
+    setShowDocUploadModal(false);
+    setDocUploadFiles([]);
+    setDocUploadCategory('');
+    setDocUploadNewCategory('');
+    setDocUploadBy('');
+    setDocDragOver(false);
+    setDocUploadProgress('');
+  };
+
+  // 格式化文件大小
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return '-';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -127,7 +344,8 @@ const DeviceDetail: React.FC = () => {
         fetchDevice(),
         fetchModules(),
         fetchIssues(),
-        fetchDeviceUpgrades()
+        fetchDeviceUpgrades(),
+        fetchDeviceDocuments()
       ]);
       setLoading(false);
     };
@@ -226,16 +444,18 @@ const DeviceDetail: React.FC = () => {
       const { version_number, release_id, description, updated_by } = versionData;
 
       if (selectedModuleForVersion) {
-        // 更新模块版本
+        // 判断是出厂版本还是更新版本
+        const isFactory = !(selectedModuleForVersion as any).current_version;
         await moduleVersionApi.createModuleVersion({
           module_id: selectedModuleForVersion.id,
           version_number,
           release_id,
-          version_type: 'update',
+          version_type: isFactory ? 'factory' : 'update',
           description,
           updated_by
         });
         await fetchModules();
+        await fetchDeviceUpgrades();
       }
 
       setShowVersionUpdateForm(false);
@@ -313,9 +533,20 @@ const DeviceDetail: React.FC = () => {
   const handleDeviceSubmit = async (data: DeviceFormData) => {
     try {
       console.log('开始更新设备:', id, data);
-      const response = await deviceApi.updateDevice(id!, data);
+      // 如果序列号有变更，传递new_id
+      const submitData: any = { ...data };
+      if (data.id && data.id !== id) {
+        submitData.new_id = data.id;
+      }
+      delete submitData.id;
+      const response: any = await deviceApi.updateDevice(id!, submitData);
       console.log('设备更新响应:', response);
-      await fetchDevice();
+      // 如果序列号变更了，跳转到新的URL
+      if (response.data?.new_id && response.data.new_id !== id) {
+        navigate(`/devices/${response.data.new_id}`, { replace: true });
+      } else {
+        await fetchDevice();
+      }
       setShowDeviceForm(false);
       console.log('设备更新完成');
     } catch (error) {
@@ -398,7 +629,7 @@ const DeviceDetail: React.FC = () => {
             </button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{device.name}</h1>
-              <p className="text-gray-600 mt-1">设备详情信息</p>
+              <p className="text-gray-600 mt-1">{device.product_model || '设备详情信息'}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 no-print">
@@ -424,21 +655,18 @@ const DeviceDetail: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">基本信息</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:grid-cols-2 print:gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">设备编号</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">生产序列号</label>
               <p className="text-lg font-mono print:text-base">{device.id}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">产品线</label>
-              <p className="text-lg print:text-base">{device.product_line_name}</p>
+              <label className="block text-sm font-medium text-gray-700 mb-1">产品型号</label>
+              <p className="text-lg print:text-base">
+                {device.product_model || '-'}
+              </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-              <div className="flex items-center space-x-2">
-                {getStatusIcon(device.status)}
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(device.status)}`}>
-                  {device.status}
-                </span>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">设备编码</label>
+              <p className="text-lg font-mono print:text-base">{device.device_code || '-'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">客户</label>
@@ -450,10 +678,6 @@ const DeviceDetail: React.FC = () => {
                   </>
                 ) : '-'}
               </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">位置</label>
-              <p className="text-lg print:text-base">{device.location || '-'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">远程码</label>
@@ -488,6 +712,15 @@ const DeviceDetail: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">更新时间</label>
               <p className="text-lg print:text-base">{new Date(device.updated_at).toLocaleDateString()}</p>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+              <div className="flex items-center space-x-2">
+                {getStatusIcon(device.status)}
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(device.status)}`}>
+                  {device.status}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -518,6 +751,28 @@ const DeviceDetail: React.FC = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">问题数量</p>
                 <p className="text-2xl font-semibold text-gray-900">{issues.length}</p>
+                <div className="flex items-center gap-3 mt-1 text-xs">
+                  <span className="text-red-600">待处理 {issues.filter(i => i.status === 'open').length}</span>
+                  <span className="text-yellow-600">处理中 {issues.filter(i => i.status === 'in_progress').length}</span>
+                  <span className="text-green-600">已解决 {issues.filter(i => i.status === 'closed').length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow border-2 border-transparent hover:border-green-300"
+            onClick={() => setActiveTab('documents' as any)}
+          >
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
+                  <FolderIcon className="h-5 w-5 text-green-600" />
+                </div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">出厂资料</p>
+                <p className="text-2xl font-semibold text-gray-900">{deviceDocuments.length}</p>
               </div>
             </div>
           </div>
@@ -529,8 +784,8 @@ const DeviceDetail: React.FC = () => {
             <nav className="-mb-px flex space-x-8 px-6">
               {[
                 { key: 'modules', label: '模块信息', count: modules.length },
-                { key: 'versions', label: '版本记录', count: modules.some(m => (m as any).current_version) ? modules.length : 0 },
-                { key: 'after-sales', label: '售后服务', count: issues.length + deviceUpgrades.length }
+                { key: 'after-sales', label: '售后服务', count: issues.length + deviceUpgrades.length },
+                { key: 'documents', label: '出厂资料', count: deviceDocuments.length }
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -566,9 +821,9 @@ const DeviceDetail: React.FC = () => {
                     添加模块
                   </button>
                 </div>
-                <div className="grid grid-cols-5 gap-4 print:grid-cols-3">
+                <div className="flex flex-nowrap gap-4 overflow-x-auto pb-2 print:grid print:grid-cols-3 print:flex-wrap">
                   {modules.map((module) => (
-                    <div key={module.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all flex flex-col print:break-inside-avoid">
+                    <div key={module.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all flex flex-col flex-shrink-0 min-w-[180px] print:break-inside-avoid">
                       {/* 模块名称和版本号 */}
                       <div className="flex items-center justify-center gap-3 mb-3 print:gap-1 print:mb-2">
                         <h4 className="font-semibold text-lg text-gray-900 print:text-sm">{module.module_type}</h4>
@@ -579,13 +834,6 @@ const DeviceDetail: React.FC = () => {
                         )}
                       </div>
                       
-                      {/* 状态 */}
-                      <div className="flex justify-center mb-3">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(module.status)}`}>
-                          {module.status}
-                        </span>
-                      </div>
-                      
                       {/* 操作按钮 */}
                       <div className="flex gap-2 mb-3 justify-center no-print">
                         <button
@@ -594,23 +842,19 @@ const DeviceDetail: React.FC = () => {
                           title="版本历史"
                         >
                           <ClockIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">历史</span>
+                          <span className="text-sm font-medium">版本历史</span>
                         </button>
                         <button
                           onClick={() => handleUpdateModuleVersion(module)}
-                          className="flex items-center justify-center gap-1 px-3 py-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors border border-purple-200 hover:border-purple-400"
-                          title="更新版本"
+                          className={`flex items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors border ${
+                            (module as any).current_version
+                              ? 'text-purple-600 hover:bg-purple-50 border-purple-200 hover:border-purple-400'
+                              : 'text-blue-600 hover:bg-blue-50 border-blue-200 hover:border-blue-400'
+                          }`}
+                          title={(module as any).current_version ? '更新版本' : '设置出厂版本'}
                         >
                           <WrenchScrewdriverIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">更新版本</span>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteModule(module.id)}
-                          className="flex items-center justify-center gap-1 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200 hover:border-red-400"
-                          title="删除模块"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">删除</span>
+                          <span className="text-sm font-medium">{(module as any).current_version ? '更新版本' : '出厂版本'}</span>
                         </button>
                       </div>
                       
@@ -622,111 +866,224 @@ const DeviceDetail: React.FC = () => {
               </div>
             )}
 
-            {/* 版本记录标签页 */}
-            {activeTab === 'versions' && (
-              <div className="space-y-6">
+            {/* 出厂资料标签页 */}
+            {activeTab === 'documents' && (
+              <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-2">
-                    <h3 className="text-lg font-medium text-gray-900">版本控制中心</h3>
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">快照</span>
+                  <h3 className="text-lg font-medium text-gray-900">出厂资料</h3>
+                  <div className="flex items-center gap-2 no-print">
+                    {deviceDocuments.length > 0 && (
+                      <button
+                        onClick={() => { setDocSelectMode(!docSelectMode); setSelectedDocIds(new Set()); }}
+                        className={`flex items-center gap-1 px-3 py-2 rounded-md transition-colors text-sm ${
+                          docSelectMode ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {docSelectMode ? '取消选择' : '批量管理'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowDocUploadModal(true)}
+                      className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition-colors"
+                    >
+                      <ArrowUpTrayIcon className="h-4 w-4" />
+                      上传资料
+                    </button>
                   </div>
-                  <p className="text-sm text-gray-500">查看各模块的最新版本迭代状态</p>
                 </div>
+                {docSelectMode && (
+                  <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={selectedDocIds.size === deviceDocuments.length && deviceDocuments.length > 0}
+                        onChange={toggleSelectAllDocs}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      全选
+                    </label>
+                    <span className="text-sm text-gray-500">已选 {selectedDocIds.size} / {deviceDocuments.length}</span>
+                    <div className="ml-auto flex gap-2">
+                      <button
+                        onClick={handleBatchDownloadDocs}
+                        disabled={selectedDocIds.size === 0}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <DocumentArrowDownIcon className="h-4 w-4" />
+                        批量下载
+                      </button>
+                      <button
+                        onClick={handleBatchDeleteDocs}
+                        disabled={selectedDocIds.size === 0}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                        批量删除
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-                <div className="space-y-4">
-                  {modules.map(module => (
-                    <div key={module.id} className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
-                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
-                        <div className="flex items-center space-x-3">
-                          <span className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
-                            <TagIcon className="h-4 w-4" />
-                          </span>
-                          <span className="font-bold text-gray-900">{module.module_type}</span>
+                {deviceDocuments.length === 0 ? (
+                  <div className="text-center py-16">
+                    <FolderIcon className="mx-auto h-12 w-12 text-gray-300" />
+                    <p className="mt-2 text-sm text-gray-500">暂无出厂资料</p>
+                    <button
+                      onClick={() => setShowDocUploadModal(true)}
+                      className="mt-3 text-sm text-green-600 hover:text-green-700 font-medium"
+                    >
+                      上传第一个文件
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {deviceDocCategories.map(cat => {
+                      const docs = deviceDocuments.filter(d => d.category === cat);
+                      if (docs.length === 0) return null;
+                      return (
+                        <div key={cat} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                            <FolderIcon className="h-5 w-5 mr-2 text-green-500" />
+                            {cat} ({docs.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {docs.map(doc => {
+                              const ext = (doc.original_name || '').split('.').pop()?.toLowerCase() || '';
+                              const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
+                              const isPdf = ext === 'pdf';
+                              const canPreview = isImage || isPdf;
+                              return (
+                              <div key={doc.id} className={`bg-white p-3 rounded-lg shadow-sm border flex items-center justify-between transition-colors ${selectedDocIds.has(doc.id) ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-green-200'}`}>
+                                {docSelectMode && (
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedDocIds.has(doc.id)}
+                                    onChange={() => toggleDocSelect(doc.id)}
+                                    className="w-4 h-4 text-blue-600 rounded flex-shrink-0 mr-2"
+                                  />
+                                )}
+                                <div
+                                  className={`flex items-center gap-3 min-w-0 flex-1 ${canPreview && !docSelectMode ? 'cursor-pointer' : docSelectMode ? 'cursor-pointer' : ''}`}
+                                  onClick={() => docSelectMode ? toggleDocSelect(doc.id) : (canPreview && handlePreviewDocument(doc.id, doc.original_name))}
+                                >
+                                  {isImage ? (
+                                    <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                      <img
+                                        src={`/api/device-documents/${doc.id}/download`}
+                                        alt={doc.title}
+                                        className="w-10 h-10 object-cover rounded"
+                                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <DocumentIcon className="h-8 w-8 text-gray-400 flex-shrink-0" />
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {doc.title}
+                                      {canPreview && <span className="ml-1.5 text-xs text-green-500 font-normal">可预览</span>}
+                                    </p>
+                                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                                      <span>{doc.original_name}</span>
+                                      <span>{formatFileSize(doc.file_size)}</span>
+                                      <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                                      {doc.uploaded_by && <span>上传人: {doc.uploaded_by}</span>}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 flex-shrink-0 ml-4">
+                                  {canPreview && (
+                                    <button
+                                      onClick={() => handlePreviewDocument(doc.id, doc.original_name)}
+                                      className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                                      title="预览"
+                                    >
+                                      <EyeIcon className="h-5 w-5" />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleDownloadDocument(doc.id)}
+                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                    title="下载"
+                                  >
+                                    <DocumentArrowDownIcon className="h-5 w-5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteDocument(doc.id)}
+                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                    title="删除"
+                                  >
+                                    <TrashIcon className="h-5 w-5" />
+                                  </button>
+                                </div>
+                              </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs text-gray-500">当前主版本:</span>
-                          <span className="px-2 py-0.5 bg-blue-600 text-white text-xs font-mono rounded">
-                            {(module as any).current_version || '未注册'}
-                          </span>
-                          <button
-                            onClick={() => handleUpdateModuleVersion(module)}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            title="变更登记"
-                          >
-                            <PencilIcon className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <div className="text-xs text-gray-400 italic">
-                          该模块当前版本信息已在上方展示
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {modules.length === 0 && (
-                    <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                      暂无模块数据，请先添加模块
-                    </div>
-                  )}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
-
 
             {/* 售后中心标签页 */}
             {activeTab === 'after-sales' && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">售后与版本迭代</h3>
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={handleAddIssue}
-                      className="flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-md hover:bg-red-700 transition-colors text-sm"
-                    >
-                      <ExclamationTriangleIcon className="h-4 w-4" />
-                      报修
-                    </button>
-                    <button
-                      onClick={() => setShowUpgradeForm(true)}
-                      className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm"
-                    >
-                      <WrenchScrewdriverIcon className="h-4 w-4" />
-                      等级升级
-                    </button>
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* 未解决问题 */}
+                  {/* 历史故障问题 */}
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                     <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
                       <ExclamationTriangleIcon className="h-5 w-5 mr-2 text-red-500" />
-                      待处理问题 ({issues.filter(i => i.status !== 'closed').length})
+                      历史故障问题 ({issues.length})
                     </h4>
-                    <div className="space-y-3">
-                      {issues.filter(i => i.status !== 'closed').map(issue => (
-                        <div key={issue.id} className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                      {[...issues].sort((a, b) => {
+                        const statusOrder: Record<string, number> = { 'open': 0, 'in_progress': 1, 'closed': 2 };
+                        return (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
+                      }).map(issue => (
+                        <div
+                          key={issue.id}
+                          className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 hover:border-blue-200 cursor-pointer transition-colors"
+                          onClick={() => navigate(`/issues/${issue.id}`)}
+                        >
                           <div className="flex justify-between items-start">
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${issue.severity === 'high' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                            <div className="flex items-center gap-2">
+                              {(issue as any).module_category && (
+                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-700">
+                                  {(issue as any).module_category}
+                                </span>
+                              )}
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                issue.severity === 'high' ? 'bg-red-100 text-red-700' :
+                                issue.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-gray-100 text-gray-600'
                               }`}>
-                              {issue.severity === 'high' ? '高' : '中'}
-                            </span>
+                                {issue.severity === 'high' ? '高' : issue.severity === 'medium' ? '中' : '低'}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                issue.status === 'open' ? 'bg-red-50 text-red-600' :
+                                issue.status === 'in_progress' ? 'bg-orange-50 text-orange-600' :
+                                'bg-green-50 text-green-600'
+                              }`}>
+                                {issue.status === 'open' ? '待处理' : issue.status === 'in_progress' ? '处理中' : '已关闭'}
+                              </span>
+                            </div>
                             <span className="text-xs text-gray-400">{new Date(issue.created_at).toLocaleDateString()}</span>
                           </div>
                           <p className="mt-2 text-sm text-gray-800 line-clamp-2">{issue.description}</p>
                           <div className="mt-2 flex justify-end">
-                            <button
-                              onClick={() => handleResolveIssue(issue)}
-                              className="text-xs text-blue-600 hover:underline"
-                            >
-                              去解决 →
-                            </button>
+                            <span className="text-xs text-blue-600 hover:underline">查看详情 →</span>
                           </div>
                         </div>
                       ))}
-                      {issues.filter(i => i.status !== 'closed').length === 0 && (
-                        <p className="text-center py-8 text-sm text-gray-400">目前没有任何待处理问题</p>
+                      {issues.length === 0 && (
+                        <p className="text-center py-8 text-sm text-gray-400">暂无故障记录</p>
                       )}
                     </div>
                   </div>
@@ -741,15 +1098,20 @@ const DeviceDetail: React.FC = () => {
                       {deviceUpgrades.slice(0, 5).map(upgrade => (
                         <div key={upgrade.id} className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
                           <div className="flex justify-between">
-                            <span className="text-xs font-bold text-blue-600">{upgrade.upgrade_type}</span>
-                            <span className="text-xs text-gray-400">{new Date(upgrade.upgrade_at).toLocaleDateString()}</span>
+                            <span className="text-xs font-bold text-purple-600">{upgrade.module_type || '模块'}</span>
+                            <span className="text-xs text-gray-400">{upgrade.release_date ? new Date(upgrade.release_date).toLocaleDateString() : '-'}</span>
                           </div>
                           <div className="mt-1 flex items-center space-x-2 text-xs">
-                            <span className="text-gray-400">{upgrade.old_version || 'N/A'}</span>
-                            <span>→</span>
-                            <span className="font-medium">{upgrade.new_version || 'N/A'}</span>
+                            {upgrade.old_version && (
+                              <>
+                                <span className="font-mono text-gray-400">{upgrade.old_version}</span>
+                                <span className="text-gray-400">→</span>
+                              </>
+                            )}
+                            <span className="font-mono font-bold text-blue-600">{upgrade.version_number}</span>
                           </div>
-                          <p className="mt-2 text-xs text-gray-600">{upgrade.description}</p>
+                          <p className="mt-2 text-xs text-gray-600">{upgrade.description || '-'}</p>
+                          {upgrade.updated_by && <p className="mt-1 text-xs text-gray-400">操作人: {upgrade.updated_by}</p>}
                         </div>
                       ))}
                       {deviceUpgrades.length === 0 && (
@@ -848,7 +1210,7 @@ const DeviceDetail: React.FC = () => {
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h3 className="text-lg font-bold text-gray-900">
-                强制版本更新登记 - {selectedModuleForVersion.module_type}
+                {(selectedModuleForVersion as any).current_version ? '版本更新登记' : '设置出厂版本'} - {selectedModuleForVersion.module_type}
               </h3>
               <button
                 onClick={() => {
@@ -1136,6 +1498,210 @@ const DeviceDetail: React.FC = () => {
           onClose={() => setShowUpgradeForm(false)}
           onSubmit={handleUpgradeSubmit}
         />
+      )}
+
+      {/* 设备出厂资料上传弹窗 (批量) */}
+      {showDocUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-green-50">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <ArrowUpTrayIcon className="h-5 w-5 text-green-600" />
+                批量上传出厂资料
+              </h3>
+              <button
+                onClick={resetDocUploadForm}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XCircleIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* 文件拖拽区域 (多文件) */}
+              <div
+                className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                  docDragOver
+                    ? 'border-green-400 bg-green-50'
+                    : docUploadFiles.length > 0
+                    ? 'border-green-300 bg-green-50'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+                onDragOver={(e) => { e.preventDefault(); setDocDragOver(true); }}
+                onDragLeave={() => setDocDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDocDragOver(false);
+                  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    const newFiles = Array.from(e.dataTransfer.files);
+                    setDocUploadFiles(prev => [...prev, ...newFiles]);
+                  }
+                }}
+              >
+                {docUploadFiles.length > 0 ? (
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {docUploadFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-white rounded-md px-3 py-1.5 border border-gray-200">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <DocumentIcon className="h-5 w-5 text-green-500 flex-shrink-0" />
+                          <span className="text-sm text-gray-900 truncate">{file.name}</span>
+                          <span className="text-xs text-gray-400 flex-shrink-0">{formatFileSize(file.size)}</span>
+                        </div>
+                        <button
+                          onClick={() => setDocUploadFiles(prev => prev.filter((_, i) => i !== idx))}
+                          className="ml-2 text-gray-400 hover:text-red-500 flex-shrink-0"
+                        >
+                          <XCircleIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <label className="inline-flex items-center px-3 py-1 bg-white border border-gray-300 rounded-md text-xs font-medium text-green-600 hover:bg-gray-50 cursor-pointer mt-1">
+                      继续添加文件
+                      <input
+                        type="file"
+                        className="hidden"
+                        multiple
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            setDocUploadFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <>
+                    <ArrowUpTrayIcon className="mx-auto h-10 w-10 text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-600">拖拽文件到此处，或</p>
+                    <label className="mt-1 inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm font-medium text-green-600 hover:bg-gray-50 cursor-pointer">
+                      选择文件（可多选）
+                      <input
+                        type="file"
+                        className="hidden"
+                        multiple
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            setDocUploadFiles(Array.from(e.target.files));
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                    <p className="mt-2 text-xs text-gray-400">支持批量选择，每个文件最大 50MB</p>
+                  </>
+                )}
+              </div>
+
+              {/* 分类选择 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  资料分类 <span className="text-red-500">*</span>
+                </label>
+                {deviceDocCategories.length > 0 && (
+                  <select
+                    value={docUploadCategory}
+                    onChange={(e) => {
+                      setDocUploadCategory(e.target.value);
+                      if (e.target.value) setDocUploadNewCategory('');
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm mb-2"
+                  >
+                    <option value="">-- 选择已有分类 --</option>
+                    {deviceDocCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                )}
+                <input
+                  type="text"
+                  value={docUploadNewCategory}
+                  onChange={(e) => {
+                    setDocUploadNewCategory(e.target.value);
+                    if (e.target.value) setDocUploadCategory('');
+                  }}
+                  placeholder={deviceDocCategories.length > 0 ? '或输入新分类名称' : '输入分类名称'}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                />
+              </div>
+
+              {/* 上传者 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">上传者</label>
+                <input
+                  type="text"
+                  value={docUploadBy}
+                  onChange={(e) => setDocUploadBy(e.target.value)}
+                  placeholder="输入上传者姓名（选填）"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                />
+              </div>
+            </div>
+
+            {/* 底部按钮 */}
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <span className="text-xs text-gray-500">
+                {docUploadFiles.length > 0 ? `已选择 ${docUploadFiles.length} 个文件` : ''}
+                {docUploadProgress && ` · ${docUploadProgress}`}
+              </span>
+              <div className="flex space-x-3">
+                <button
+                  onClick={resetDocUploadForm}
+                  disabled={docUploading}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm disabled:opacity-50"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleDocUpload}
+                  disabled={docUploading || docUploadFiles.length === 0 || (!docUploadCategory && !docUploadNewCategory.trim())}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                >
+                  {docUploading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      上传中...
+                    </>
+                  ) : (
+                    <>
+                      <ArrowUpTrayIcon className="h-4 w-4" />
+                      上传 {docUploadFiles.length > 0 ? `(${docUploadFiles.length})` : ''}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 文件预览弹窗 */}
+      {previewDoc && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50" onClick={() => setPreviewDoc(null)}>
+          <div className="relative max-w-5xl w-full mx-4 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* 顶部工具栏 */}
+            <div className="flex items-center justify-between bg-gray-900 px-4 py-2 rounded-t-lg">
+              <span className="text-white text-sm truncate">{previewDoc.title}</span>
+              <button
+                onClick={() => setPreviewDoc(null)}
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                <XCircleIcon className="h-6 w-6" />
+              </button>
+            </div>
+            {/* 预览内容 */}
+            <div className="bg-white rounded-b-lg overflow-auto flex-1 flex items-center justify-center" style={{ maxHeight: 'calc(90vh - 48px)' }}>
+              {previewDoc.type === 'image' ? (
+                <img src={previewDoc.url} alt={previewDoc.title} className="max-w-full max-h-full object-contain" />
+              ) : (
+                <iframe src={previewDoc.url} title={previewDoc.title} className="w-full h-full min-h-[80vh]" />
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   );

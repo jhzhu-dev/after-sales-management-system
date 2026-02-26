@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     PlusIcon,
     ArrowPathIcon,
@@ -17,6 +17,7 @@ import { formatDate, getStatusColor, getSeverityColor } from '../utils';
 
 export default function AfterSales() {
     const location = useLocation();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'issues' | 'upgrades'>('issues');
 
     useEffect(() => {
@@ -289,38 +290,36 @@ export default function AfterSales() {
             { 
                 key: 'id', 
                 title: <SortableHeader field="id" title="编号" />,
-                width: '80px',
+                width: '120px',
                 render: (val: any) => <span className="text-blue-600 font-medium">#{val}</span> 
             },
             {
                 key: 'device_name',
-                title: <SortableHeader field="device_name" title="设备名称" />,
+                title: <SortableHeader field="device_name" title="名称" />,
+                width: '140px',
                 render: (val: string) => <span className="font-medium text-gray-900">{val || '未知设备'}</span>
             },
             {
                 key: 'device_id',
-                title: <SortableHeader field="device_id" title="SN码" />,
+                title: <SortableHeader field="device_id" title="生产序列号" />,
+                width: '140px',
                 render: (val: string) => <span className="font-mono text-sm text-gray-700">{val}</span>
             },
             {
                 key: 'customer_name',
                 title: <SortableHeader field="customer_name" title="客户" />,
+                width: '100px',
                 render: (val: string) => <span className="text-sm text-gray-900">{val || '-'}</span>
-            },
-            {
-                key: 'device_location',
-                title: <SortableHeader field="device_location" title="位置" />,
-                render: (val: string) => <span className="text-sm text-gray-600">{val || '-'}</span>
             },
             {
                 key: 'description',
                 title: <SortableHeader field="description" title="故障描述" />,
-                render: (val: string) => <div className="font-medium text-gray-900 truncate max-w-[120px]" title={val}>{val}</div>
+                render: (val: string) => <div className="font-medium text-gray-900 truncate max-w-[200px]" title={val}>{val}</div>
             },
             {
                 key: 'severity',
                 title: <SortableHeader field="severity" title="严重性" />,
-                width: '90px',
+                width: '80px',
                 render: (val: string) => (
                     <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getSeverityColor(val)}`}>
                         {val === 'high' ? '紧急' : val === 'medium' ? '中等' : '轻微'}
@@ -330,7 +329,7 @@ export default function AfterSales() {
             {
                 key: 'status',
                 title: <SortableHeader field="status" title="当前状态" />,
-                width: '100px',
+                width: '90px',
                 render: (val: string) => (
                     <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getStatusColor(val)}`}>
                         {val === 'open' ? '待处理' : val === 'in_progress' ? '处理中' : '已关闭'}
@@ -339,35 +338,23 @@ export default function AfterSales() {
             },
             { 
                 key: 'assignee', 
-                title: <SortableHeader field="assignee" title="负责人" />
+                title: <SortableHeader field="assignee" title="负责人" />,
+                width: '100px'
             },
             {
                 key: 'created_at',
                 title: <SortableHeader field="created_at" title="提报日期" />,
-                width: '110px',
-                render: (val: string) => formatDate(val, 'yyyy-MM-dd')
+                width: '100px',
+                render: (val: string) => <span className="text-sm">{formatDate(val, 'yyyy-MM-dd')}</span>
             },
             {
                 key: 'resolved_at',
                 title: <SortableHeader field="resolved_at" title="处理时间" />,
-                width: '110px',
+                width: '100px',
                 render: (val: string, item: Issue) => (
                     item.status === 'closed' && val
                         ? <span className="text-green-600 text-sm">{formatDate(val, 'yyyy-MM-dd')}</span>
                         : <span className="text-gray-400 text-sm">-</span>
-                )
-            },
-            {
-                key: 'actions',
-                title: '操作',
-                width: '60px',
-                render: (_: any, item: Issue) => (
-                    <button
-                        onClick={() => { setEditingIssue(item); setShowIssueForm(true); }}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                    >
-                        详情/流转
-                    </button>
                 )
             }
         ];
@@ -443,6 +430,7 @@ export default function AfterSales() {
                         loading={loading}
                         rowKey="id"
                         compact
+                        onRowClick={(record: Issue) => navigate(`/issues/${record.id}`)}
                     />
                     {issuePagination.pages > 1 && (
                         <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
@@ -622,7 +610,7 @@ export default function AfterSales() {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-gray-900 tracking-tight">售后中心</h1>
-                            <p className="text-gray-500 text-sm mt-1 font-medium">统一管理全生命周期的故障报修、远程调试与升级演进</p>
+                            <p className="text-gray-500 text-sm mt-1 font-medium">统一管理全生命周期的故障报修与升级演进</p>
                         </div>
                         <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
                             {[

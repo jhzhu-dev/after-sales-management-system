@@ -134,7 +134,6 @@ router.get('/:id', async (req, res) => {
 router.post('/', [
   body('device_id').notEmpty().withMessage('设备ID不能为空'),
   body('type_id').notEmpty().withMessage('模块类型ID不能为空'),
-  body('status').optional().isIn(['正常', '异常', '维护中'])
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -146,7 +145,7 @@ router.post('/', [
       });
     }
     
-    const { device_id, type_id, version_id, status = '正常' } = req.body;
+    const { device_id, type_id, version_id } = req.body;
     
     // 检查设备是否存在
     const device = await query('SELECT id FROM devices WHERE id = ?', [device_id]);
@@ -188,8 +187,8 @@ router.post('/', [
     await transaction(async (connection) => {
       // 创建模块
       await connection.execute(
-        'INSERT INTO modules (id, device_id, type_id, status) VALUES (?, ?, ?, ?)',
-        [moduleId, device_id, type_id, status]
+        'INSERT INTO modules (id, device_id, type_id) VALUES (?, ?, ?)',
+        [moduleId, device_id, type_id]
       );
       
       // 如果提供了版本ID，创建初始版本记录
@@ -221,8 +220,7 @@ router.post('/', [
 
 // 更新模块
 router.put('/:id', [
-  body('type_id').optional().notEmpty().withMessage('模块类型ID不能为空'),
-  body('status').optional().isIn(['正常', '异常', '维护中'])
+  body('type_id').optional().notEmpty().withMessage('模块类型ID不能为空')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
