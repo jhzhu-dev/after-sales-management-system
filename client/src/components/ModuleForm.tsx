@@ -28,12 +28,12 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
     if (module) {
       setFormData({
         device_id: module.device_id,
-        type_id: module.type_id,
+        type_id: module.type_id.toString(),
         version_id: '',
-        status: module.status as '正常' | '异常' | '维护中'
+        status: '正常'
       });
       if (module.type_id) {
-        fetchVersions(module.type_id);
+        fetchVersions(module.type_id.toString());
       }
     }
   }, [module, deviceId]);

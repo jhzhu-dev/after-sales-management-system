@@ -1,5 +1,10 @@
 # Project Context
 
+> **🚨 PRODUCTION ENVIRONMENT**  
+> This project is in **PRODUCTION** since 2026-02-27.  
+> Contains real business data. No test operations on database allowed.  
+> See: [PRODUCTION.md](../PRODUCTION.md) and [.ai-context](../.ai-context)
+
 ## Purpose
 设备管理系统 - 一个完整的企业级设备全生命周期管理平台，专注于：
 - 多类型设备的信息管理和状态追踪
@@ -10,6 +15,32 @@
 - 为工业设备、机械设备、电气系统等提供统一的管理入口
 
 **核心目标**：帮助企业实现设备资产数字化管理，提升设备维护效率，建立完整的设备生命周期档案。
+
+## Current Specifications Status
+
+**最后更新**: 2026-02-27
+
+本项目已完成 OpenSpec 规范体系重置，当前规范状态如下：
+
+### 已实施规范 (openspec/specs/)
+1. **device-management** - 设备管理：设备信息、模块配置、版本追踪
+2. **product-management** - 产品管理：产品线、产品型号、产品模块配置、产品文档
+3. **customer-management** - 客户管理：客户信息、设备-客户关联
+4. **issue-tracking** - 问题跟踪：问题报修、状态流转、处理日志
+5. **release-management** - 版本发布：版本库、版本发布、空状态处理
+6. **module-types** - 模块类型：标准模块分类体系
+7. **dashboard** - 数据仪表盘：统计数据、可视化图表
+8. **after-sales** - 售后服务：设备升级、设备文档、售后概览
+9. **sop-management** - SOP流程：标准作业程序模板
+
+### 规范覆盖的功能
+- ✅ 后端 API 路由：18个路由文件全部覆盖
+- ✅ 前端页面：10个核心页面全部覆盖
+- ✅ 数据库表：所有核心业务表都有规范定义
+
+### 活跃变更 (openspec/changes/)
+- 无活跃变更（已清空重置）
+- 历史变更已备份到 `changes/backup/`
 
 ## Tech Stack
 

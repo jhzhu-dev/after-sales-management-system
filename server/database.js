@@ -136,7 +136,6 @@ async function createTables() {
         name VARCHAR(255) NOT NULL,
         product_line_id INT NOT NULL,
         customer_id INT,
-        location VARCHAR(255),
         status ENUM('正常', '异常', '维护中') DEFAULT '正常',
         remote_code VARCHAR(100),
         password VARCHAR(100),
@@ -343,6 +342,18 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+    // 问题跟进日志表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS issue_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        issue_id INT NOT NULL,
+        content TEXT NOT NULL,
+        operator VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     // ==================== 设备维护SOP模板 ====================
 
     // SOP 模板表 (用于设备维护检查流程)
@@ -418,11 +429,25 @@ async function createTables() {
         console.log('✅ customer_id 字段添加成功');
       }
 
-      const [locCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'location'");
-      if (locCols.length === 0) {
-        console.log('🔄 正在为 devices 表添加 location 字段...');
-        await pool.execute("ALTER TABLE devices ADD COLUMN location VARCHAR(255) AFTER customer_id");
-        console.log('✅ location 字段添加成功');
+      // 添加 device_code 字段
+      const [deviceCodeCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'device_code'");
+      if (deviceCodeCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加 device_code 字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN device_code VARCHAR(100) AFTER name");
+        console.log('✅ device_code 字段添加成功');
+      }
+
+      // 添加 product_id 字段
+      const [deviceProductIdCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'product_id'");
+      if (deviceProductIdCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加 product_id 字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN product_id INT AFTER product_line_id");
+        try {
+          await pool.execute("ALTER TABLE devices ADD CONSTRAINT fk_device_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL");
+        } catch (e) {
+          console.warn('⚠️ 添加 product_id 外键警告:', e.message);
+        }
+        console.log('✅ product_id 字段添加成功');
       }
 
       // Phase 4: 扩展 issues 表及创建 device_upgrades 表

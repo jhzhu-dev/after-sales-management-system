@@ -1,7 +1,7 @@
 {
   "name": "device-management-system",
   "version": "1.0.0",
-  "description": "设备管理系统 - 支持多类型设备管理、版本追踪、售后问题记录",
+  "description": "售后登记系统 - 支持多类型设备管理、版本追踪、售后问题记录",
   "main": "server/index.js",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
@@ -9,13 +9,8 @@
     "client": "cd client && npm start",
     "build": "cd client && npm run build",
     "install-all": "npm install && cd client && npm install",
-    "start": "node server/index.js",
-    "init-db": "node -e \"require('./server/database').initializeDatabase().then(() => process.exit(0)).catch(() => process.exit(1))\"",
-    "seed": "node server/seed_new.js",
-    "view-data": "node view-data.js",
-    "setup": "npm run install-all && npm run init-db && npm run seed",
-    "test-oss": "node server/test-oss-connection.js",
-    "migrate-to-oss": "node server/migrate-files-to-oss.js"
+    "start": "chcp 65001 > nul && node server/index.js",
+    "init-db": "node -e \"require('./server/database').initializeDatabase().then(() => process.exit(0)).catch(() => process.exit(1))\""
   },
   "keywords": [
     "device-management",

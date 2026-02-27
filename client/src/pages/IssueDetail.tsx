@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
 import {
   ArrowLeftIcon,
   PencilIcon,
@@ -9,7 +10,8 @@ import {
   UserIcon,
   DevicePhoneMobileIcon,
   CogIcon,
-  PrinterIcon
+  PrinterIcon,
+  PaperClipIcon
 } from '@heroicons/react/24/outline';
 import { Issue, IssueFormData } from '../types';
 import { issueApi } from '../services/api';
@@ -27,6 +29,8 @@ export default function IssueDetail() {
   const [showEditForm, setShowEditForm] = useState(false);
   const [showResolveForm, setShowResolveForm] = useState(false);
   const [resolveNotes, setResolveNotes] = useState('');
+  const [previewAtts, setPreviewAtts] = useState<Attachment[]>([]);
+  const [previewIdx, setPreviewIdx] = useState(0);
 
   useEffect(() => {
     if (id) {
@@ -173,6 +177,32 @@ export default function IssueDetail() {
   return (
     <Layout>
       <div className="space-y-6">
+        {/* 仅打印可见的页眉 */}
+        <div className="hidden print:block print-header">
+          <div className="flex items-center justify-between" style={{marginBottom: '3pt'}}>
+            <span style={{fontSize: '8pt', color: '#6b7280'}}>售后登记系统</span>
+            <span style={{fontSize: '8pt', color: '#6b7280'}}>打印时间：{new Date().toLocaleString('zh-CN')}</span>
+          </div>
+          <h1 style={{fontSize: '12pt', fontWeight: 'bold', margin: '0 0 3pt 0', color: '#111827'}}>
+            问题详情 #{issue.id} — {issue.description}
+          </h1>
+          <div className="print-flex-row" style={{marginTop: '3pt'}}>
+            <span style={{padding: '0 6pt', borderRadius: '999px', fontSize: '8pt', fontWeight: '600',
+              background: issue.status === 'closed' ? '#d1fae5' : issue.status === 'in_progress' ? '#fef3c7' : '#fee2e2',
+              color: issue.status === 'closed' ? '#065f46' : issue.status === 'in_progress' ? '#92400e' : '#991b1b'}}>
+              {issue.status === 'closed' ? '已解决' : issue.status === 'in_progress' ? '处理中' : '待处理'}
+            </span>
+            <span style={{padding: '0 6pt', borderRadius: '999px', fontSize: '8pt', fontWeight: '600',
+              background: issue.severity === 'high' ? '#fee2e2' : issue.severity === 'medium' ? '#fef3c7' : '#f0f9ff',
+              color: issue.severity === 'high' ? '#991b1b' : issue.severity === 'medium' ? '#92400e' : '#0369a1'}}>
+              {issue.severity === 'high' ? '高' : issue.severity === 'medium' ? '中' : '低'}
+            </span>
+            <span style={{fontSize: '8pt', color: '#6b7280'}}>
+              设备：{issue.device_name}{issue.device_type ? '（' + issue.device_type + '）' : ''}
+            </span>
+          </div>
+        </div>
+
         {/* 头部 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -241,7 +271,7 @@ export default function IssueDetail() {
                   </div>
                 </div>
               </div>
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 print:hidden">
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500 uppercase tracking-wide">问题ID</p>
                   <p className="text-xl font-mono font-bold text-gray-900">#{issue.id}</p>
@@ -252,7 +282,7 @@ export default function IssueDetail() {
         </div>
 
         {/* 详细信息网格 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2 print:gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2 print:gap-4 print-2col-grid">
           {/* 设备信息卡片 */}
           <div className="bg-white rounded-lg shadow print:shadow-none print:border">
             <div className="px-6 py-4 border-b border-gray-200">
@@ -352,11 +382,39 @@ export default function IssueDetail() {
               {issue.resolution_description && (
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-2">问题备注</h4>
-                  <p className="text-sm text-gray-900 leading-relaxed bg-blue-50 p-4 rounded-lg whitespace-pre-wrap">
+                  <p className="text-sm text-gray-900 leading-relaxed bg-blue-50 p-4 rounded-lg whitespace-pre-wrap print:bg-white print:p-0">
                     {issue.resolution_description}
                   </p>
                 </div>
               )}
+
+              {/* 问题附件 */}
+              {(() => {
+                const atts: Attachment[] = issue.attachments
+                  ? (typeof issue.attachments === 'string'
+                      ? (() => { try { return JSON.parse(issue.attachments as any); } catch { return []; } })()
+                      : issue.attachments)
+                  : [];
+                return atts.length > 0 ? (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                      <PaperClipIcon className="h-4 w-4" />登记附件
+                    </h4>
+                    <ul className="space-y-1.5">
+                      {atts.map((att, i) => (
+                        <li key={i} className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded px-3 py-1.5 text-sm">
+                          <PaperClipIcon className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                          <button
+                            onClick={() => { setPreviewAtts(atts); setPreviewIdx(i); }}
+                            className="text-blue-700 hover:underline truncate text-left print-show"
+                          >{att.name}</button>
+                          <span className="text-gray-400 text-xs ml-auto flex-shrink-0">{att.size ? (att.size / 1024).toFixed(0) + ' KB' : ''}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null;
+              })()}
             </div>
           </div>
         </div>
@@ -370,12 +428,12 @@ export default function IssueDetail() {
             </h3>
           </div>
           <div className="px-6 py-4">
-            <IssueLogTimeline issueId={id!} onLogAdded={fetchIssue} />
+            <IssueLogTimeline issueId={id!} issueStatus={issue.status} onLogAdded={fetchIssue} />
           </div>
         </div>
 
         {/* 固定操作栏 - 仅在移动端显示 */}
-        <div className="fixed bottom-6 right-6 z-40 md:hidden">
+        <div className="fixed bottom-6 right-6 z-40 md:hidden no-print">
           <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-2">
             <div className="flex items-center space-x-2">
               {issue.status !== 'closed' && (
@@ -399,6 +457,15 @@ export default function IssueDetail() {
             </div>
           </div>
         </div>
+
+        {/* 附件预览 */}
+        {previewAtts.length > 0 && (
+          <AttachmentViewer
+            attachments={previewAtts}
+            initialIndex={previewIdx}
+            onClose={() => setPreviewAtts([])}
+          />
+        )}
 
         {/* 编辑表单 */}
         {showEditForm && (

@@ -11,16 +11,15 @@ export interface Customer {
 export interface Device {
   id: string;
   name: string;
-  device_code?: string;
+  device_code?: string | null;
   product_line_id?: number;
   product_line_name?: string;
-  product_id?: number;
-  product_name?: string;
-  product_model?: string;
+  product_id?: number | null;
+  product_name?: string | null;
+  product_model?: string | null;
   customer_id?: number;
   customer_name?: string;
   customer_short_name?: string;
-  location?: string;
   status: '正常' | '异常' | '维护中';
   created_at: string;
   updated_at: string;
@@ -32,15 +31,17 @@ export interface Device {
 
 // 模块类型 (仅用于设备详情页面)
 export interface Module {
-  id: string;
+  id: number;
   device_id: string;
-  type_id: string;
-  status: string;
+  type_id: number;
   created_at: string;
   updated_at: string;
   device_name?: string;
   device_type?: string;
   module_type?: string;
+  current_version?: string;
+  current_version_type?: string;
+  current_version_date?: string;
 }
 
 
@@ -60,9 +61,9 @@ export interface VersionRelease {
 
 // 问题类型
 export interface Issue {
-  id: string;
+  id: number;
   device_id: string;
-  module_id?: string;
+  module_id?: number;
   category: '硬件故障' | '软件Bug' | '操作咨询' | '安装调试' | '其他';
   description: string;
   severity: 'low' | 'medium' | 'high';
@@ -72,14 +73,11 @@ export interface Issue {
   contact_phone?: string;
   is_visit_required: boolean;
   visit_at?: string;
-  attachments?: string[]; // 存储附件URL的数组
-  notes?: string;
+  attachments?: string[];
   created_at: string;
   updated_at: string;
   device_name?: string;
   device_type?: string;
-  product_name?: string;
-  device_location?: string;
   customer_name?: string;
   customer_short_name?: string;
   module_category?: string;
@@ -90,13 +88,11 @@ export interface Issue {
 // 问题处理记录类型
 export interface IssueLog {
   id: number;
-  issue_id: string;
+  issue_id: number;
   content: string;
-  handler: string;
-  handled_at: string;
-  attachments?: string[];
+  operator?: string;
+  attachments?: Array<{ name: string; url: string; ossPath: string; size: number }>;
   created_at: string;
-  updated_at: string;
 }
 
 // 设备升级记录类型
@@ -175,17 +171,16 @@ export interface DashboardStats {
 
 // 表单类型
 export interface DeviceFormData {
-  id?: string; // 可选，新增时可由用户输入或由后端自动生成
+  id?: string;
   name: string;
-  device_code?: string | null; // 设备编码
-  product_line_id: string | number; // 支持字符串和数字类型
-  product_id?: number; // 可选，用于自动绑定产品模块配置
+  device_code?: string | null;
+  product_line_id: string | number;
+  product_id?: number | null;
   customer_id?: number | null;
-  location?: string | null;
   status: '正常' | '异常' | '维护中';
   remote_code?: string | null;
   password?: string | null;
-  selectedModuleTypeIds?: number[]; // 选中的模块类型ID（用于新建时过滤可选模块）
+  selectedModuleTypeIds?: number[];
 }
 
 export interface ModuleFormData {

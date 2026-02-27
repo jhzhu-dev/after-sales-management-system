@@ -283,7 +283,7 @@ router.put('/:id', [
         params.push(id);
 
         await query(
-            `UPDATE version_releases SET ${updates.join(', ')}, updated_at = NOW() WHERE id = ?`,
+            `UPDATE version_releases SET ${updates.join(', ')} WHERE id = ?`,
             params
         );
 
@@ -305,20 +305,6 @@ router.put('/:id', [
 router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-
-        // 检查是否有模块使用该版本
-        const modulesUsingVersion = await query(
-            'SELECT COUNT(*) as count FROM modules WHERE version_id = ?',
-            [id]
-        );
-
-        if (modulesUsingVersion[0].count > 0) {
-            return res.status(400).json({
-                success: false,
-                error: `无法删除：有 ${modulesUsingVersion[0].count} 个模块正在使用该版本`
-            });
-        }
-
         // 删除关联的附件文件（OSS/本地）
         const attachments = await query('SELECT * FROM release_attachments WHERE release_id = ?', [id]);
         for (const att of attachments) {

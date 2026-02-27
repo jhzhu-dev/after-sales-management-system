@@ -45,6 +45,7 @@ const DeviceDetail: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [moduleReleases, setModuleReleases] = useState<VersionRelease[]>([]);
   const [selectedModuleForVersion, setSelectedModuleForVersion] = useState<Module | null>(null);
+  const [selectedReleaseForVersion, setSelectedReleaseForVersion] = useState<VersionRelease | null>(null);
   const [moduleVersions, setModuleVersions] = useState<any[]>([]);
   const [showModuleVersionHistory, setShowModuleVersionHistory] = useState(false);
   const [deviceUpgrades, setDeviceUpgrades] = useState<any[]>([]);
@@ -382,7 +383,7 @@ const DeviceDetail: React.FC = () => {
   const handleModuleSubmit = async (data: ModuleFormData) => {
     try {
       if (editingModule) {
-        await moduleApi.updateModule(editingModule.id, data);
+        await moduleApi.updateModule(editingModule.id.toString(), data);
       } else {
         await moduleApi.createModule(data);
       }
@@ -410,7 +411,7 @@ const DeviceDetail: React.FC = () => {
   // 显示模块版本历史
   const handleShowModuleVersionHistory = async (module: Module) => {
     setSelectedModuleForVersion(module);
-    await fetchModuleVersions(module.id);
+    await fetchModuleVersions(module.id.toString());
     setShowModuleVersionHistory(true);
   };
 
@@ -429,7 +430,8 @@ const DeviceDetail: React.FC = () => {
   // 修改当前版本 (模块)
   const handleUpdateModuleVersion = async (module: Module) => {
     setSelectedModuleForVersion(module);
-    await fetchModuleReleases(module.type_id);
+    setSelectedReleaseForVersion(null);
+    await fetchModuleReleases(module.type_id.toString());
     setShowVersionUpdateForm(true);
   };
 
@@ -460,6 +462,7 @@ const DeviceDetail: React.FC = () => {
 
       setShowVersionUpdateForm(false);
       setSelectedModuleForVersion(null);
+      setSelectedReleaseForVersion(null);
     } catch (error: any) {
       console.error('更新版本失败:', error);
       const errorMsg = error.response?.data?.error || '更新版本失败';
@@ -502,7 +505,7 @@ const DeviceDetail: React.FC = () => {
     if (!selectedIssueForResolve) return;
 
     try {
-      await issueApi.updateIssue(selectedIssueForResolve.id, {
+      await issueApi.updateIssue(selectedIssueForResolve.id.toString(), {
         status: 'closed',
         resolution_description: resolutionDescription,
         resolved_at: new Date().toISOString()
@@ -629,7 +632,7 @@ const DeviceDetail: React.FC = () => {
             </button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{device.name}</h1>
-              <p className="text-gray-600 mt-1">{device.product_model || '设备详情信息'}</p>
+              <p className="text-gray-600 mt-1">设备详细信息</p>
             </div>
           </div>
           <div className="flex items-center gap-2 no-print">
@@ -659,12 +662,6 @@ const DeviceDetail: React.FC = () => {
               <p className="text-lg font-mono print:text-base">{device.id}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">产品型号</label>
-              <p className="text-lg print:text-base">
-                {device.product_model || '-'}
-              </p>
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">设备编码</label>
               <p className="text-lg font-mono print:text-base">{device.device_code || '-'}</p>
             </div>
@@ -677,6 +674,15 @@ const DeviceDetail: React.FC = () => {
                     {device.customer_short_name && <span className="text-sm text-gray-400 ml-2">({device.customer_short_name})</span>}
                   </>
                 ) : '-'}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">产品线 / 产品型号</label>
+              <p className="text-lg print:text-base">
+                {device.product_line_name || '-'}
+                {device.product_model && (
+                  <span className="text-gray-500 text-base ml-2">/ {device.product_model}</span>
+                )}
               </p>
             </div>
             <div>
@@ -1216,6 +1222,7 @@ const DeviceDetail: React.FC = () => {
                 onClick={() => {
                   setShowVersionUpdateForm(false);
                   setSelectedModuleForVersion(null);
+                  setSelectedReleaseForVersion(null);
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -1223,26 +1230,30 @@ const DeviceDetail: React.FC = () => {
               </button>
             </div>
             <div className="p-6 space-y-5">
-              {/* 版本库选填区 */}
-              {moduleReleases.length > 0 && (
-                <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
-                  <label className="block text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
-                    <TagIcon className="h-4 w-4" /> 从发布库勾选正式版本 (可选)
-                  </label>
+              {/* 版本库必选区 */}
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                <label className="block text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                  <TagIcon className="h-4 w-4" /> 从发布库勾选正式版本 (必选)
+                </label>
+                {moduleReleases.length === 0 ? (
+                  <div className="text-center py-4 text-sm text-gray-500">
+                    暂无可选版本，请先前往<span className="font-semibold text-blue-600">版本发布中心</span>添加版本
+                  </div>
+                ) : (
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
                     {moduleReleases.map((rel) => (
-                      <label key={rel.id} className="flex items-center justify-between p-2 bg-white rounded border border-blue-200 hover:bg-blue-50 cursor-pointer transition-colors group">
+                      <label key={rel.id} className={`flex items-center justify-between p-2 bg-white rounded border cursor-pointer transition-colors group ${
+                        selectedReleaseForVersion?.id === rel.id
+                          ? 'border-blue-500 ring-2 ring-blue-200'
+                          : 'border-blue-200 hover:bg-blue-50'
+                      }`}>
                         <div className="flex items-center">
                           <input
                             type="radio"
                             name="releaseSelection"
                             className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                            onChange={() => {
-                              const versionInput = document.getElementById('newVersion') as HTMLInputElement;
-                              const releaseIdInput = document.getElementById('releaseId') as HTMLInputElement;
-                              if (versionInput) versionInput.value = rel.version_number;
-                              if (releaseIdInput) releaseIdInput.value = rel.id.toString();
-                            }}
+                            checked={selectedReleaseForVersion?.id === rel.id}
+                            onChange={() => setSelectedReleaseForVersion(rel)}
                           />
                           <span className="ml-3 text-sm font-bold font-mono text-gray-900">{rel.version_number}</span>
                         </div>
@@ -1250,32 +1261,18 @@ const DeviceDetail: React.FC = () => {
                       </label>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">目标版本号</label>
-                  <input
-                    type="text"
-                    id="newVersion"
-                    required
-                    placeholder="V1.x.x"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    defaultValue=""
-                  />
-                  <input type="hidden" id="releaseId" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">更新执行人 (强制)</label>
-                  <input
-                    type="text"
-                    id="updatedBy"
-                    required
-                    placeholder="请输入你的姓名"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">更新执行人 (强制)</label>
+                <input
+                  type="text"
+                  id="updatedBy"
+                  required
+                  placeholder="请输入你的姓名"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
               </div>
 
               <div>
@@ -1294,6 +1291,7 @@ const DeviceDetail: React.FC = () => {
                   onClick={() => {
                     setShowVersionUpdateForm(false);
                     setSelectedModuleForVersion(null);
+                    setSelectedReleaseForVersion(null);
                   }}
                   className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 >
@@ -1301,29 +1299,36 @@ const DeviceDetail: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    const versionInput = document.getElementById('newVersion') as HTMLInputElement;
                     const descriptionInput = document.getElementById('versionDescription') as HTMLTextAreaElement;
                     const updatedByInput = document.getElementById('updatedBy') as HTMLInputElement;
-                    const releaseIdInput = document.getElementById('releaseId') as HTMLInputElement;
 
-                    const version_number = versionInput.value.trim();
                     const description = descriptionInput.value.trim();
                     const updated_by = updatedByInput.value.trim();
-                    const release_id = releaseIdInput.value ? parseInt(releaseIdInput.value) : undefined;
 
-                    if (!version_number || !description || !updated_by) {
-                      alert('所有字段均为必填项');
+                    if (!selectedReleaseForVersion) {
+                      alert('请从发布库中选择一个版本');
                       return;
                     }
 
-                    if (description.length < 5) {
+                    if (!updated_by) {
+                      alert('请填写更新执行人');
+                      return;
+                    }
+
+                    if (!description || description.length < 5) {
                       alert('说明过短，请提供更详细的执行记录');
                       return;
                     }
 
-                    handleVersionUpdateSubmit({ version_number, description, updated_by, release_id });
+                    handleVersionUpdateSubmit({
+                      version_number: selectedReleaseForVersion.version_number,
+                      release_id: selectedReleaseForVersion.id,
+                      description,
+                      updated_by
+                    });
                   }}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                  disabled={moduleReleases.length === 0}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   确认并保存记录
                 </button>
@@ -1400,7 +1405,7 @@ const DeviceDetail: React.FC = () => {
                     >
                       <option value="">设备级别问题</option>
                       {modules.map((module) => (
-                        <option key={module.id} value={module.id}>
+                        <option key={module.id} value={module.id.toString()}>
                           {module.module_type}
                         </option>
                       ))}

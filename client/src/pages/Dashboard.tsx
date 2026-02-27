@@ -5,14 +5,14 @@ import {
   DocumentTextIcon,
   ClockIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  PrinterIcon
 } from '@heroicons/react/24/outline';
 import { dashboardApi } from '../services/api';
 import { DashboardStats } from '../types';
 import Layout from '../components/Layout';
 import StatsCard from '../components/StatsCard';
 import ProductLineChart from '../components/ProductLineChart';
-import LocationStatsChart from '../components/LocationStatsChart';
 import ChartCard from '../components/ChartCard';
 import { formatDate } from '../utils';
 import { 
@@ -67,6 +67,8 @@ export default function Dashboard() {
     }));
   };
 
+  const handlePrint = () => window.print();
+
   if (loading) {
     return (
       <Layout>
@@ -98,10 +100,25 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="space-y-6">
+        {/* 打印专用页眉 */}
+        <div className="hidden print:block print-header">
+          <h1 style={{fontSize:'13pt',fontWeight:'800',margin:0}}>系统仪表盘</h1>
+          <p style={{fontSize:'8pt',color:'#6b7280',marginTop:'2pt'}}>打印时间：{new Date().toLocaleString('zh-CN')}</p>
+        </div>
+
         {/* 页面标题 */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">系统仪表盘</h1>
-          <p className="mt-1 text-sm text-gray-600">实时监控系统运行状态和关键指标</p>
+        <div className="flex items-center justify-between print:hidden">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">系统仪表盘</h1>
+            <p className="mt-1 text-sm text-gray-600">实时监控系统运行状态和关键指标</p>
+          </div>
+          <button
+            onClick={handlePrint}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <PrinterIcon className="h-4 w-4 mr-2" />
+            打印
+          </button>
         </div>
 
         {/* 核心指标卡片 */}
@@ -153,9 +170,6 @@ export default function Dashboard() {
               {/* 产品线分布 */}
               <ProductLineChart data={stats.deviceTypeDistribution} />
 
-              {/* 位置统计 */}
-              <LocationStatsChart data={stats.locationStats} />
-
               {/* 设备状态分布 */}
               <ChartCard title="设备状态分布" description="设备当前运行状态统计">
                 <ResponsiveContainer width="100%" height={300}>
@@ -205,18 +219,6 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               </ChartCard>
 
-              {/* 模块类别分布 */}
-              <ChartCard title="模块类别分布" description="设备模块类型统计">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={stats.moduleCategoryDistribution}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="category" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#8B5CF6" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
             </div>
           )}
         </section>

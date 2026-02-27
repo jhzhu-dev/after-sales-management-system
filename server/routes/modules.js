@@ -93,10 +93,10 @@ router.get('/:id', async (req, res) => {
       SELECT 
         m.*,
         d.name as device_name,
-        d.type as device_type,
-        d.location as device_location
+        pl.name as device_type
       FROM modules m
       LEFT JOIN devices d ON m.device_id = d.id
+      LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       WHERE m.id = ?
     `;
     
@@ -179,17 +179,13 @@ router.post('/', [
       return res.status(400).json({ success: false, error: '该设备的此模块类别已存在' });
     }
     
-    // 生成6位随机ID
-    const IDGenerator = require('../../id-generator');
-    const idGenerator = new IDGenerator();
-    const moduleId = idGenerator.generate();
-    
     await transaction(async (connection) => {
-      // 创建模块
-      await connection.execute(
-        'INSERT INTO modules (id, device_id, type_id) VALUES (?, ?, ?)',
-        [moduleId, device_id, type_id]
+      // 创建模块（使用自增主键）
+      const [insertResult] = await connection.execute(
+        'INSERT INTO modules (device_id, type_id) VALUES (?, ?)',
+        [device_id, type_id]
       );
+      const moduleId = insertResult.insertId;
       
       // 如果提供了版本ID，创建初始版本记录
       if (version_id) {
@@ -242,11 +238,12 @@ router.put('/:id', [
     }
     
     // 构建更新语句
+    const allowedFields = ['type_id'];
     const updateFields = [];
     const updateValues = [];
     
     Object.keys(updates).forEach(key => {
-      if (updates[key] !== undefined) {
+      if (allowedFields.includes(key) && updates[key] !== undefined) {
         updateFields.push(`${key} = ?`);
         updateValues.push(updates[key]);
       }

@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import ProductForm from '../components/ProductForm';
 import { Product, ProductLine, ApiResponse } from '../types';
 import { productApi, productLineApi } from '../services/api';
-import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 
 const Products: React.FC = () => {
@@ -125,20 +125,37 @@ const Products: React.FC = () => {
         }
     };
 
+    const handlePrint = () => window.print();
+
     return (
         <Layout>
             <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
+                {/* 打印专用页眉 */}
+                <div className="hidden print:block print-header" style={{marginBottom:'8pt'}}>
+                  <h1 style={{fontSize:'13pt',fontWeight:'800',margin:0}}>产品管理</h1>
+                  <p style={{fontSize:'8pt',color:'#6b7280',marginTop:'2pt'}}>打印时间：{new Date().toLocaleString('zh-CN')} · 共 {products.length} 个产品</p>
+                </div>
+
+                <div className="flex justify-between items-center mb-6 print:hidden">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">产品管理</h1>
                         <p className="mt-1 text-sm text-gray-600">管理各产品线下的具体产品型号</p>
                     </div>
-                    <button 
-                        onClick={handleAddProduct}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                    >
-                        + 新增产品
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handlePrint}
+                            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                            <PrinterIcon className="h-4 w-4 mr-2" />
+                            打印
+                        </button>
+                        <button 
+                            onClick={handleAddProduct}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                            + 新增产品
+                        </button>
+                    </div>
                 </div>
 
                 {/* 成功消息提示 */}
@@ -148,7 +165,7 @@ const Products: React.FC = () => {
                     </div>
                 )}
 
-                <div className="bg-white p-4 rounded-lg shadow mb-6 flex items-center space-x-4">
+                <div className="bg-white p-4 rounded-lg shadow mb-6 flex items-center space-x-4 no-print">
                     <div className="flex items-center space-x-2">
                         <label className="text-sm font-medium text-gray-700">筛选产品线:</label>
                         <select

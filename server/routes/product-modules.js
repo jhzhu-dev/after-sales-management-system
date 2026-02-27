@@ -300,58 +300,21 @@ router.put('/:productId/modules/:moduleId', [
   }
 });
 
-// 删除产品模块配置（软删除：移至历史记录）
+// 删除产品模块配置
 router.delete('/:productId/modules/:moduleId', async (req, res) => {
   try {
     const { productId, moduleId } = req.params;
-    const { created_by } = req.body;
-    
-    // 获取当前模块配置
-    const [currentModule] = await query(
-      'SELECT * FROM product_modules WHERE id = ? AND product_id = ?',
+
+    const result = await query(
+      'DELETE FROM product_modules WHERE id = ? AND product_id = ?',
       [moduleId, productId]
     );
-    
-    if (!currentModule) {
+
+    if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: '模块配置不存在' });
     }
-    
-    await transaction(async (conn) => {
-      // 1. 将历史记录标记为非当前版本并设置过期日期
-      await conn.execute(
-        `UPDATE product_module_history 
-         SET is_current = FALSE, deprecated_date = CURRENT_TIMESTAMP 
-         WHERE product_id = ? AND module_type_id = ? AND is_current = TRUE`,
-        [productId, currentModule.module_type_id]
-      );
-      
-      // 2. 创建删除记录到历史表
-      await conn.execute(
-        `INSERT INTO product_module_history 
-         (product_id, module_type_id, is_required, default_config, version_number, change_description, is_current, created_by, deprecated_date)
-         VALUES (?, ?, ?, ?, ?, ?, FALSE, ?, CURRENT_TIMESTAMP)`,
-        [
-          productId,
-          currentModule.module_type_id,
-          currentModule.is_required,
-          currentModule.default_config,
-          'deleted',
-          '配置已删除',
-          created_by
-        ]
-      );
-      
-      // 3. 从主表删除
-      await conn.execute(
-        'DELETE FROM product_modules WHERE id = ? AND product_id = ?',
-        [moduleId, productId]
-      );
-    });
-    
-    res.json({
-      success: true,
-      message: '模块配置删除成功，历史记录已保留'
-    });
+
+    res.json({ success: true, message: '模块配置删除成功' });
   } catch (error) {
     console.error('删除模块配置失败:', error);
     res.status(500).json({

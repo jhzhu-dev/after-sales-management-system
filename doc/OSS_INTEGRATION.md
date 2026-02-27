@@ -1,5 +1,8 @@
 # 阿里云OSS集成说明文档
 
+> **🚨 生产环境文档**  
+> 本文档用于技术参考。系统已投入生产使用，文件迁移工具已移除。
+
 ## 概述
 
 系统已集成阿里云OSS（对象存储服务）功能，所有上传的文件将存储在阿里云OSS华东2（上海）区域，按产品线分类管理。
@@ -112,28 +115,6 @@ npm run dev
 - 通过路径前缀 `oss://` 自动识别文件存储位置
 - OSS上传失败时自动降级到本地存储
 
-## 文件迁移
-
-### 将现有文件迁移到OSS
-
-如果需要将已有的本地文件迁移到OSS，运行迁移脚本：
-
-```bash
-node server/migrate-files-to-oss.js
-```
-
-迁移脚本功能：
-1. 扫描数据库中所有本地路径的文件
-2. 查询文件所属的产品线信息
-3. 按产品线上传到OSS
-4. 更新数据库中的文件路径
-5. 保留本地文件作为备份（不会自动删除）
-
-**注意**：
-- 迁移前请确保 `.env` 配置正确
-- 迁移过程会保留本地文件，可手动删除
-- 建议先备份数据库
-
 ## 开启/关闭OSS功能
 
 ### 启用OSS存储
@@ -223,17 +204,9 @@ USE_OSS_STORAGE=false
 3. **路由修改**:
    - `server/routes/product-documents.js` - 产品文档路由
    - `server/routes/uploads.js` - 生产资料路由
+   - `server/routes/version-releases.js` - 版本发布附件
 
-4. **迁移工具**:
-   - `server/migrate-files-to-oss.js` - 文件迁移脚本
-
-5. **依赖包**:
-   - `ali-oss` ^6.18.0 - 阿里云OSS SDK
-
-### OSS Service API
-
-```javascript
-const ossService = require('./services/oss-service');
+4onst ossService = require('./services/oss-service');
 
 // 上传文件
 const result = await ossService.uploadFile(file, productLineName, 'product-documents');

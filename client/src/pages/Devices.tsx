@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PencilIcon, TrashIcon, EyeIcon, ChevronUpIcon, ChevronDownIcon, PlusIcon } from '@heroicons/react/24/outline';
-import { deviceApi, moduleApi, productModuleApi } from '../services/api';
+import { PencilIcon, TrashIcon, EyeIcon, ChevronUpIcon, ChevronDownIcon, PlusIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { deviceApi, moduleApi } from '../services/api';
 import { Device, FilterOptions, DeviceFormData } from '../types';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
@@ -241,49 +241,49 @@ export default function Devices() {
     setShowDeviceForm(true);
   };
 
+  const handlePrint = () => window.print();
+
+  // 打印用：全量过滤结果（不切分页）
+  const allFilteredDevices = (() => {
+    let filtered = [...allDevices];
+    if (filters.search) {
+      const s = filters.search.toLowerCase();
+      filtered = filtered.filter(d =>
+        d.name.toLowerCase().includes(s) ||
+        d.id.toLowerCase().includes(s) ||
+        (d.customer_name && d.customer_name.toLowerCase().includes(s)) ||
+        (d.customer_short_name && d.customer_short_name.toLowerCase().includes(s))
+      );
+    }
+    if (filters.type) filtered = filtered.filter(d => d.product_line_name === filters.type);
+    if (filters.status) filtered = filtered.filter(d => d.status === filters.status);
+    return filtered;
+  })();
+
   const handleDeviceSubmit = async (data: DeviceFormData) => {
     try {
       let newDeviceId: string;
-      
+      const { selectedModuleTypeIds, ...deviceData } = data;
+
       if (editingDevice) {
-        await deviceApi.updateDevice(editingDevice.id, data);
+        await deviceApi.updateDevice(editingDevice.id, deviceData);
         newDeviceId = editingDevice.id;
       } else {
-        const response = await deviceApi.createDevice(data);
+        const response = await deviceApi.createDevice(deviceData);
         newDeviceId = response.data.id;
-        
-        // 如果选择了产品，自动创建模块配置
-        if (data.product_id) {
+      }
+
+      // 新建设备时自动创建选配模块
+      if (!editingDevice && selectedModuleTypeIds && selectedModuleTypeIds.length > 0) {
+        for (const typeId of selectedModuleTypeIds) {
           try {
-            const modulesResponse = await productModuleApi.getProductModules(data.product_id);
-            if (modulesResponse.success && modulesResponse.data.length > 0) {
-              // 根据选中的模块类型ID过滤
-              const selectedIds = data.selectedModuleTypeIds;
-              const modulesToCreate = selectedIds
-                ? modulesResponse.data.filter(m => selectedIds.includes(m.module_type_id))
-                : modulesResponse.data;
-              const moduleCreationPromises = modulesToCreate.map(async (productModule) => {
-                try {
-                  await moduleApi.createModule({
-                    device_id: newDeviceId,
-                    type_id: productModule.module_type_id.toString(),
-                    status: '正常'
-                  });
-                } catch (err) {
-                  console.error(`创建模块 ${productModule.module_type_name} 失败:`, err);
-                }
-              });
-              
-              await Promise.allSettled(moduleCreationPromises);
-              console.log(`已为设备 ${newDeviceId} 自动创建 ${modulesResponse.data.length} 个模块`);
-            }
-          } catch (error) {
-            console.error('自动创建模块配置失败:', error);
-            // 不抛出错误，允许设备创建成功
+            await moduleApi.createModule({ device_id: newDeviceId, type_id: typeId.toString(), status: '正常' });
+          } catch (err) {
+            console.warn(`创建模块 type_id=${typeId} 失败:`, err);
           }
         }
       }
-      
+
       await fetchAllDevices();
       setShowDeviceForm(false);
       setEditingDevice(null);
@@ -336,6 +336,13 @@ export default function Devices() {
       )
     },
     {
+      key: 'device_code' as keyof Device,
+      title: <SortableHeader field="device_code" title="设备编码" />,
+      render: (value: string) => (
+        <div className="text-gray-700 text-sm">{value || <span className="text-gray-300">—</span>}</div>
+      )
+    },
+    {
       key: 'name' as keyof Device,
       title: <SortableHeader field="name" title="名称" />,
       render: (value: string) => (
@@ -343,19 +350,13 @@ export default function Devices() {
       )
     },
     {
-      key: 'product_name' as keyof Device,
-      title: <SortableHeader field="product_name" title="产品" />,
-      render: (value: string, record: Device) => {
-        // 如果有产品信息，显示产品名称，否则显示产品线名称
-        const displayText = value ? 
-          (record.product_model ? `${value} (${record.product_model})` : value) : 
-          (record.product_line_name || '-');
-        return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDeviceTypeColor(record.product_line_name || '')}`}>
-            {displayText}
-          </span>
-        );
-      }
+      key: 'product_line_name' as keyof Device,
+      title: <SortableHeader field="product_line_name" title="产品线 / 产品型号" />,
+      render: (value: string, record: Device) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDeviceTypeColor(value || '')}`}>
+          {[value, record.product_model].filter(Boolean).join(' / ') || '-'}
+        </span>
+      )
     },
     {
       key: 'customer_name' as keyof Device,
@@ -428,20 +429,44 @@ export default function Devices() {
   return (
     <Layout>
       <div className="space-y-6">
+        {/* 仅打印可见的页眉 */}
+        <div className="hidden print:block print-header">
+          <div className="flex items-center justify-between" style={{marginBottom: '3pt'}}>
+            <span style={{fontSize: '8pt', color: '#6b7280'}}>售后登记系统</span>
+            <span style={{fontSize: '8pt', color: '#6b7280'}}>打印时间：{new Date().toLocaleString('zh-CN')}</span>
+          </div>
+          <h1 style={{fontSize: '13pt', fontWeight: 'bold', margin: '0 0 3pt 0', color: '#111827'}}>设备管理</h1>
+          <div className="print-flex-row" style={{marginTop: '2pt'}}>
+            {filters.search && <span style={{fontSize: '8pt', color: '#6b7280'}}>搜索：{filters.search}</span>}
+            {filters.type && <span style={{fontSize: '8pt', color: '#6b7280'}}>产品线：{filters.type}</span>}
+            {filters.status && <span style={{fontSize: '8pt', color: '#6b7280'}}>状态：{filters.status}</span>}
+            <span style={{fontSize: '8pt', color: '#6b7280'}}>共 {allFilteredDevices.length} 条记录</span>
+          </div>
+        </div>
+
         {/* 页面标题和操作 */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center no-print">
           <h1 className="text-2xl font-bold text-gray-900">设备管理</h1>
-          <button
-            onClick={() => handleAddDevice()}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            新增设备
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <PrinterIcon className="h-4 w-4 mr-2" />
+              打印
+            </button>
+            <button
+              onClick={() => handleAddDevice()}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <PlusIcon className="h-5 w-5 mr-2" />
+              新增设备
+            </button>
+          </div>
         </div>
 
         {/* 筛选器 */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 no-print">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -511,7 +536,38 @@ export default function Devices() {
           }}
           rowKey="id"
           onRowClick={handleRowClick}
+          className="print:hidden"
         />
+
+        {/* 打印专用表格 - 显示全部筛选结果 */}
+        <div className="hidden print:block">
+          <table style={{width:'100%', borderCollapse:'collapse', fontSize:'8pt'}}>
+            <thead>
+              <tr style={{borderBottom:'1pt solid #374151', backgroundColor:'#f9fafb'}}>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>生产序列号</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>设备编码</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>名称</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>产品线 / 型号</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>客户</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>状态</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>创建时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allFilteredDevices.map((d, i) => (
+                <tr key={d.id} style={{borderBottom:'0.5pt solid #e5e7eb', backgroundColor: i%2===0?'white':'#f9fafb'}}>
+                  <td style={{padding:'3pt 6pt', fontFamily:'monospace'}}>{d.id}</td>
+                  <td style={{padding:'3pt 6pt'}}>{d.device_code || '-'}</td>
+                  <td style={{padding:'3pt 6pt', fontWeight:'500'}}>{d.name}</td>
+                  <td style={{padding:'3pt 6pt'}}>{[d.product_line_name, d.product_model].filter(Boolean).join(' / ') || '-'}</td>
+                  <td style={{padding:'3pt 6pt'}}>{d.customer_name || '-'}</td>
+                  <td style={{padding:'3pt 6pt'}}>{d.status}</td>
+                  <td style={{padding:'3pt 6pt'}}>{new Date(d.created_at).toLocaleDateString('zh-CN')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {/* 设备表单弹窗 */}
         {

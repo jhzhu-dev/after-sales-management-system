@@ -1,3 +1,11 @@
+// ─── Windows UTF-8 控制台编码修复 ───────────────────────────────────────────
+if (process.platform === 'win32') {
+  const { execSync } = require('child_process');
+  try { execSync('chcp 65001', { stdio: 'ignore' }); } catch (_) {}
+  if (process.stdout.isTTY) process.stdout.setDefaultEncoding('utf8');
+  if (process.stderr.isTTY) process.stderr.setDefaultEncoding('utf8');
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -165,7 +173,7 @@ app.get('/api/health', (req, res) => {
     status: 'OK',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
-    message: '设备管理系统API运行正常'
+    message: '售后登记系统API运行正常'
   });
 });
 

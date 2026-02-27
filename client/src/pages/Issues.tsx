@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { PlusIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon, ChatBubbleLeftRightIcon, ArrowPathIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon, ChatBubbleLeftRightIcon, ArrowPathIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { issueApi } from '../services/api';
 import { Issue, FilterOptions, IssueFormData } from '../types';
 import Layout from '../components/Layout';
@@ -41,7 +41,7 @@ export default function Issues() {
   });
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
+  const [selectedIssues, setSelectedIssues] = useState<number[]>([]);
   const [showIssueForm, setShowIssueForm] = useState(false);
   const [moduleTypes, setModuleTypes] = useState<Array<{id: string, name: string}>>([]);
   const [productLines, setProductLines] = useState<Array<{id: string, name: string}>>([]);
@@ -57,6 +57,7 @@ export default function Issues() {
     customer: ''
   });
   const [customers, setCustomers] = useState<any[]>([]);
+  const [printAllIssues, setPrintAllIssues] = useState<Issue[] | null>(null);
 
   useEffect(() => {
     if (activeTab === 'issues') {
@@ -259,7 +260,7 @@ export default function Issues() {
     setIssues(sortedIssues);
   };
 
-  const handleDelete = async (id: string, event?: React.MouseEvent) => {
+  const handleDelete = async (id: number, event?: React.MouseEvent) => {
     // 阻止事件冒泡，防止触发行点击事件
     if (event) {
       event.stopPropagation();
@@ -267,7 +268,7 @@ export default function Issues() {
     
     if (window.confirm('确定要删除这个问题吗？')) {
       try {
-        const response = await issueApi.deleteIssue(id);
+        const response = await issueApi.deleteIssue(id.toString());
         if (response.success) {
           // 删除成功后，检查当前路径
           const currentPath = window.location.pathname;
@@ -293,6 +294,26 @@ export default function Issues() {
   const handleAdd = () => {
     setShowIssueForm(true);
   };
+
+  const handlePrint = async () => {
+    if (activeTab === 'issues') {
+      try {
+        const resp = await issueApi.getIssues({ ...filters, page: 1, limit: 9999 });
+        if (resp.success) {
+          setPrintAllIssues(resp.data);
+          return;
+        }
+      } catch (e) {}
+    }
+    window.print();
+  };
+
+  // 打印数据加载后触发打印
+  useEffect(() => {
+    if (printAllIssues !== null) {
+      setTimeout(() => { window.print(); setPrintAllIssues(null); }, 100);
+    }
+  }, [printAllIssues]);
 
   const handleIssueSubmit = async (data: IssueFormData) => {
     try {
@@ -328,7 +349,7 @@ export default function Issues() {
     }
   };
 
-  const handleSelectIssue = (id: string) => {
+  const handleSelectIssue = (id: number) => {
     setSelectedIssues(prev => 
       prev.includes(id) 
         ? prev.filter(issueId => issueId !== id)
@@ -404,7 +425,7 @@ export default function Issues() {
       render: (value: string, record: Issue) => (
         <div>
           <div className="font-medium text-gray-900">{value}</div>
-          <div className="text-sm text-gray-500">{[record.device_type, record.product_name].filter(Boolean).join('-') || '-'}</div>
+          <div className="text-sm text-gray-500">{record.device_type || '-'}</div>
         </div>
       ),
       width: '140px'
@@ -618,13 +639,35 @@ export default function Issues() {
   return (
     <Layout>
       <div className="space-y-6">
+        {/* 打印专用页眉 */}
+        <div className="hidden print:block print-header">
+          <div className="print-flex-row" style={{justifyContent:'space-between'}}>
+            <div>
+              <h1 style={{fontSize:'13pt',fontWeight:'800',margin:0}}>故障与升级 — {activeTab === 'issues' ? '故障管理' : '版本演进'}</h1>
+              <p style={{fontSize:'8pt',color:'#6b7280',marginTop:'2pt'}}>打印时间：{new Date().toLocaleString('zh-CN')}</p>
+            </div>
+            <div style={{fontSize:'8pt',color:'#6b7280',textAlign:'right'}}>
+              {activeTab === 'issues' && <span>共 {printAllIssues ? printAllIssues.length : pagination.total} 条故障记录</span>}
+              {activeTab === 'upgrades' && <span>共 {upgradeTotal} 条版本演进记录</span>}
+            </div>
+          </div>
+        </div>
+
         {/* 顶部标题与Tab切换 */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 no-print">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-black text-gray-900 tracking-tight">故障与升级</h1>
               <p className="text-gray-500 text-sm mt-1 font-medium">统一管理全生命周期的故障报修与升级演进</p>
             </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handlePrint}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <PrinterIcon className="h-4 w-4 mr-2" />
+                打印
+              </button>
             <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
               {[
                 { id: 'issues' as const, label: '故障管理', icon: ChatBubbleLeftRightIcon },
@@ -644,17 +687,18 @@ export default function Issues() {
                 </button>
               ))}
             </div>
+            </div>
           </div>
         </div>
 
         {/* 版本演进内容 */}
-        {activeTab === 'upgrades' && renderUpgrades()}
+        {activeTab === 'upgrades' && <div className="no-print">{renderUpgrades()}</div>}
 
         {/* 故障管理内容 */}
         {activeTab === 'issues' && (<>
 
         {/* 批量操作按钮 */}
-        <div className="flex justify-end">
+        <div className="flex justify-end no-print">
           <button
             onClick={handleAdd}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
@@ -666,7 +710,7 @@ export default function Issues() {
 
         {/* 批量操作 */}
         {selectedIssues.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 no-print">
             <div className="flex items-center justify-between">
               <span className="text-sm text-blue-700">
                 已选择 {selectedIssues.length} 个问题
@@ -691,7 +735,7 @@ export default function Issues() {
         )}
 
         {/* 筛选器 */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 no-print">
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -784,21 +828,85 @@ export default function Issues() {
         </div>
 
         {/* 数据表格 */}
-        <DataTable
-          data={issues}
-          columns={columns}
-          loading={loading}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            onChange: handlePageChange
-          }}
-          rowKey="id"
-          onRowClick={handleRowClick}
-        />
+        <div className="print:hidden">
+          <DataTable
+            data={issues}
+            columns={columns}
+            loading={loading}
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              onChange: handlePageChange
+            }}
+            rowKey="id"
+            onRowClick={handleRowClick}
+          />
+        </div>
+
+        {/* 打印专用故障表格 */}
+        <div className="hidden print:block">
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:'8pt'}}>
+            <thead>
+              <tr style={{borderBottom:'1pt solid #374151',backgroundColor:'#f9fafb'}}>
+                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>问题ID</th>
+                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>设备</th>
+                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>模块</th>
+                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>问题描述</th>
+                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>严重性</th>
+                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>状态</th>
+                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>创建时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(printAllIssues ?? issues).map((issue, i) => (
+                <tr key={issue.id} style={{borderBottom:'0.5pt solid #e5e7eb',backgroundColor:i%2===0?'white':'#f9fafb'}}>
+                  <td style={{padding:'3pt 6pt',fontFamily:'monospace'}}>#{issue.id}</td>
+                  <td style={{padding:'3pt 6pt'}}>{issue.device_name || '-'}</td>
+                  <td style={{padding:'3pt 6pt'}}>{issue.module_category || '-'}</td>
+                  <td style={{padding:'3pt 6pt',maxWidth:'180pt',wordBreak:'break-word'}}>{issue.description}</td>
+                  <td style={{padding:'3pt 6pt'}}>{issue.severity === 'low' ? '低' : issue.severity === 'medium' ? '中' : '高'}</td>
+                  <td style={{padding:'3pt 6pt'}}>{issue.status === 'open' ? '待处理' : issue.status === 'in_progress' ? '处理中' : '已解决'}</td>
+                  <td style={{padding:'3pt 6pt'}}>{new Date(issue.created_at).toLocaleDateString('zh-CN')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         </>)}
+
+        {/* 打印专用版本演进表格 */}
+        {activeTab === 'upgrades' && (
+          <div className="hidden print:block">
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:'8pt'}}>
+              <thead>
+                <tr style={{borderBottom:'1pt solid #374151',backgroundColor:'#f9fafb'}}>
+                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>设备</th>
+                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>模块类型</th>
+                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>版本号</th>
+                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>版本类型</th>
+                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>变更说明</th>
+                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>操作人</th>
+                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>发布日期</th>
+                </tr>
+              </thead>
+              <tbody>
+                {upgrades.map((v, i) => (
+                  <tr key={v.id} style={{borderBottom:'0.5pt solid #e5e7eb',backgroundColor:i%2===0?'white':'#f9fafb'}}>
+                    <td style={{padding:'3pt 6pt'}}>{v.device_name || '-'}</td>
+                    <td style={{padding:'3pt 6pt'}}>{v.module_type || '-'}</td>
+                    <td style={{padding:'3pt 6pt',fontFamily:'monospace'}}>{v.old_version ? `${v.old_version} → ` : ''}{v.version_number}</td>
+                    <td style={{padding:'3pt 6pt'}}>{v.version_type === 'factory' ? '出厂' : '更新'}</td>
+                    <td style={{padding:'3pt 6pt',maxWidth:'160pt',wordBreak:'break-word'}}>{v.description || '-'}</td>
+                    <td style={{padding:'3pt 6pt'}}>{v.updated_by || '-'}</td>
+                    <td style={{padding:'3pt 6pt'}}>{v.release_date ? new Date(v.release_date).toLocaleDateString('zh-CN') : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* 新增问题表单弹窗 */}
         {showIssueForm && (

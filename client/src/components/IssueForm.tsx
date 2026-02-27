@@ -1,7 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect, useRef } from 'react';
+import { XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { Issue, IssueFormData } from '../types';
 import { deviceApi, moduleApi } from '../services/api';
+
+interface UploadedAttachment {
+  name: string;
+  url: string;
+  ossPath: string;
+  size: number;
+}
 
 interface IssueFormProps {
   issue?: Issue | null;
@@ -23,13 +30,16 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
   const [modules, setModules] = useState<Array<{id: string, name: string, device_id: string}>>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchDevices();
     if (issue) {
       setFormData({
         device_id: issue.device_id || '',
-        module_id: issue.module_id || undefined,
+        module_id: issue.module_id?.toString() || undefined,
         description: issue.description || '',
         severity: issue.severity || 'medium',
         status: issue.status || 'open',
@@ -38,6 +48,15 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
       });
       if (issue.device_id) {
         fetchModules(issue.device_id);
+      }
+      // 加载已有附件
+      if ((issue as any).attachments) {
+        try {
+          const att = typeof (issue as any).attachments === 'string'
+            ? JSON.parse((issue as any).attachments)
+            : (issue as any).attachments;
+          if (Array.isArray(att)) setAttachments(att);
+        } catch (_) {}
       }
     }
   }, [issue]);
@@ -130,7 +149,8 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
       const submitData: any = {
         ...formData,
         resolution_description: formData.notes,
-        notes: undefined
+        notes: undefined,
+        attachments: attachments.length > 0 ? attachments : undefined
       };
       // 当状态变为已解决时，自动记录处理时间
       if (formData.status === 'closed' && issue?.status !== 'closed') {
@@ -295,19 +315,78 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
             />
           </div>
 
-          {/* 备注 */}
+          {/* 附件上传 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              备注
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+              <PaperClipIcon className="h-4 w-4" /> 附件
             </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleInputChange}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="请输入备注信息..."
-            />
+            <div
+              className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors bg-gray-50 cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (!files.length) return;
+                  e.target.value = '';
+                  setUploadingCount(c => c + files.length);
+                  try {
+                    const fd = new FormData();
+                    files.forEach(f => fd.append('files', f));
+                    if (formData.device_id) fd.append('device_id', formData.device_id);
+                    const selModule = modules.find(m => String(m.id) === String(formData.module_id));
+                    if (selModule) fd.append('module_name', selModule.name);
+                    const resp = await fetch('/api/issues/upload-attachment', { method: 'POST', body: fd });
+                    const result = await resp.json();
+                    if (result.success) {
+                      setAttachments(prev => [...prev, ...result.data]);
+                    } else {
+                      alert('上传失败: ' + (result.error || '未知错误'));
+                    }
+                  } catch (err) {
+                    alert('上传失败，请检查网络连接');
+                  } finally {
+                    setUploadingCount(c => c - files.length);
+                  }
+                }}
+              />
+              <ArrowUpTrayIcon className="h-7 w-7 text-gray-400 mx-auto mb-1.5" />
+              <p className="text-sm text-gray-500">
+                {uploadingCount > 0
+                  ? `上传中... (${uploadingCount} 个文件)`
+                  : '点击选择文件，支持图片、PDF、文档等，单文件最大 50MB'}
+              </p>
+            </div>
+            {attachments.length > 0 && (
+              <ul className="mt-2 space-y-1.5">
+                {attachments.map((att, i) => (
+                  <li key={i} className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-md px-3 py-1.5 text-sm">
+                    <a
+                      href={att.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-blue-700 hover:underline truncate max-w-[85%]"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <PaperClipIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate">{att.name}</span>
+                      <span className="text-gray-400 text-xs ml-1 flex-shrink-0">({(att.size / 1024).toFixed(0)} KB)</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setAttachments(prev => prev.filter((_, j) => j !== i)); }}
+                      className="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           {/* 按钮 */}

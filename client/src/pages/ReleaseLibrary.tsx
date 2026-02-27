@@ -14,7 +14,8 @@ import {
     PencilIcon,
     TrashIcon,
     PaperClipIcon,
-    ArrowDownTrayIcon
+    ArrowDownTrayIcon,
+    PrinterIcon
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import VersionReleaseForm from '../components/VersionReleaseForm';
@@ -27,6 +28,7 @@ const ReleaseLibrary: React.FC = () => {
     const [moduleTypes, setModuleTypes] = useState<any[]>([]);
     const [activeTypeId, setActiveTypeId] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
+    const [moduleTypesLoaded, setModuleTypesLoaded] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -39,6 +41,7 @@ const ReleaseLibrary: React.FC = () => {
     const [activeCategory, setActiveCategory] = useState<string>('');
 
     const fetchModuleTypes = async () => {
+        setModuleTypesLoaded(false);
         try {
             const response = await moduleTypeApi.getModuleTypes({ limit: 100 });
             if (response.success) {
@@ -46,9 +49,17 @@ const ReleaseLibrary: React.FC = () => {
                 if (response.data.length > 0 && activeTypeId === null) {
                     setActiveTypeId(response.data[0].id);
                 }
+                if (response.data.length === 0) {
+                    setActiveTypeId(null);
+                    setReleases([]);
+                    setExistingCategories([]);
+                    setLoading(false);
+                }
             }
         } catch (error) {
             console.error('获取模块类型失败:', error);
+        } finally {
+            setModuleTypesLoaded(true);
         }
     };
 
@@ -88,11 +99,18 @@ const ReleaseLibrary: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        if (!moduleTypesLoaded) {
+            return;
+        }
         if (activeTypeId !== null) {
             fetchReleases();
             setActiveCategory('');
+        } else {
+            setReleases([]);
+            setExistingCategories([]);
+            setLoading(false);
         }
-    }, [activeTypeId]);
+    }, [activeTypeId, moduleTypesLoaded]);
 
     const handleAddRelease = () => {
         setEditingRelease(null);
@@ -225,6 +243,8 @@ const ReleaseLibrary: React.FC = () => {
         }
     };
 
+    const handlePrint = () => window.print();
+
     return (
         <Layout>
             <div className="space-y-6">
@@ -234,6 +254,13 @@ const ReleaseLibrary: React.FC = () => {
                         <p className="text-gray-600 mt-1">管理各模块类型的正式发布版本</p>
                     </div>
                     <div className="flex items-center gap-3">
+                        <button
+                            onClick={handlePrint}
+                            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                            <PrinterIcon className="h-4 w-4 mr-2" />
+                            打印
+                        </button>
                         {/* 视图切换按钮 */}
                         <div className="flex items-center bg-gray-100 rounded-lg p-1">
                             <button
@@ -251,13 +278,15 @@ const ReleaseLibrary: React.FC = () => {
                                 <ListBulletIcon className="h-5 w-5" />
                             </button>
                         </div>
-                        <button
-                            onClick={handleAddRelease}
-                            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                        >
-                            <PlusIcon className="h-5 w-5" />
-                            发布新版本
-                        </button>
+                        {moduleTypes.length > 0 && (
+                            <button
+                                onClick={handleAddRelease}
+                                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                            >
+                                <PlusIcon className="h-5 w-5" />
+                                发布新版本
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -270,7 +299,7 @@ const ReleaseLibrary: React.FC = () => {
 
                 {/* 模块类型 Tabs */}
                 <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <div className="border-b border-gray-200">
+                    <div className="border-b border-gray-200 no-print">
                         <nav className="flex -mb-px">
                             {moduleTypes.map((type) => (
                                 <button
@@ -291,7 +320,7 @@ const ReleaseLibrary: React.FC = () => {
                     <div className="p-6">
                         {/* 分类过滤 */}
                         {existingCategories.length > 0 && (
-                            <div className="flex items-center gap-2 mb-4 flex-wrap">
+                            <div className="flex items-center gap-2 mb-4 flex-wrap no-print">
                                 <span className="text-sm text-gray-500 mr-1">分类:</span>
                                 <button
                                     onClick={() => setActiveCategory('')}
@@ -322,9 +351,33 @@ const ReleaseLibrary: React.FC = () => {
                             const filteredReleases = activeCategory
                                 ? releases.filter(r => r.category === activeCategory)
                                 : releases;
-                            return loading ? (
-                            <div className="text-center py-12">加载中...</div>
-                        ) : filteredReleases.length > 0 ? (
+                            if (loading) {
+                                return <div className="text-center py-12">加载中...</div>;
+                            }
+                            if (moduleTypesLoaded && moduleTypes.length === 0) {
+                                return (
+                                    <div className="text-center py-12 text-gray-500">
+                                        暂无模块类型，请先创建模块类型。
+                                    </div>
+                                );
+                            }
+                            if (filteredReleases.length === 0) {
+                                return (
+                                    <div className="text-center py-20 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                                        <TagIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                                        <p className="text-gray-500">暂无已发布的版本记录</p>
+                                        {moduleTypes.length > 0 && (
+                                            <button
+                                                onClick={handleAddRelease}
+                                                className="mt-4 text-blue-600 font-medium hover:underline"
+                                            >
+                                                立即发布第一个版本
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            }
+                            return (
                             viewMode === 'grid' ? (
                                 // 方块视图 - 突出版本描述
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -440,18 +493,43 @@ const ReleaseLibrary: React.FC = () => {
                                     ))}
                                 </div>
                             )
-                        ) : (
-                            <div className="text-center py-20 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                                <TagIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-500">该分类下暂无已发布的版本记录</p>
-                                <button
-                                    onClick={handleAddRelease}
-                                    className="mt-4 text-blue-600 font-medium hover:underline"
-                                >
-                                    立即发布第一个版本
-                                </button>
-                            </div>
                         );
+                        })()}
+
+                        {/* 打印专用版本列表 */}
+                        {(() => {
+                            const fr = activeCategory ? releases.filter((r: any) => r.category === activeCategory) : releases;
+                            const currentType = moduleTypes.find((t: any) => t.id === activeTypeId);
+                            return (
+                                <div className="hidden print:block" style={{marginTop:'8pt'}}>
+                                    <h3 style={{fontSize:'10pt',fontWeight:'700',marginBottom:'4pt'}}>
+                                        {currentType?.name || ''}版本发布列表{activeCategory ? ` — ${activeCategory}` : ''}
+                                        <span style={{fontSize:'8pt',fontWeight:'400',color:'#6b7280',marginLeft:'6pt'}}>共 {fr.length} 条</span>
+                                    </h3>
+                                    <table style={{width:'100%',borderCollapse:'collapse',fontSize:'8pt'}}>
+                                        <thead>
+                                            <tr style={{borderBottom:'1pt solid #374151',backgroundColor:'#f9fafb'}}>
+                                                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>版本号</th>
+                                                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>名称</th>
+                                                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>分类</th>
+                                                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>变更说明</th>
+                                                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>发布日期</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {fr.map((release: any, i: number) => (
+                                                <tr key={release.id} style={{borderBottom:'0.5pt solid #e5e7eb',backgroundColor:i%2===0?'white':'#f9fafb'}}>
+                                                    <td style={{padding:'3pt 6pt',fontFamily:'monospace',fontWeight:'700'}}>{release.version_number}</td>
+                                                    <td style={{padding:'3pt 6pt',fontWeight:'500'}}>{release.title}</td>
+                                                    <td style={{padding:'3pt 6pt'}}>{release.category || '-'}</td>
+                                                    <td style={{padding:'3pt 6pt',maxWidth:'180pt',wordBreak:'break-word',whiteSpace:'pre-wrap'}}>{release.change_log || '-'}</td>
+                                                    <td style={{padding:'3pt 6pt'}}>{new Date(release.release_date).toLocaleDateString('zh-CN')}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            );
                         })()}
                     </div>
                 </div>

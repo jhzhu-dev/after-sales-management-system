@@ -186,17 +186,14 @@ router.post('/', [
       });
     }
     
-    // 生成6位随机ID
-    const IDGenerator = require('../../id-generator');
-    const idGenerator = new IDGenerator();
-    const typeId = idGenerator.generate();
-    
+    // 创建模块类型（使用自增主键）
     const insertQuery = `
-      INSERT INTO module_types (id, name, code, description, is_active)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO module_types (name, code, description, is_active)
+      VALUES (?, ?, ?, ?)
     `;
     
-    await query(insertQuery, [typeId, name, code, description, is_active]);
+    const result = await query(insertQuery, [name, code, description, is_active]);
+    const typeId = result.insertId;
     
     res.status(201).json({
       success: true,

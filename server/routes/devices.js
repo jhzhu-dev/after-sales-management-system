@@ -28,8 +28,8 @@ router.get('/', async (req, res) => {
     }
 
     if (search) {
-      whereConditions.push('(d.name LIKE ? OR d.id LIKE ?)');
-      params.push(`%${search}%`, `%${search}%`);
+      whereConditions.push('(d.name LIKE ? OR d.id LIKE ? OR d.device_code LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
@@ -65,8 +65,6 @@ router.get('/', async (req, res) => {
       FROM devices d
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       LEFT JOIN customers c ON d.customer_id = c.id
-      LEFT JOIN modules m ON d.id = m.device_id
-      LEFT JOIN issues i ON d.id = i.device_id
       ${whereClause}
     `;
 
@@ -167,28 +165,19 @@ router.get('/:id', async (req, res) => {
 
 // 创建设备
 router.post('/', [
-  body('id').optional().isString().withMessage('设备ID必须是字符串'),
+  body('id').optional({ nullable: true }).isString().withMessage('设备ID必须是字符串'),
   body('name').notEmpty().withMessage('设备名称不能为空'),
-  body('device_code').optional().isString().withMessage('设备编码必须是字符串'),
-  body('product_line_id').notEmpty().withMessage('产品线ID不能为空'),
-  body('product_id').optional().isInt().withMessage('产品ID必须是整数'),
-  body('status').optional().isIn(['正常', '异常', '维护中']),
-  body('remote_code').optional().custom((value) => {
-    if (value !== undefined && value !== null && typeof value !== 'string') {
-      throw new Error('远程码必须是字符串');
-    }
-    return true;
-  }),
-  body('password').optional().custom((value) => {
-    if (value !== undefined && value !== null && typeof value !== 'string') {
-      throw new Error('密码必须是字符串');
-    }
-    return true;
-  })
+  body('product_line_id').notEmpty().isInt().withMessage('产品线ID必须是整数'),
+  body('customer_id').optional({ nullable: true }).isInt().withMessage('客户ID必须是整数'),
+  body('status').optional({ nullable: true }).isIn(['正常', '异常', '维护中']).withMessage('状态必须是：正常、异常或维护中'),
+  body('remote_code').optional({ nullable: true }).isString().withMessage('远程码必须是字符串'),
+  body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串')
 ], async (req, res) => {
   try {
+    console.log('收到创建设备请求:', req.body);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('验证失败:', errors.array());
       return res.status(400).json({
         success: false,
         error: '输入数据无效',
@@ -220,7 +209,7 @@ router.post('/', [
 
     const insertQuery = `
       INSERT INTO devices(id, name, device_code, product_line_id, product_id, customer_id, status, remote_code, password)
-    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await query(insertQuery, [deviceId, name, device_code || null, product_line_id, product_id || null, customer_id || null, status, remote_code || null, password || null]);
@@ -239,38 +228,11 @@ router.post('/', [
 // 更新设备
 router.put('/:id', [
   body('name').optional().notEmpty().withMessage('设备名称不能为空'),
-  body('device_code').optional({ nullable: true }).custom((value) => {
-    if (value !== undefined && value !== null && typeof value !== 'string') {
-      throw new Error('设备编码必须是字符串');
-    }
-    return true;
-  }),
-  body('product_line_id').optional().notEmpty().withMessage('产品线ID不能为空'),
-  body('product_id').optional({ nullable: true }).custom((value) => {
-    if (value !== undefined && value !== null && !Number.isInteger(Number(value))) {
-      throw new Error('产品ID必须是整数');
-    }
-    return true;
-  }),
-  body('customer_id').optional({ nullable: true }).custom((value) => {
-    if (value !== undefined && value !== null && !Number.isInteger(Number(value))) {
-      throw new Error('客户ID必须是整数');
-    }
-    return true;
-  }),
-  body('status').optional().isIn(['正常', '异常', '维护中']),
-  body('remote_code').optional({ nullable: true }).custom((value) => {
-    if (value !== undefined && value !== null && typeof value !== 'string') {
-      throw new Error('远程码必须是字符串');
-    }
-    return true;
-  }),
-  body('password').optional({ nullable: true }).custom((value) => {
-    if (value !== undefined && value !== null && typeof value !== 'string') {
-      throw new Error('密码必须是字符串');
-    }
-    return true;
-  })
+  body('product_line_id').optional().isInt().withMessage('产品线ID必须是整数'),
+  body('customer_id').optional({ nullable: true }).isInt().withMessage('客户ID必须是整数'),
+  body('status').optional({ nullable: true }).isIn(['正常', '异常', '维护中']).withMessage('状态必须是：正常、异常或维护中'),
+  body('remote_code').optional({ nullable: true }).isString().withMessage('远程码必须是字符串'),
+  body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -311,15 +273,22 @@ router.put('/:id', [
       }
     }
 
+    // 只允许更新存在的字段（白名单）
+    const allowedFields = ['name', 'device_code', 'product_line_id', 'product_id', 'customer_id', 'status', 'remote_code', 'password'];
+    const filteredUpdates = {};
+    Object.keys(updates).forEach(key => {
+      if (allowedFields.includes(key) && updates[key] !== undefined) {
+        filteredUpdates[key] = updates[key];
+      }
+    });
+
     // 构建更新语句
     const updateFields = [];
     const updateValues = [];
 
-    Object.keys(updates).forEach(key => {
-      if (updates[key] !== undefined) {
-        updateFields.push(`${key} = ?`);
-        updateValues.push(updates[key]);
-      }
+    Object.keys(filteredUpdates).forEach(key => {
+      updateFields.push(`${key} = ?`);
+      updateValues.push(filteredUpdates[key]);
     });
 
     // 如果要修改序列号，加入id字段

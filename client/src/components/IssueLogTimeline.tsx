@@ -1,24 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { IssueLog } from '../types';
-import { ClockIcon, UserIcon, PaperClipIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, UserIcon, PlusIcon, XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import api from '../services/api';
+import AttachmentViewer, { Attachment } from './AttachmentViewer';
 
 interface IssueLogTimelineProps {
   issueId: string;
+  issueStatus?: string;
   onLogAdded?: () => void;
 }
 
-const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, onLogAdded }) => {
+interface UploadedAttachment {
+  name: string;
+  url: string;
+  ossPath: string;
+  size: number;
+}
+
+const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatus, onLogAdded }) => {
   const [logs, setLogs] = useState<IssueLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     content: '',
-    handler: '',
-    handled_at: new Date().toISOString().slice(0, 16),
-    attachments: [] as File[]
+    operator: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewAtts, setPreviewAtts] = useState<Attachment[]>([]);
+  const [previewIdx, setPreviewIdx] = useState(0);
 
   const fetchLogs = async () => {
     try {
@@ -39,7 +51,7 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, onLogAdded
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.content.trim() || !formData.handler.trim()) {
+    if (!formData.content.trim() || !formData.operator.trim()) {
       alert('请填写处理内容和处理人');
       return;
     }
@@ -47,37 +59,31 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, onLogAdded
     try {
       setSubmitting(true);
 
-      // 上传附件（如果有）
-      let attachmentUrls: string[] = [];
-      if (formData.attachments.length > 0) {
-        const uploadFormData = new FormData();
-        formData.attachments.forEach(file => {
-          uploadFormData.append('files', file);
-        });
-        uploadFormData.append('type', 'issue-logs');
-
-        const uploadResponse = await api.post('/uploads/multiple', uploadFormData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        attachmentUrls = uploadResponse.data.data.urls || [];
+      // 如果有附件，先上传附件
+      let attachments: UploadedAttachment[] = [];
+      if (pendingFiles.length > 0) {
+        setUploadingCount(pendingFiles.length);
+        const fd = new FormData();
+        fd.append('issue_id', issueId);
+        pendingFiles.forEach(f => fd.append('files', f));
+        const uploadRes = await fetch('/api/issue-logs/upload-attachment', { method: 'POST', body: fd });
+        const uploadData = await uploadRes.json();
+        if (!uploadData.success) throw new Error(uploadData.error || '附件上传失败');
+        attachments = uploadData.data || [];
+        setUploadingCount(0);
       }
 
       // 创建处理记录
       await api.post('/issue-logs', {
         issue_id: issueId,
         content: formData.content,
-        handler: formData.handler,
-        handled_at: formData.handled_at,
-        attachments: attachmentUrls
+        operator: formData.operator,
+        ...(attachments.length > 0 ? { attachments: JSON.stringify(attachments) } : {})
       });
 
       // 重置表单
-      setFormData({
-        content: '',
-        handler: '',
-        handled_at: new Date().toISOString().slice(0, 16),
-        attachments: []
-      });
+      setFormData({ content: '', operator: '' });
+      setPendingFiles([]);
       setShowForm(false);
 
       // 刷新列表
@@ -93,25 +99,24 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, onLogAdded
       alert('添加处理记录失败');
     } finally {
       setSubmitting(false);
+      setUploadingCount(0);
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFormData({
-        ...formData,
-        attachments: Array.from(e.target.files)
-      });
-    }
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setPendingFiles(prev => [...prev, ...files]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const removeFile = (index: number) => {
-    const newAttachments = [...formData.attachments];
-    newAttachments.splice(index, 1);
-    setFormData({
-      ...formData,
-      attachments: newAttachments
-    });
+  const removePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const formatDateTime = (dateString: string) => {
@@ -134,25 +139,28 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, onLogAdded
   }
 
   return (
+    <>
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-900">处理记录</h3>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-        >
-          {showForm ? (
-            <>
-              <XMarkIcon className="h-4 w-4 mr-1" />
-              取消
-            </>
-          ) : (
-            <>
-              <PlusIcon className="h-4 w-4 mr-1" />
-              添加处理记录
-            </>
-          )}
-        </button>
+        {issueStatus !== 'closed' && (
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          >
+            {showForm ? (
+              <>
+                <XMarkIcon className="h-4 w-4 mr-1" />
+                取消
+              </>
+            ) : (
+              <>
+                <PlusIcon className="h-4 w-4 mr-1" />
+                添加处理记录
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* 添加记录表单 */}
@@ -173,66 +181,64 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, onLogAdded
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* 附件上传 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+                <PaperClipIcon className="h-4 w-4" />
+                添加附件
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-blue-200 rounded-lg p-3 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+              >
+                <ArrowUpTrayIcon className="h-5 w-5 mx-auto text-blue-400 mb-1" />
+                <p className="text-xs text-blue-500">点击选择附件（支持多选）</p>
+              </div>
+              {pendingFiles.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {pendingFiles.map((file, i) => (
+                    <li key={i} className="flex items-center justify-between bg-white border border-gray-200 rounded px-3 py-1.5 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <PaperClipIcon className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                        <span className="truncate text-gray-700">{file.name}</span>
+                        <span className="text-gray-400 flex-shrink-0">{formatFileSize(file.size)}</span>
+                      </div>
+                      <button type="button" onClick={() => removePendingFile(i)} className="ml-2 text-red-400 hover:text-red-600 flex-shrink-0">
+                        <TrashIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   处理人 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  value={formData.handler}
-                  onChange={(e) => setFormData({ ...formData, handler: e.target.value })}
+                  value={formData.operator}
+                  onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="请输入处理人姓名"
                   required
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  处理时间
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.handled_at}
-                  onChange={(e) => setFormData({ ...formData, handled_at: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                附件
-              </label>
-              <input
-                type="file"
-                onChange={handleFileChange}
-                multiple
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {formData.attachments.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {formData.attachments.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between bg-white px-2 py-1 rounded border border-gray-200">
-                      <span className="text-sm text-gray-700">{file.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(index)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <XMarkIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => { setShowForm(false); setPendingFiles([]); }}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
                 取消
@@ -242,7 +248,10 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, onLogAdded
                 disabled={submitting}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
-                {submitting ? '提交中...' : '提交'}
+                {submitting
+                  ? (uploadingCount > 0 ? `上传附件中 (${uploadingCount})…` : '提交中…')
+                  : '提交'
+                }
               </button>
             </div>
           </form>
@@ -275,11 +284,11 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, onLogAdded
                     <div className="flex items-center gap-4">
                       <div className="flex items-center text-sm text-gray-600">
                         <UserIcon className="h-4 w-4 mr-1" />
-                        <span className="font-medium">{log.handler}</span>
+                        <span className="font-medium">{log.operator || '-'}</span>
                       </div>
                       <div className="flex items-center text-sm text-gray-500">
                         <ClockIcon className="h-4 w-4 mr-1" />
-                        <span>{formatDateTime(log.handled_at)}</span>
+                        <span>{formatDateTime(log.created_at)}</span>
                       </div>
                     </div>
                   </div>
@@ -288,31 +297,33 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, onLogAdded
                     {log.content}
                   </div>
 
-                  {/* 附件 */}
-                  {log.attachments && log.attachments.length > 0 && (
-                    <div className="mt-3 border-t border-gray-100 pt-3">
-                      <div className="flex items-center text-sm text-gray-600 mb-2">
-                        <PaperClipIcon className="h-4 w-4 mr-1" />
-                        <span>附件 ({log.attachments.length})</span>
+                  {/* 附件列表 */}
+                  {(() => {
+                    const atts: Attachment[] = log.attachments
+                      ? (typeof log.attachments === 'string'
+                          ? (() => { try { return JSON.parse(log.attachments as any); } catch { return []; } })()
+                          : log.attachments)
+                      : [];
+                    return atts.length > 0 ? (
+                      <div className="mt-2 pt-2 border-t border-gray-100">
+                        <p className="text-xs text-gray-500 mb-1.5 flex items-center gap-1">
+                          <PaperClipIcon className="h-3.5 w-3.5" />附件
+                        </p>
+                        <ul className="space-y-1">
+                          {atts.map((att, i) => (
+                            <li key={i} className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded px-2.5 py-1 text-xs">
+                              <PaperClipIcon className="h-3 w-3 text-blue-400 flex-shrink-0" />
+                              <button
+                                onClick={() => { setPreviewAtts(atts); setPreviewIdx(i); }}
+                                className="text-blue-700 hover:underline truncate text-left"
+                              >{att.name}</button>
+                              <span className="text-gray-400 ml-auto flex-shrink-0">{formatFileSize(att.size ?? 0)}</span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
-                      <div className="space-y-1">
-                        {log.attachments.map((url, idx) => {
-                          const filename = url.split('/').pop() || `附件${idx + 1}`;
-                          return (
-                            <a
-                              key={idx}
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                            >
-                              📎 {filename}
-                            </a>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                    ) : null;
+                  })()}
                 </div>
               </div>
             ))}
@@ -320,6 +331,16 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, onLogAdded
         )}
       </div>
     </div>
+
+      {/* 附件预览模态框 */}
+      {previewAtts.length > 0 && (
+        <AttachmentViewer
+          attachments={previewAtts}
+          initialIndex={previewIdx}
+          onClose={() => setPreviewAtts([])}
+        />
+      )}
+    </>
   );
 };
 

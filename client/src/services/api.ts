@@ -119,7 +119,7 @@ export const issueApi = {
     api.get('/issues/stats/overview').then(res => res.data),
 
   // 批量更新问题状态
-  batchUpdateStatus: (issueIds: string[], status: string): Promise<ApiResponse<void>> =>
+  batchUpdateStatus: (issueIds: (string | number)[], status: string): Promise<ApiResponse<void>> =>
     api.patch('/issues/batch/status', { issue_ids: issueIds, status }).then(res => res.data),
 };
 

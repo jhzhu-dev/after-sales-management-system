@@ -31,7 +31,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* 侧边栏 */}
       <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg no-print">
         <div className="flex h-16 items-center justify-center border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-900">设备管理系统</h1>
+          <h1 className="text-xl font-bold text-gray-900">售后登记系统</h1>
         </div>
 
         <nav className="mt-8 px-4">
@@ -66,7 +66,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex h-16 items-center justify-between px-6">
             <div className="flex items-center">
               <h2 className="text-lg font-semibold text-gray-900">
-                {navigation.find(item => item.href === location.pathname)?.name || '设备管理系统'}
+                {navigation.find(item => item.href === location.pathname)?.name || '售后登记系统'}
               </h2>
             </div>
 

@@ -307,40 +307,56 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
               附件
             </label>
             <div
-              className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer"
+              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer bg-gray-50"
               onClick={() => fileInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDragOver={(e) => { 
+                e.preventDefault(); 
+                e.stopPropagation(); 
+                e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+              }}
               onDrop={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
                 const droppedFiles = Array.from(e.dataTransfer.files);
-                setFiles(prev => [...prev, ...droppedFiles]);
+                if (droppedFiles.length > 0) {
+                  setFiles(prev => [...prev, ...droppedFiles]);
+                }
               }}
             >
-              <ArrowUpTrayIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">点击或拖拽文件到此处上传</p>
-              <p className="text-xs text-gray-400 mt-1">支持任意格式，单个文件最大100MB</p>
+              <ArrowUpTrayIcon className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600 font-medium">点击该描边区块即可上传</p>
+              <p className="text-xs text-gray-500 mt-1">支持压缩包、单个文件最大100MB</p>
               <input
                 ref={fileInputRef}
                 type="file"
                 multiple
                 className="hidden"
                 onChange={(e) => {
-                  if (e.target.files) {
-                    setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                  const selectedFiles = e.target.files;
+                  if (selectedFiles && selectedFiles.length > 0) {
+                    const newFiles = Array.from(selectedFiles);
+                    setFiles(prev => [...prev, ...newFiles]);
+                    // 重置input以允许重复选择同一文件
                     e.target.value = '';
                   }
                 }}
               />
             </div>
             {files.length > 0 && (
-              <div className="mt-2 space-y-1">
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-gray-500 font-medium">已选择 {files.length} 个文件：</p>
                 {files.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <PaperClipIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 truncate">{file.name}</span>
-                      <span className="text-xs text-gray-400 flex-shrink-0">
+                  <div key={`${file.name}-${index}`} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <PaperClipIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                      <span className="text-sm text-gray-700 truncate" title={file.name}>{file.name}</span>
+                      <span className="text-xs text-gray-500 flex-shrink-0 ml-auto">
                         {file.size < 1024 * 1024
                           ? `${(file.size / 1024).toFixed(1)} KB`
                           : `${(file.size / 1024 / 1024).toFixed(1)} MB`}
@@ -348,8 +364,12 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
                     </div>
                     <button
                       type="button"
-                      onClick={() => setFiles(prev => prev.filter((_, i) => i !== index))}
-                      className="text-red-400 hover:text-red-600 flex-shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFiles(prev => prev.filter((_, i) => i !== index));
+                      }}
+                      className="text-red-500 hover:text-red-700 flex-shrink-0 ml-2"
+                      title="删除此文件"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -369,7 +389,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
           {/* 提示信息 */}
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-700">
-              <strong>提示：</strong>发布后的版本将在设备模块配置中可选，用于记录设备使用的具体模块版本。
+              <strong>提示：</strong>发布后的版本将存储在模块类型中可调，用于记录该模块的版本库及历史记录。
             </p>
           </div>
 

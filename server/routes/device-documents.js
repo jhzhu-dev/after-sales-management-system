@@ -99,12 +99,10 @@ router.get('/categories', async (req, res) => {
 // 获取设备信息辅助函数
 async function getDeviceInfo(device_id) {
     const devices = await query(
-        `SELECT d.id, d.name, d.product_line_id, d.product_id,
-                pl.name as product_line_name,
-                p.name as product_name, p.model as product_model
+        `SELECT d.id, d.name, d.product_line_id,
+                pl.name as product_line_name
          FROM devices d
          LEFT JOIN product_lines pl ON d.product_line_id = pl.id
-         LEFT JOIN products p ON d.product_id = p.id
          WHERE d.id = ?`,
         [device_id]
     );
@@ -112,17 +110,14 @@ async function getDeviceInfo(device_id) {
 }
 
 // 构建设备资料的完整OSS路径 (每段独立标准化，避免/被吞)
-// 最终: basePath/产品线/产品名(型号)/设备名-序列号/分类/文件名
+// 最终: basePath/产品线/设备名-序列号/分类/文件名
 function buildDeviceDocOSSPath(device, category, originalName) {
     const safeSeg = (s) => (s || 'unknown').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '_').trim();
     const productLineName = safeSeg(device.product_line_name);
-    const productName = device.product_model
-        ? `${safeSeg(device.product_name)}(${safeSeg(device.product_model)})`
-        : safeSeg(device.product_name);
     const deviceFolder = `${safeSeg(device.name)}-${safeSeg(device.id)}`;
     const safeCategory = safeSeg(category);
     // 使用原始文件名
-    return `${ossService.basePath}/${productLineName}/${productName}/${deviceFolder}/${safeCategory}/${originalName}`;
+    return `${ossService.basePath}/${productLineName}/${deviceFolder}/${safeCategory}/${originalName}`;
 }
 
 // OSS上传带重试 (最多3次，间隔2秒)

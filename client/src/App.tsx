@@ -11,7 +11,6 @@ const Settings = React.lazy(() => import('./pages/Settings'));
 const ReleaseLibrary = React.lazy(() => import('./pages/ReleaseLibrary'));
 const ProductLines = React.lazy(() => import('./pages/ProductLines'));
 const ProductDetail = React.lazy(() => import('./pages/ProductDetail'));
-const AfterSales = React.lazy(() => import('./pages/AfterSales'));
 const Products = React.lazy(() => import('./pages/Products'));
 
 function App() {

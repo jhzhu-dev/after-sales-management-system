@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ProductLineForm from '../components/ProductLineForm';
 import { ProductLine, ApiResponse } from '../types';
-import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 
 const ProductLines: React.FC = () => {
@@ -112,22 +112,39 @@ const ProductLines: React.FC = () => {
         }
     };
 
+    const handlePrint = () => window.print();
+
     return (
         <Layout>
             <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
+                {/* 打印专用页眉 */}
+                <div className="hidden print:block print-header" style={{marginBottom:'8pt'}}>
+                  <h1 style={{fontSize:'13pt',fontWeight:'800',margin:0}}>产品线管理</h1>
+                  <p style={{fontSize:'8pt',color:'#6b7280',marginTop:'2pt'}}>打印时间：{new Date().toLocaleString('zh-CN')}</p>
+                </div>
+
+                <div className="flex justify-between items-center mb-6 print:hidden">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">产品线管理</h1>
                         <p className="mt-1 text-sm text-gray-600">
                             管理公司的核心产品线系列
                         </p>
                     </div>
-                    <button
-                        onClick={handleAddProductLine}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                    >
-                        + 新增产品线
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handlePrint}
+                            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                            <PrinterIcon className="h-4 w-4 mr-2" />
+                            打印
+                        </button>
+                        <button
+                            onClick={handleAddProductLine}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                            + 新增产品线
+                        </button>
+                    </div>
                 </div>
 
                 {/* 成功消息提示 */}

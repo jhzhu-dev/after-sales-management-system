@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { Product, ProductDocument, ProductModule, ProductModuleHistory, ModuleType, ApiResponse } from '../types';
+import { Product, ProductDocument, ProductModule, ModuleType, ApiResponse } from '../types';
 import { productModuleApi, moduleTypeApi } from '../services/api';
-import { PlusIcon, ClockIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon, ArrowUpTrayIcon, DocumentIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, ArrowUpTrayIcon, DocumentIcon, XMarkIcon, PrinterIcon } from '@heroicons/react/24/outline';
 
 const DOC_TYPES = ['规格书', '使用说明', '用户手册', '其他'] as const;
 
@@ -13,16 +13,12 @@ const ProductDetail: React.FC = () => {
     const [documents, setDocuments] = useState<ProductDocument[]>([]);
     const [modules, setModules] = useState<ProductModule[]>([]);
     const [moduleTypes, setModuleTypes] = useState<ModuleType[]>([]);
-    const [expandedHistory, setExpandedHistory] = useState<{ [key: number]: boolean }>({});
-    const [moduleHistory, setModuleHistory] = useState<{ [key: number]: ProductModuleHistory[] }>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'info' | 'docs' | 'modules'>('info');
     const [showModuleForm, setShowModuleForm] = useState(false);
     const [selectedModuleTypes, setSelectedModuleTypes] = useState<number[]>([]);
     const [isRequired, setIsRequired] = useState(true);
-    const [versionNumber, setVersionNumber] = useState('v1');
-    const [changeDescription, setChangeDescription] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
     // 文档上传相关状态
@@ -95,27 +91,6 @@ const ProductDetail: React.FC = () => {
         }
     };
 
-    const fetchModuleHistory = async (moduleTypeId: number) => {
-        if (!id) return;
-        try {
-            const response = await productModuleApi.getModuleHistory(parseInt(id), moduleTypeId, { limit: 20 });
-            if (response.success) {
-                setModuleHistory(prev => ({ ...prev, [moduleTypeId]: response.data }));
-            }
-        } catch (err) {
-            console.error('获取历史记录失败:', err);
-        }
-    };
-
-    const toggleHistory = async (moduleTypeId: number) => {
-        const isExpanded = expandedHistory[moduleTypeId];
-        setExpandedHistory(prev => ({ ...prev, [moduleTypeId]: !isExpanded }));
-        
-        if (!isExpanded && !moduleHistory[moduleTypeId]) {
-            await fetchModuleHistory(moduleTypeId);
-        }
-    };
-
     const handleAddModules = async () => {
         if (!id || selectedModuleTypes.length === 0) {
             alert('请至少选择一个模块类型');
@@ -133,8 +108,6 @@ const ProductDetail: React.FC = () => {
             alert('模块配置添加成功');
             setShowModuleForm(false);
             setSelectedModuleTypes([]);
-            setVersionNumber('v1');
-            setChangeDescription('');
             fetchModules();
         } catch (err: any) {
             console.error('添加模块配置失败:', err);
@@ -147,7 +120,7 @@ const ProductDetail: React.FC = () => {
     };
 
     const handleDeleteModule = async (moduleId: number, moduleName: string) => {
-        if (!window.confirm(`确定要删除 ${moduleName} 模块配置吗？历史记录将被保留。`)) {
+        if (!window.confirm(`确定要删除 ${moduleName} 模块配置吗？此操作不可恢复。`)) {
             return;
         }
 
@@ -258,6 +231,8 @@ const ProductDetail: React.FC = () => {
         return (bytes / 1024 / 1024).toFixed(2) + ' MB';
     };
 
+    const handlePrint = () => window.print();
+
     if (loading) {
         return (
             <Layout>
@@ -297,6 +272,13 @@ const ProductDetail: React.FC = () => {
                         </h1>
                         <div className="space-x-3">
                             <button
+                                onClick={handlePrint}
+                                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 inline-flex items-center gap-2"
+                            >
+                                <PrinterIcon className="h-4 w-4" />
+                                打印
+                            </button>
+                            <button
                                 onClick={() => alert('编辑产品功能开发中...')}
                                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                             >
@@ -319,7 +301,7 @@ const ProductDetail: React.FC = () => {
                 </div>
 
                 {/* 标签页导航 */}
-                <div className="border-b border-gray-200 mb-6">
+                <div className="border-b border-gray-200 mb-6 no-print">
                     <nav className="-mb-px flex space-x-8">
                         <button
                             onClick={() => setActiveTab('info')}
@@ -507,19 +489,7 @@ const ProductDetail: React.FC = () => {
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                             {new Date(module.created_at).toLocaleString('zh-CN')}
                                                         </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                                                            <button
-                                                                onClick={() => toggleHistory(module.module_type_id)}
-                                                                className="text-blue-600 hover:text-blue-900 inline-flex items-center"
-                                                            >
-                                                                <ClockIcon className="h-4 w-4 mr-1" />
-                                                                查看历史
-                                                                {expandedHistory[module.module_type_id] ? (
-                                                                    <ChevronUpIcon className="h-4 w-4 ml-1" />
-                                                                ) : (
-                                                                    <ChevronDownIcon className="h-4 w-4 ml-1" />
-                                                                )}
-                                                            </button>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                             <button
                                                                 onClick={() => handleDeleteModule(module.id, module.module_type_name || '')}
                                                                 className="text-red-600 hover:text-red-900 inline-flex items-center"
@@ -529,53 +499,6 @@ const ProductDetail: React.FC = () => {
                                                             </button>
                                                         </td>
                                                     </tr>
-                                                    {expandedHistory[module.module_type_id] && (
-                                                        <tr>
-                                                            <td colSpan={4} className="px-6 py-4 bg-gray-50">
-                                                                <div className="text-sm font-medium text-gray-700 mb-3">历史版本</div>
-                                                                {moduleHistory[module.module_type_id] ? (
-                                                                    moduleHistory[module.module_type_id].length > 0 ? (
-                                                                        <div className="space-y-3">
-                                                                            {moduleHistory[module.module_type_id].map((history) => (
-                                                                                <div key={history.id} className="flex items-start border-l-2 border-gray-300 pl-4">
-                                                                                    <div className="flex-grow">
-                                                                                        <div className="flex items-center gap-2">
-                                                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                                                                history.is_current
-                                                                                                    ? 'bg-green-100 text-green-800'
-                                                                                                    : 'bg-gray-100 text-gray-800'
-                                                                                            }`}>
-                                                                                                {history.version_number}
-                                                                                            </span>
-                                                                                            {history.is_current && (
-                                                                                                <span className="text-xs text-green-600 font-semibold">当前版本</span>
-                                                                                            )}
-                                                                                        </div>
-                                                                                        <div className="text-sm text-gray-600 mt-1">
-                                                                                            {history.change_description || '无变更说明'}
-                                                                                        </div>
-                                                                                        <div className="text-xs text-gray-500 mt-1">
-                                                                                            生效时间: {new Date(history.effective_date).toLocaleString('zh-CN')}
-                                                                                            {history.deprecated_date && (
-                                                                                                <> | 过期时间: {new Date(history.deprecated_date).toLocaleString('zh-CN')}</>
-                                                                                            )}
-                                                                                            {history.created_by && <> | 创建人: {history.created_by}</>}
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <p className="text-sm text-gray-500">暂无历史记录</p>
-                                                                    )
-                                                                ) : (
-                                                                    <div className="flex items-center justify-center py-4">
-                                                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                                                                    </div>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    )}
                                                 </React.Fragment>
                                             ))}
                                         </tbody>
@@ -664,8 +587,6 @@ const ProductDetail: React.FC = () => {
                                                 onClick={() => {
                                                     setShowModuleForm(false);
                                                     setSelectedModuleTypes([]);
-                                                    setVersionNumber('v1');
-                                                    setChangeDescription('');
                                                 }}
                                                 disabled={submitting}
                                                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"

@@ -2,6 +2,101 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { query } = require('../database');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const ossService = require('../services/oss-service');
+
+// ─── 问题附件上传配置 ──────────────────────────────────────────────────────────
+const issueUploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, '../../uploads/issue-attachments');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    let safeName;
+    try { safeName = Buffer.from(file.originalname, 'latin1').toString('utf8'); }
+    catch (e) { safeName = file.originalname; }
+    cb(null, `${Date.now()}_${safeName}`);
+  }
+});
+const issueUpload = multer({ storage: issueUploadStorage, limits: { fileSize: 50 * 1024 * 1024 } });
+
+async function issueOssUploadWithRetry(ossPath, localPath, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try { return await ossService.client.put(ossPath, localPath); }
+    catch (err) {
+      if (attempt < maxRetries) await new Promise(r => setTimeout(r, 2000));
+      else throw err;
+    }
+  }
+}
+
+// POST /api/issues/upload-attachment
+router.post('/upload-attachment', issueUpload.array('files', 10), async (req, res) => {
+  const uploaded = req.files || [];
+  try {
+    const { device_id, module_name } = req.body;
+    if (uploaded.length === 0)
+      return res.status(400).json({ success: false, error: '没有上传文件' });
+
+    // 查询设备信息构建 OSS 路径
+    let deviceInfo = null;
+    if (device_id) {
+      const rows = await query(
+        `SELECT d.id, d.name, pl.name as product_line_name
+         FROM devices d LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+         WHERE d.id = ?`, [device_id]
+      );
+      deviceInfo = rows[0] || null;
+    }
+
+    const safeSeg = s => (s || 'unknown').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '_').trim();
+    const results = [];
+
+    for (const file of uploaded) {
+      let originalName;
+      try { originalName = Buffer.from(file.originalname, 'latin1').toString('utf8'); }
+      catch (e) { originalName = file.originalname; }
+
+      let filePath = file.path;
+
+      if (ossService.enabled) {
+        try {
+          const productLine = safeSeg(deviceInfo?.product_line_name);
+          const deviceFolder = deviceInfo
+            ? `${safeSeg(deviceInfo.name)}-${safeSeg(deviceInfo.id)}`
+            : 'unknown-device';
+          const moduleFolder = safeSeg(module_name || 'general');
+          const ossPath = `${ossService.basePath}/${productLine}/${deviceFolder}/issue-attachments/${moduleFolder}/${Date.now()}_${originalName}`;
+          await issueOssUploadWithRetry(ossPath, file.path);
+          filePath = `oss://${ossService.bucket}/${ossPath}`;
+          try { fs.unlinkSync(file.path); } catch (_) {}
+          console.log(`✅ 问题附件已上传OSS: ${filePath}`);
+        } catch (err) {
+          console.error('OSS上传失败，保留本地文件:', err.message);
+        }
+      }
+
+      let url = filePath;
+      if (filePath.startsWith('oss://')) {
+        try { url = await ossService.getSignedUrl(filePath, 3600 * 24 * 7); }
+        catch (e) { url = filePath; }
+      } else {
+        url = `/uploads/issue-attachments/${path.basename(filePath)}`;
+      }
+
+      results.push({ name: originalName, url, ossPath: filePath, size: file.size });
+    }
+
+    res.json({ success: true, data: results });
+  } catch (error) {
+    uploaded.forEach(f => { try { if (fs.existsSync(f.path)) fs.unlinkSync(f.path); } catch (_) {} });
+    console.error('上传问题附件失败:', error);
+    res.status(500).json({ success: false, error: '上传失败', message: error.message });
+  }
+});
 
 // 获取所有问题
 router.get('/', async (req, res) => {
@@ -65,7 +160,7 @@ router.get('/', async (req, res) => {
     }
 
     if (device_type) {
-      whereConditions.push('dt.name = ?');
+      whereConditions.push('pl.name = ?');
       params.push(device_type);
     }
 
@@ -81,14 +176,12 @@ router.get('/', async (req, res) => {
       `FROM issues i
        INNER JOIN devices d ON i.device_id = d.id
        INNER JOIN product_lines pl ON d.product_line_id = pl.id
-       LEFT JOIN products p ON d.product_id = p.id
        LEFT JOIN customers c ON d.customer_id = c.id
        INNER JOIN modules m ON i.module_id = m.id
        INNER JOIN module_types mt ON m.type_id = mt.id` :
       `FROM issues i
        LEFT JOIN devices d ON i.device_id = d.id
        LEFT JOIN product_lines pl ON d.product_line_id = pl.id
-       LEFT JOIN products p ON d.product_id = p.id
        LEFT JOIN customers c ON d.customer_id = c.id
        LEFT JOIN modules m ON i.module_id = m.id
        LEFT JOIN module_types mt ON m.type_id = mt.id`;
@@ -97,9 +190,7 @@ router.get('/', async (req, res) => {
       SELECT 
         i.*,
         d.name as device_name,
-        d.location as device_location,
         pl.name as device_type,
-        p.name as product_name,
         c.name as customer_name,
         c.short_name as customer_short_name,
         mt.name as module_category
@@ -116,14 +207,12 @@ router.get('/', async (req, res) => {
       `FROM issues i
        INNER JOIN devices d ON i.device_id = d.id
        INNER JOIN product_lines pl ON d.product_line_id = pl.id
-       LEFT JOIN products p ON d.product_id = p.id
        LEFT JOIN customers c ON d.customer_id = c.id
        INNER JOIN modules m ON i.module_id = m.id
        INNER JOIN module_types mt ON m.type_id = mt.id` :
       `FROM issues i
        LEFT JOIN devices d ON i.device_id = d.id
        LEFT JOIN product_lines pl ON d.product_line_id = pl.id
-       LEFT JOIN products p ON d.product_id = p.id
        LEFT JOIN customers c ON d.customer_id = c.id
        LEFT JOIN modules m ON i.module_id = m.id
        LEFT JOIN module_types mt ON m.type_id = mt.id`;
@@ -162,16 +251,13 @@ router.get('/:id', async (req, res) => {
       SELECT 
         i.*,
         d.name as device_name,
-        d.location as device_location,
         pl.name as device_type,
-        p.name as product_name,
         c.name as customer_name,
         c.short_name as customer_short_name,
         mt.name as module_category
       FROM issues i
       LEFT JOIN devices d ON i.device_id = d.id
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
-      LEFT JOIN products p ON d.product_id = p.id
       LEFT JOIN customers c ON d.customer_id = c.id
       LEFT JOIN modules m ON i.module_id = m.id
       LEFT JOIN module_types mt ON m.type_id = mt.id
@@ -262,31 +348,22 @@ router.post('/', [
       }
     }
 
-    // 生成基于时间戳的ID（年月日时分秒+毫秒，格式：YYYYMMDDHHmmssSSS）
-    const now = new Date();
-    const issueId = now.getFullYear().toString() +
-      String(now.getMonth() + 1).padStart(2, '0') +
-      String(now.getDate()).padStart(2, '0') +
-      String(now.getHours()).padStart(2, '0') +
-      String(now.getMinutes()).padStart(2, '0') +
-      String(now.getSeconds()).padStart(2, '0') +
-      String(now.getMilliseconds()).padStart(3, '0');
-
     const insertQuery = `
       INSERT INTO issues (
-        id, device_id, module_id, category, description, severity, status, 
+        device_id, module_id, category, description, severity, status, 
         assignee, contact_person, contact_phone, is_visit_required, visit_at, attachments
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     // 处理JSON字段
     const attachmentsJson = attachments ? JSON.stringify(attachments) : null;
 
-    await query(insertQuery, [
-      issueId, device_id, processedModuleId, category, description, severity, status,
+    const insertResult = await query(insertQuery, [
+      device_id, processedModuleId, category, description, severity, status,
       assignee, contact_person, contact_phone, is_visit_required, visit_at || null, attachmentsJson
     ]);
+    const issueId = insertResult.insertId;
 
     res.status(201).json({
       success: true,
@@ -334,26 +411,28 @@ router.put('/:id', [
     }
 
     // 构建更新语句
+    const allowedFields = ['description', 'severity', 'status', 'category', 'assignee', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'attachments', 'resolution_description', 'resolved_at'];
     const updateFields = [];
     const updateValues = [];
 
     Object.keys(updates).forEach(key => {
-      if (updates[key] !== undefined) {
-        // 特殊处理日期时间字段
-        if ((key === 'resolved_at' || key === 'visit_at') && updates[key]) {
-          // 将ISO 8601格式转换为MySQL兼容格式
-          const date = new Date(updates[key]);
-          if (!isNaN(date.getTime())) {
-            updateFields.push(`${key} = ?`);
-            updateValues.push(date.toISOString().slice(0, 19).replace('T', ' '));
-          }
-        } else if (key === 'attachments' && updates[key]) {
+      if (!allowedFields.includes(key) || updates[key] === undefined) return;
+      // 特殊处理日期时间字段
+      if ((key === 'resolved_at' || key === 'visit_at') && updates[key]) {
+        // 将ISO 8601格式转换为MySQL兼容格式（使用本地时间，避免时区偏移）
+        const date = new Date(updates[key]);
+        if (!isNaN(date.getTime())) {
+          const pad = n => String(n).padStart(2, '0');
+          const localStr = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
           updateFields.push(`${key} = ?`);
-          updateValues.push(JSON.stringify(updates[key]));
-        } else if (updates[key] !== undefined) {
-          updateFields.push(`${key} = ?`);
-          updateValues.push(updates[key]);
+          updateValues.push(localStr);
         }
+      } else if (key === 'attachments' && updates[key]) {
+        updateFields.push(`${key} = ?`);
+        updateValues.push(JSON.stringify(updates[key]));
+      } else {
+        updateFields.push(`${key} = ?`);
+        updateValues.push(updates[key]);
       }
     });
 
