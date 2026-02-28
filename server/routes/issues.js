@@ -350,20 +350,22 @@ router.post('/', [
 
     const insertQuery = `
       INSERT INTO issues (
-        device_id, module_id, category, description, severity, status, 
+        id, device_id, module_id, category, description, severity, status, 
         assignee, contact_person, contact_phone, is_visit_required, visit_at, attachments
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
+
+    // 生成唯一 issue ID（前缀 ISS + 13位时间戳，共16位，在 varchar(20) 范围内）
+    const issueId = `ISS${Date.now()}`;
 
     // 处理JSON字段
     const attachmentsJson = attachments ? JSON.stringify(attachments) : null;
 
-    const insertResult = await query(insertQuery, [
-      device_id, processedModuleId, category, description, severity, status,
+    await query(insertQuery, [
+      issueId, device_id, processedModuleId, category, description, severity, status,
       assignee, contact_person, contact_phone, is_visit_required, visit_at || null, attachmentsJson
     ]);
-    const issueId = insertResult.insertId;
 
     res.status(201).json({
       success: true,

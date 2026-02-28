@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ProductForm from '../components/ProductForm';
 import { Product, ProductLine, ApiResponse } from '../types';
 import { productApi, productLineApi } from '../services/api';
-import { PencilIcon, TrashIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PrinterIcon, Squares2X2Icon, ListBulletIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 
 const Products: React.FC = () => {
@@ -18,6 +18,8 @@ const Products: React.FC = () => {
     const [showForm, setShowForm] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchInitialData();
@@ -149,6 +151,23 @@ const Products: React.FC = () => {
                             <PrinterIcon className="h-4 w-4 mr-2" />
                             打印
                         </button>
+                        {/* 视图切换按钮 */}
+                        <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                title="方块视图"
+                            >
+                                <Squares2X2Icon className="h-5 w-5" />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('list')}
+                                className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                title="列表视图"
+                            >
+                                <ListBulletIcon className="h-5 w-5" />
+                            </button>
+                        </div>
                         <button 
                             onClick={handleAddProduct}
                             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
@@ -195,15 +214,19 @@ const Products: React.FC = () => {
                             创建第一个产品
                         </button>
                     </div>
-                ) : (
+                ) : viewMode === 'grid' ? (
+                    // 方块视图
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {products.map(product => (
-                            <div key={product.id} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-6 border border-gray-100">
+                            <div key={product.id}
+                                onClick={() => navigate(`/products/${product.id}`)}
+                                className="bg-white rounded-lg shadow hover:shadow-lg hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer p-6 border border-gray-100"
+                            >
                                 <div className="flex justify-between items-start mb-3">
-                                    <h3 className="font-bold text-lg text-gray-900">{product.name}</h3>
+                                    <h3 className="font-bold text-base text-gray-900 leading-snug flex-1 min-w-0 mr-3">{product.name}</h3>
                                     <button
-                                        onClick={() => handleToggleActive(product)}
-                                        className={`px-2 py-0.5 text-xs rounded-full cursor-pointer hover:opacity-80 transition-opacity ${
+                                        onClick={(e) => { e.stopPropagation(); handleToggleActive(product); }}
+                                        className={`px-2.5 py-0.5 text-xs font-semibold rounded-full cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap shrink-0 ${
                                             product.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                                         }`}
                                         title={product.is_active ? '点击停用' : '点击启用'}
@@ -218,6 +241,7 @@ const Products: React.FC = () => {
                                     <div className="flex gap-2 mb-2">
                                         <Link
                                             to={`/products/${product.id}`}
+                                            onClick={(e) => e.stopPropagation()}
                                             className="flex-1 text-center px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded text-sm font-medium transition-colors"
                                         >
                                             配置详情
@@ -225,7 +249,7 @@ const Products: React.FC = () => {
                                     </div>
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => handleEditProduct(product)}
+                                            onClick={(e) => { e.stopPropagation(); handleEditProduct(product); }}
                                             className="flex-1 px-3 py-1.5 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded transition-colors flex items-center justify-center"
                                             title="编辑"
                                         >
@@ -233,7 +257,7 @@ const Products: React.FC = () => {
                                             <span className="text-sm">编辑</span>
                                         </button>
                                         <button
-                                            onClick={() => handleDeleteProduct(product)}
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteProduct(product); }}
                                             className="flex-1 px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors flex items-center justify-center"
                                             title="删除"
                                         >
@@ -241,6 +265,65 @@ const Products: React.FC = () => {
                                             <span className="text-sm">删除</span>
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    // 列表视图
+                    <div className="bg-white rounded-lg shadow divide-y divide-gray-100">
+                        {products.map(product => (
+                            <div key={product.id}
+                                onClick={() => navigate(`/products/${product.id}`)}
+                                className="flex items-center justify-between px-5 py-4 hover:bg-blue-50 hover:ring-1 hover:ring-inset hover:ring-blue-100 transition-colors cursor-pointer"
+                            >
+                                <div className="flex items-center gap-5 flex-1 min-w-0">
+                                    {/* 型号标签 */}
+                                    <div className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold font-mono text-sm min-w-[120px] text-center shadow-sm shrink-0">
+                                        {product.model || '未设定型号'}
+                                    </div>
+                                    {/* 名称 + 产品线 + 描述 */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <h3 className="text-base font-bold text-gray-900 truncate">{product.name}</h3>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleToggleActive(product); }}
+                                                className={`px-2.5 py-0.5 text-xs font-semibold rounded-full cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap shrink-0 ${
+                                                    product.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                }`}
+                                                title={product.is_active ? '点击停用' : '点击启用'}
+                                            >
+                                                {product.is_active ? '启用' : '停用'}
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs text-blue-600 font-medium">{product.product_line_name}</span>
+                                            <span className="text-sm text-gray-500 truncate">{product.description || '暂无描述'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0 ml-4">
+                                    <Link
+                                        to={`/products/${product.id}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 hover:bg-blue-100 rounded-lg transition-colors text-sm whitespace-nowrap"
+                                    >
+                                        配置详情
+                                    </Link>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleEditProduct(product); }}
+                                        className="px-3 py-1.5 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded transition-colors"
+                                        title="编辑"
+                                    >
+                                        <PencilIcon className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteProduct(product); }}
+                                        className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
+                                        title="删除"
+                                    >
+                                        <TrashIcon className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
                         ))}

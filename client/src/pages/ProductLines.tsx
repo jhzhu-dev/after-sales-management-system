@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ProductLineForm from '../components/ProductLineForm';
 import { ProductLine, ApiResponse } from '../types';
-import { PencilIcon, TrashIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PrinterIcon, Squares2X2Icon, ListBulletIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 
 const ProductLines: React.FC = () => {
@@ -13,6 +13,8 @@ const ProductLines: React.FC = () => {
     const [showForm, setShowForm] = useState(false);
     const [editingProductLine, setEditingProductLine] = useState<ProductLine | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchProductLines();
@@ -138,6 +140,23 @@ const ProductLines: React.FC = () => {
                             <PrinterIcon className="h-4 w-4 mr-2" />
                             打印
                         </button>
+                        {/* 视图切换按钮 */}
+                        <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                title="方块视图"
+                            >
+                                <Squares2X2Icon className="h-5 w-5" />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('list')}
+                                className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                title="列表视图"
+                            >
+                                <ListBulletIcon className="h-5 w-5" />
+                            </button>
+                        </div>
                         <button
                             onClick={handleAddProductLine}
                             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
@@ -163,37 +182,37 @@ const ProductLines: React.FC = () => {
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
                         {error}
                     </div>
-                ) : (
+                ) : viewMode === 'grid' ? (
+                    // 方块视图
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {productLines.map((line) => (
                             <div
                                 key={line.id}
-                                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden"
+                                onClick={() => navigate(`/products?product_line_id=${line.id}`)}
+                                className="bg-white rounded-lg shadow hover:shadow-lg hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer overflow-hidden"
                             >
                                 <div className="p-6">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="p-2 bg-blue-50 rounded-lg">
-                                            <span className="text-2xl font-bold text-blue-600">
-                                                {line.code}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => handleToggleActive(line)}
-                                                className={`px-2 py-1 text-xs font-semibold rounded-full cursor-pointer hover:opacity-80 transition-opacity ${line.is_active
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-gray-100 text-gray-800'
-                                                    }`}
-                                                title={line.is_active ? '点击停用' : '点击启用'}
-                                            >
-                                                {line.is_active ? '启用' : '停用'}
-                                            </button>
-                                        </div>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="text-lg font-bold text-gray-900 leading-snug flex-1 min-w-0 mr-3">
+                                            {line.name}
+                                        </h3>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleToggleActive(line); }}
+                                            className={`px-2.5 py-0.5 text-xs font-semibold rounded-full cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap shrink-0 ${line.is_active
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-gray-100 text-gray-800'
+                                                }`}
+                                            title={line.is_active ? '点击停用' : '点击启用'}
+                                        >
+                                            {line.is_active ? '启用' : '停用'}
+                                        </button>
                                     </div>
 
-                                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                                        {line.name}
-                                    </h3>
+                                    <div className="mb-3">
+                                        <span className="text-xs text-gray-400 font-mono bg-gray-50 border border-gray-100 px-2 py-0.5 rounded">
+                                            {line.code}
+                                        </span>
+                                    </div>
 
                                     <p className="text-gray-600 text-sm mb-4 h-10 line-clamp-2">
                                         {line.description || '暂无描述'}
@@ -209,25 +228,87 @@ const ProductLines: React.FC = () => {
                                         <div className="flex gap-2">
                                             <Link
                                                 to={`/products?product_line_id=${line.id}`}
+                                                onClick={(e) => e.stopPropagation()}
                                                 className="flex-1 text-center px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded text-sm font-medium transition-colors"
                                             >
                                                 查看产品
                                             </Link>
                                             <button
-                                                onClick={() => handleEditProductLine(line)}
+                                                onClick={(e) => { e.stopPropagation(); handleEditProductLine(line); }}
                                                 className="px-3 py-1.5 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded transition-colors"
                                                 title="编辑"
                                             >
                                                 <PencilIcon className="w-4 h-4" />
                                             </button>
                                             <button
-                                                onClick={() => handleDeleteProductLine(line)}
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteProductLine(line); }}
                                                 className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
                                                 title="删除"
                                             >
                                                 <TrashIcon className="w-4 h-4" />
                                             </button>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    // 列表视图
+                    <div className="bg-white rounded-lg shadow divide-y divide-gray-100">
+                        {productLines.map((line) => (
+                            <div key={line.id}
+                                onClick={() => navigate(`/products?product_line_id=${line.id}`)}
+                                className="flex items-center justify-between px-5 py-4 hover:bg-blue-50 hover:ring-1 hover:ring-inset hover:ring-blue-100 transition-colors cursor-pointer"
+                            >
+                                <div className="flex items-center gap-5 flex-1 min-w-0">
+                                    {/* Code 标签 */}
+                                    <div className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold font-mono text-sm min-w-[120px] text-center shadow-sm shrink-0">
+                                        {line.code}
+                                    </div>
+                                    {/* 名称 + 描述 */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <h3 className="text-base font-bold text-gray-900 truncate">{line.name}</h3>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleToggleActive(line); }}
+                                                className={`px-2.5 py-0.5 text-xs font-semibold rounded-full cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap shrink-0 ${
+                                                    line.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                                }`}
+                                                title={line.is_active ? '点击停用' : '点击启用'}
+                                            >
+                                                {line.is_active ? '启用' : '停用'}
+                                            </button>
+                                        </div>
+                                        <p className="text-sm text-gray-500 truncate">{line.description || '暂无描述'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4 shrink-0 ml-4">
+                                    <span className="text-sm text-gray-400 whitespace-nowrap">
+                                        更新于: {new Date(line.updated_at).toLocaleDateString()}
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <Link
+                                            to={`/products?product_line_id=${line.id}`}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 hover:bg-blue-100 rounded-lg transition-colors text-sm whitespace-nowrap"
+                                        >
+                                            查看产品
+                                        </Link>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleEditProductLine(line); }}
+                                            className="px-3 py-1.5 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded transition-colors"
+                                            title="编辑"
+                                        >
+                                            <PencilIcon className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteProductLine(line); }}
+                                            className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
+                                            title="删除"
+                                        >
+                                            <TrashIcon className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
