@@ -6,6 +6,8 @@ import { Issue, FilterOptions, IssueFormData } from '../types';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import IssueForm from '../components/IssueForm';
+import ExportButton from '../components/ExportButton';
+import { exportToExcel } from '../utils/exportUtils';
 import { formatDate, getStatusColor, getSeverityColor } from '../utils';
 
 export default function Issues() {
@@ -306,6 +308,59 @@ export default function Issues() {
       } catch (e) {}
     }
     window.print();
+  };
+
+  const ISSUE_EXPORT_COLUMNS = [
+    { key: 'id', label: '问题ID' },
+    { key: 'device_name', label: '设备' },
+    { key: 'module_category', label: '模块' },
+    { key: 'description', label: '问题描述' },
+    { key: 'severity_label', label: '严重性' },
+    { key: 'status_label', label: '状态' },
+    { key: 'assignee', label: '责任人' },
+    { key: 'created_at', label: '创建时间' },
+  ];
+
+  const UPGRADE_EXPORT_COLUMNS = [
+    { key: 'device_name', label: '设备名称' },
+    { key: 'device_id', label: '设备序列号' },
+    { key: 'module_type', label: '模块类型' },
+    { key: 'old_version', label: '旧版本号' },
+    { key: 'version_number', label: '新版本号' },
+    { key: 'version_label', label: '版本类型' },
+    { key: 'description', label: '变更说明' },
+    { key: 'updated_by', label: '操作人' },
+    { key: 'release_date', label: '发布日期' },
+  ];
+
+  const handleExportIssues = async () => {
+    try {
+      const resp = await issueApi.getIssues({ ...filters, page: 1, limit: 9999 });
+      if (!resp.success) return;
+      const severityMap: Record<string, string> = { low: '低', medium: '中', high: '高' };
+      const statusMap: Record<string, string> = { open: '待处理', in_progress: '处理中', closed: '已解决' };
+      const rows = resp.data.map((issue: any) => ({
+        ...issue,
+        severity_label: severityMap[issue.severity] || issue.severity,
+        status_label: statusMap[issue.status] || issue.status,
+        created_at: issue.created_at ? new Date(issue.created_at).toLocaleDateString('zh-CN') : '',
+      }));
+      const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
+      exportToExcel(rows, ISSUE_EXPORT_COLUMNS, `故障管理_${timestamp}`);
+    } catch (e) {
+      console.error('导出失败:', e);
+    }
+  };
+
+  const handleExportUpgrades = () => {
+    const versionTypeMap: Record<string, string> = { factory: '出厂', update: '更新' };
+    const rows = upgrades.map((v: any) => ({
+      ...v,
+      version_label: versionTypeMap[v.version_type] || v.version_type,
+      release_date: v.release_date ? new Date(v.release_date).toLocaleDateString('zh-CN') : '',
+    }));
+    const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
+    exportToExcel(rows, UPGRADE_EXPORT_COLUMNS, `版本演进_${timestamp}`);
   };
 
   // 打印数据加载后触发打印
@@ -621,6 +676,16 @@ export default function Issues() {
               ))}
             </select>
             <div className="flex-1"></div>
+            <ExportButton
+              onExport={handleExportUpgrades}
+            />
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <PrinterIcon className="h-4 w-4 mr-2" />
+              打印
+            </button>
             <p className="text-sm text-gray-500 whitespace-nowrap">共 {upgradeTotal} 条</p>
           </div>
         </div>
@@ -661,13 +726,6 @@ export default function Issues() {
               <p className="text-gray-500 text-sm mt-1 font-medium">统一管理全生命周期的故障报修与升级演进</p>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={handlePrint}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              >
-                <PrinterIcon className="h-4 w-4 mr-2" />
-                打印
-              </button>
             <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
               {[
                 { id: 'issues' as const, label: '故障管理', icon: ChatBubbleLeftRightIcon },
@@ -698,7 +756,17 @@ export default function Issues() {
         {activeTab === 'issues' && (<>
 
         {/* 批量操作按钮 */}
-        <div className="flex justify-end no-print">
+        <div className="flex justify-end gap-2 no-print">
+          <ExportButton
+            onExport={handleExportIssues}
+          />
+          <button
+            onClick={handlePrint}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <PrinterIcon className="h-4 w-4 mr-2" />
+            打印
+          </button>
           <button
             onClick={handleAdd}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"

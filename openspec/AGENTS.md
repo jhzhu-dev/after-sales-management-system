@@ -1,15 +1,5 @@
 # OpenSpec Instructions
 
-> **🚨 PRODUCTION ENVIRONMENT NOTICE**  
-> This project is **LIVE IN PRODUCTION** (since 2026-02-27).  
-> **CRITICAL**: Do NOT suggest or perform any operations that could affect production data:
-> - No database clearing (DELETE, TRUNCATE)
-> - No test data imports (seed scripts)
-> - No direct data modifications
-> - Database migrations require manual backup and approval first
-> 
-> **Read first**: [PRODUCTION.md](../PRODUCTION.md) | [.ai-context](../.ai-context)
-
 Instructions for AI coding assistants using OpenSpec for spec-driven development.
 
 ## TL;DR Quick Checklist

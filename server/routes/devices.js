@@ -28,8 +28,8 @@ router.get('/', async (req, res) => {
     }
 
     if (search) {
-      whereConditions.push('(d.name LIKE ? OR d.id LIKE ? OR d.device_code LIKE ?)');
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      whereConditions.push('(d.name LIKE ? OR d.id LIKE ? OR d.device_code LIKE ? OR c.name LIKE ? OR d.remote_code LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';

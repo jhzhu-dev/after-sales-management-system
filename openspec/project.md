@@ -1,284 +1,211 @@
-# Project Context
+# 项目上下文
 
-> **🚨 PRODUCTION ENVIRONMENT**  
-> This project is in **PRODUCTION** since 2026-02-27.  
-> Contains real business data. No test operations on database allowed.  
-> See: [PRODUCTION.md](../PRODUCTION.md) and [.ai-context](../.ai-context)
+> **最后更新：** 2026年3月2日  
+> **环境状态：** ✅ PRODUCTION（已于 2026年2月27日 上线）
 
-## Purpose
-设备管理系统 - 一个完整的企业级设备全生命周期管理平台，专注于：
-- 多类型设备的信息管理和状态追踪
-- 全流程订单管理与生产进度追踪 (SOP)
-- 模块化的版本管理系统（出厂配置和后期更新）
-- 统一的售后服务中心（故障报修、版本演进与看板）
-- 数据可视化和统计报表
-- 为工业设备、机械设备、电气系统等提供统一的管理入口
+---
 
-**核心目标**：帮助企业实现设备资产数字化管理，提升设备维护效率，建立完整的设备生命周期档案。
+## 项目简介
 
-## Current Specifications Status
+**设备管理系统**（售后登记系统）是一套面向工业设备全生命周期管理的 Web 应用，支持多类型设备注册、模块版本追踪、售后问题记录与统计分析。系统目前持有真实生产数据，**严禁对数据库执行任何测试性或破坏性操作**。
 
-**最后更新**: 2026-02-27
+---
 
-本项目已完成 OpenSpec 规范体系重置，当前规范状态如下：
+## 核心技术栈
 
-### 已实施规范 (openspec/specs/)
-1. **device-management** - 设备管理：设备信息、模块配置、版本追踪
-2. **product-management** - 产品管理：产品线、产品型号、产品模块配置、产品文档
-3. **customer-management** - 客户管理：客户信息、设备-客户关联
-4. **issue-tracking** - 问题跟踪：问题报修、状态流转、处理日志
-5. **release-management** - 版本发布：版本库、版本发布、空状态处理
-6. **module-types** - 模块类型：标准模块分类体系
-7. **dashboard** - 数据仪表盘：统计数据、可视化图表
-8. **after-sales** - 售后服务：设备升级、设备文档、售后概览
-9. **sop-management** - SOP流程：标准作业程序模板
+### 后端（`server/`）
+| 技术 | 版本/说明 |
+|------|-----------|
+| Node.js + Express | Web 服务器框架（`^4.18.2`） |
+| MySQL 2 | 数据库驱动（`^3.6.5`）|
+| JWT (jsonwebtoken) | 身份验证（`^9.0.2`） |
+| bcryptjs | 密码哈希（`^2.4.3`） |
+| multer | 文件上传中间件（本地存储）|
+| ali-oss | 阿里云 OSS 文件存储（`^6.18.0`）|
+| helmet + express-rate-limit | 安全中间件 |
+| express-validator | 请求参数校验 |
+| xlsx + moment | Excel 导出 / 日期处理 |
+| nodemon + concurrently | 开发工具 |
 
-### 规范覆盖的功能
-- ✅ 后端 API 路由：18个路由文件全部覆盖
-- ✅ 前端页面：10个核心页面全部覆盖
-- ✅ 数据库表：所有核心业务表都有规范定义
+### 前端（`client/`）
+| 技术 | 版本/说明 |
+|------|-----------|
+| React 18 + TypeScript | 前端框架（`^18.2.0 / ^4.9.5`）|
+| React Router v6 | 客户端路由 |
+| Tailwind CSS v3 | 原子化样式框架 |
+| Axios | HTTP 客户端 |
+| Recharts | 图表可视化 |
+| react-query v3 | 服务端状态管理 |
+| react-hook-form | 表单管理 |
+| @heroicons/react + lucide-react | 图标库 |
+| @headlessui/react | 无障碍 UI 组件 |
+| xlsx + date-fns | Excel 导出 / 日期格式化 |
 
-### 活跃变更 (openspec/changes/)
-- 无活跃变更（已清空重置）
-- 历史变更已备份到 `changes/backup/`
+### 部署 & 基础设施
+| 技术 | 说明 |
+|------|------|
+| Docker + docker-compose | 容器化部署（MySQL 8.0 + Node.js App）|
+| HTTPS (Node.js https 模块) | SSL 证书挂载于 `ssl/` |
+| 阿里云 OSS | 华东2（oss-cn-shanghai），Bucket: `els-pub-04` |
+| 本地文件存储 | OSS 关闭时回退到 `uploads/` 目录 |
 
-## Tech Stack
+---
 
-### 后端技术栈
-- **Node.js 16+** - JavaScript运行时环境
-- **Express 4.18** - Web应用框架
-- **MySQL 8.0** - 关系型数据库（使用 mysql2/promise）
-- **JWT (jsonwebtoken)** - 身份认证和授权
-- **Express Validator** - 请求参数验证
-- **Helmet** - 安全中间件（HTTP头安全）
-- **Express Rate Limit** - API限流保护
-- **CORS** - 跨域资源共享
-- **Multer** - 文件上传处理
-- **XLSX** - Excel文件导入导出
-- **Moment.js** - 日期时间处理
-- **bcryptjs** - 密码加密
+## 项目文件结构
 
-### 前端技术栈
-- **React 18** - 前端UI框架
-- **TypeScript 4.9** - 类型安全的JavaScript超集
-- **React Router DOM 6** - 客户端路由
-- **Tailwind CSS 3** - 实用优先的CSS框架
-- **Axios** - HTTP客户端
-- **Recharts** - 数据可视化图表库
-- **React Hook Form** - 表单管理
-- **React Query** - 服务端状态管理
-- **Heroicons** - SVG图标库
-- **Lucide React** - 图标组件
-- **date-fns** - 日期处理工具
-- **@headlessui/react** - 无样式UI组件
-
-### 开发工具
-- **Nodemon** - 服务器自动重启
-- **Concurrently** - 并行运行多个命令
-- **PostCSS** - CSS转换工具
-- **Autoprefixer** - CSS自动添加浏览器前缀
-
-## Project Conventions
-
-### Code Style
-**TypeScript/JavaScript**:
-- 使用 ES6+ 语法特性
-- 前端组件使用函数式组件和 React Hooks
-- 接口和类型定义使用 TypeScript interfaces
-- 异步操作使用 async/await 模式
-- 箭头函数优先于传统函数声明
-
-**命名约定**:
-- 文件名：组件使用 PascalCase（如 `DeviceForm.tsx`），工具类使用 camelCase
-- 组件名：PascalCase（如 `DataTable`, `StatsCard`）
-- 函数/变量：camelCase（如 `initializeDatabase`, `deviceRoutes`）
-- 常量：UPPER_SNAKE_CASE（如 `DB_HOST`, `PORT`）
-- 数据库表名：snake_case（如 `device_types`, `submodule_versions`）
-- 接口命名：使用 PascalCase（如 `Device`, `Module`, `Issue`）
-
-**代码组织**:
-- 前端按功能模块组织：`components/`, `pages/`, `services/`, `types/`, `utils/`
-- 后端按路由模块组织：`routes/` 目录包含各个业务模块
-- 使用懒加载优化首屏性能（React.lazy）
-- 保持组件单一职责原则
-
-### Architecture Patterns
-
-**前端架构**:
-- **组件化设计**：UI拆分为可复用组件（Layout, DataTable, StatsCard等）
-- **页面路由分离**：使用 React Router 实现 SPA 应用
-- **API服务层**：统一的 `services/api.ts` 处理所有HTTP请求
-- **类型安全**：使用 TypeScript 确保编译时类型检查
-- **响应式设计**：基于 Tailwind CSS 的移动优先设计
-
-**后端架构**:
-- **RESTful API**：遵循REST设计原则
-- **中间件模式**：安全、限流、CORS等通过中间件实现
-- **数据库连接池**：使用 mysql2 连接池管理数据库连接
-- **模块化路由**：每个业务模块独立路由文件
-- **错误处理**：统一的错误响应格式 `{ success, data/error }`
-- **安全防护**：Helmet 安全头、JWT 认证、限流保护
-
-**数据库设计**:
-- 核心表（设备）：`devices`（设备 - 关联客户与订单）、`modules`（模块）、`submodules`（子模块）、`submodule_versions`（版本）、`issues`（问题）、`device_upgrades`（升级记录）
-- 核心表（订单）：`orders`（订单）、`order_payments`（付款）、`order_devices`（订单预期设备清单）、`order_progress`（进度）、`order_shipping_info`（出货）
-- 基础数据表：`product_lines`（产品线）、`products`（产品）、`customers`（客户）、`product_documents`（产品资料）
-- 类型表：`device_types`（设备类型）、`module_types`（模块类型）
-- 配置表：`order_hardware_configs`、`order_software_configs`
-- 字符集：utf8mb4 支持完整的Unicode字符
-- 时区：+08:00（东八区）
-
-### Testing Strategy
-**当前状态**：项目处于初期开发阶段，暂未实施完整的测试策略
-
-**建议测试方向**：
-- 单元测试：使用 Jest 测试工具函数和业务逻辑
-- 集成测试：测试 API 端点和数据库交互
-- 前端测试：使用 React Testing Library 测试组件
-- E2E测试：使用 Cypress 或 Playwright 测试完整用户流程
-
-### Git Workflow
-**推荐工作流**：
-- 使用 Git Flow 或 GitHub Flow
-- 主分支：`main` 或 `master` 保持稳定
-- 开发分支：`develop` 用于日常开发
-- 功能分支：`feature/功能名称`
-- 修复分支：`fix/问题描述`
-
-**提交规范**（建议）：
 ```
-feat: 新功能
-fix: 修复bug
-docs: 文档更新
-style: 代码格式调整
-refactor: 重构代码
-perf: 性能优化
-test: 测试相关
-chore: 构建/工具配置
+manger/
+├── server/                  # Node.js 后端
+│   ├── index.js             # 主入口（HTTPS + 路由注册 + 静态文件服务）
+│   ├── database.js          # MySQL 连接池与数据库初始化
+│   ├── routes/              # API 路由（每个功能模块独立文件）
+│   │   ├── devices.js       # 设备 CRUD
+│   │   ├── modules.js       # 设备模块管理
+│   │   ├── module-types.js  # 模块类型字典
+│   │   ├── versions.js      # 模块版本记录
+│   │   ├── version-releases.js # 版本发布库
+│   │   ├── issues.js        # 售后问题管理
+│   │   ├── issue-logs.js    # 问题处理日志
+│   │   ├── dashboard.js     # 仪表盘统计聚合
+│   │   ├── product-lines.js # 产品线管理
+│   │   ├── products.js      # 产品管理
+│   │   ├── product-modules.js    # 产品模块配置
+│   │   ├── product-documents.js  # 产品文档
+│   │   ├── device-documents.js   # 设备文档
+│   │   ├── device-upgrades.js    # 设备升级记录
+│   │   ├── after-sales.js   # 售后管理集成（Phase 4）
+│   │   ├── customers.js     # 客户管理
+│   │   └── uploads.js       # 文件上传（OSS / 本地）
+│   └── services/
+│       └── oss-service.js   # 阿里云 OSS 封装
+│
+├── client/                  # React 前端
+│   ├── src/
+│   │   ├── App.tsx          # 路由配置根组件
+│   │   ├── pages/           # 页面组件（10 个页面）
+│   │   │   ├── Dashboard.tsx        # 仪表盘统计
+│   │   │   ├── Devices.tsx          # 设备列表
+│   │   │   ├── DeviceDetail.tsx     # 设备详情（含模块/版本/问题/升级）
+│   │   │   ├── Issues.tsx           # 售后问题列表
+│   │   │   ├── IssueDetail.tsx      # 问题详情与处理日志
+│   │   │   ├── Products.tsx         # 产品列表
+│   │   │   ├── ProductDetail.tsx    # 产品详情
+│   │   │   ├── ProductLines.tsx     # 产品线管理
+│   │   │   ├── ReleaseLibrary.tsx   # 版本发布库
+│   │   │   └── Settings.tsx         # 系统设置
+│   │   ├── components/      # 复用组件（15+ 个）
+│   │   │   ├── Layout.tsx           # 侧边栏 + 顶部导航布局
+│   │   │   ├── DataTable.tsx        # 通用数据表格
+│   │   │   ├── AttachmentViewer.tsx # OSS 附件预览
+│   │   │   ├── ExportButton.tsx     # Excel 导出按钮
+│   │   │   ├── ChartCard.tsx / StatsCard.tsx # 统计卡片
+│   │   │   ├── DeviceTypeChart.tsx / LocationStatsChart.tsx / ProductLineChart.tsx
+│   │   │   ├── IssueLogTimeline.tsx # 问题处理时间线
+│   │   │   └── *Form.tsx            # 各业务实体表单
+│   │   ├── services/
+│   │   │   └── api.ts       # Axios 封装，统一 API 调用
+│   │   ├── types/
+│   │   │   └── index.ts     # TypeScript 类型定义（所有领域实体）
+│   │   └── utils/
+│   │       └── exportUtils.ts # Excel 导出工具
+│   └── build/               # 生产构建产物（已构建，由后端直接 serve）
+│
+├── openspec/                # OpenSpec 规格管理
+│   ├── project.md           # 本文件
+│   ├── AGENTS.md            # AI 助手工作流规范
+│   ├── specs/               # 功能能力规格文件
+│   └── changes/             # 变更提案（archive/ 存放已归档）
+│
+├── doc/                     # 技术文档
+│   ├── OSS_INTEGRATION.md   # 阿里云 OSS 集成说明
+│   ├── OSS_STORAGE_STRUCTURE.md
+│   ├── DOCKER_HOT_UPDATE.md
+│   └── CLEANUP_RECORD.md
+│
+├── ssl/                     # SSL 证书（生产环境 HTTPS）
+├── uploads/                 # 本地文件存储（OSS 禁用时使用）
+├── docker-compose.yml       # 容器编排配置
+├── Dockerfile               # 应用镜像构建
+├── deploy.ps1 / restart.ps1 # 部署与重启脚本（PowerShell）
+├── PRODUCTION.md            # 生产环境操作规范
+└── README.md                # 项目说明文档
 ```
 
-## Domain Context
+---
 
-### 订单管理领域
-**订单生命周期**:
-1. **订单创建**: 录入客户信息、产品需求、交付日期等
-2. **生产阶段**: 确认BOM、组装、测试
-3. **调试阶段**: 烧录固件、参数校准、老化测试
-4. **打包阶段**: 清洁、附件核对、装箱
-5. **物流阶段**: 发货、追踪物流
-6. **完成/售后**: 订单交付，转入售后维护
+## 业务领域模型
 
-**SOP流程控制**:
-- 每个阶段都有标准作业程序(SOP)检查清单
-- 必须完成SOP检查并提交审核
-- 审核通过后自动进入下一阶段
+| 领域实体 | 说明 |
+|---------|------|
+| **Customer（客户）** | 设备所属客户，含简称 |
+| **ProductLine（产品线）** | 产品的顶层分类 |
+| **Product（产品）** | 具体产品型号，属于产品线 |
+| **Device（设备）** | 实体设备，关联客户、产品；状态：正常/异常/维护中 |
+| **ModuleType（模块类型）** | 模块类别字典（机械/电气/上位机/服务器/视觉等）|
+| **Module（模块）** | 设备下的功能模块实例 |
+| **Version（版本）** | 模块版本记录（出厂版本/更新版本）|
+| **VersionRelease（发布库）** | 官方版本发布记录（独立于设备） |
+| **Issue（售后问题）** | 问题单，含严重性（low/medium/high）、状态（open/in_progress/closed）|
+| **IssueLog（处理日志）** | 问题处理进度记录，支持附件 |
+| **DeviceUpgrade（升级记录）** | 设备硬件升级/软件更新记录 |
 
-**业务术语**:
-- **Order（订单）**: 销售合同对应的交付任务
-- **Product Line（产品线）**: 公司的核心产品系列（如龙门、底盘）
-- **Product（产品）**: 具体的产品型号和规格
-- **Customer（客户）**: 购买产品的企业或个人，也是设备最终的归属方
-- **Device-Order Link**: 记录物理设备与来源订单的关联，用于生产溯源
-- **Device-Customer Link**: 记录物理设备与持有客户的关联，用于售后归属梳理
-- **SOP（标准作业程序）**: 每个生产阶段必须执行的检查项
-- **Progress（进度）**: 订单当前所处的阶段和状态
+---
 
-### 设备管理领域
-**设备分类体系**：
-- 机械设备（Mechanical）
-- 电气系统（Electrical）：包含硬件和软件
-- 上位机（HMI）：包含硬件和软件
-- 服务器（Server）：包含硬件和软件
-- 视觉系统（Vision）：包含硬件和软件
+## 代码规范与架构约定
 
-**设备生命周期**：
-1. **设备录入**：记录设备编号、型号、位置等基本信息
-2. **模块管理**：为设备配置各类模块（机械、电气、上位机等）
-3. **版本追踪**：记录出厂版本和每次更新的版本信息
-4. **运维管理**：设备状态监控（正常/异常/维护中）
-5. **售后服务**：统一售后中心管理（故障报修、升级演进、概览看板）
-6. **全生命周期溯源**：从订单、到出厂配置、到后期维护升级的全链路追溯
+### 后端
+- 路由文件按业务实体拆分，统一在 `server/index.js` 注册
+- 数据库操作使用 `mysql2` Promise API，连接池管理
+- 文件上传：优先使用阿里云 OSS（`USE_OSS_STORAGE=true`），否则存入 `uploads/` 本地目录
+- API 响应格式统一：`{ success: boolean, data: T, message?: string }`
+- 分页响应格式：`{ success, data[], pagination: { page, limit, total, pages } }`
 
-**版本管理策略**：
-- 每个子模块有独立的版本号
-- 记录出厂版本（factory_version）和当前版本（current_version）
-- 版本更新记录包含：版本号、更新时间、更新人、更新说明
+### 前端
+- TypeScript 严格类型，所有领域类型集中定义在 `client/src/types/index.ts`
+- API 调用统一通过 `client/src/services/api.ts`，不在组件中直接使用 axios
+- 样式全部使用 Tailwind CSS 工具类，不写自定义 CSS（除 `App.css` / `index.css` 全局样式）
+- 表单使用 `react-hook-form`，数据请求状态使用 `react-query`
+- 组件命名使用 PascalCase，文件以 `.tsx` 结尾
 
-**问题管理流程**：
-- 严重性等级：低、中、高
-- 状态流转：待处理 → 处理中 → 已解决
-- 跟进人分配和进度追踪
+### Git 工作流
+- 功能分支：`feature/your-feature-name`
+- 生产环境变更必须经代码审查后合并
+- 部署使用 `deploy.ps1`（Docker 热更新）或 `restart.ps1`
 
-### 业务术语
-- **Device（设备）**：管理的基本单元，如一台机器或一套系统
-- **Module（模块）**：设备的组成部分，如机械模块、电气模块
-- **Submodule（子模块）**：模块下的具体部件或软件
-- **Version（版本）**：子模块的软件或硬件版本信息
-- **Issue（问题/故障）**：售后服务中的故障报修单
-- **Device Upgrade（设备升级）**：设备的硬件升级、软件更新或系统重装记录
-- **After-Sales Center（售后中心）**：整合后的统一售后管理入口
-- **Remote Code（远程代码）**：设备远程访问标识
-- **Factory Version（出厂版本）**：设备出厂时的初始版本
-- **Current Version（当前版本）**：设备当前运行的版本
+---
 
-## Important Constraints
+## 当前主要开发进度
 
-### 技术约束
-- **数据库编码**：必须使用 utf8mb4 以支持完整的中文字符和特殊符号
-- **时区设置**：数据库时区固定为 +08:00（东八区/北京时间）
-- **端口配置**：
-  - 开发环境后端：5000（HTTP）、5001（HTTPS）
-  - 开发环境前端：3000
-- **Node.js版本**：需要 16+ 版本
-- **MySQL版本**：需要 8.0+ 版本
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| Phase 1 | 基础数据模块（产品线、产品、产品模块、产品文档） | ✅ 已完成 |
+| Phase 2 | 设备管理（设备注册、模块绑定、版本记录） | ✅ 已完成 |
+| Phase 3 | 售后问题管理（问题单、处理日志、附件上传） | ✅ 已完成 |
+| Phase 4 | 售后管理集成（after-sales、设备升级、客户管理） | ✅ 已完成 |
+| 基础设施 | Docker 容器化部署、HTTPS、阿里云 OSS 集成 | ✅ 已完成 |
+| **生产上线** | **2026年2月27日正式投入生产环境** | ✅ **线上运行中** |
 
-### 安全约束
-- 所有API请求受限流保护（15分钟内最多1000次请求）
-- 使用 JWT 进行身份认证
-- 使用 Helmet 中间件设置安全HTTP头
-- 密码使用 bcryptjs 加密存储
-- HTTPS 支持（生产环境必须）
+**当前重点**：系统已全面上线，后续以功能迭代和稳定性优化为主。所有变更须遵循 OpenSpec 规范提交提案（proposal），经审批后方可实施。
 
-### 性能约束
-- 数据库连接池限制：最多10个并发连接
-- 静态资源缓存：1年（开发环境可调整）
-- API响应缓存策略：根据资源类型设置不同缓存策略
+---
 
-### 业务约束
-- 设备编号必须唯一
-- 设备状态仅限：正常、异常、维护中
-- 问题严重性仅限：低、中、高
-- 问题状态仅限：待处理、处理中、已解决
-- 订单ID格式：`ORD-YYYYMMDD-XXX` (自动生成)
-- 订单状态流转：草稿 → 进行中 → 已完成/已取消
-- 订单进度流转：生产 → 调试 → 打包 → 物流 → 完成 (单向不可逆)
+## 外部依赖与关键配置
 
-## External Dependencies
+| 依赖 | 用途 | 配置位置 |
+|------|------|---------|
+| 阿里云 OSS `els-pub-04` | 产品文档、设备文档、问题附件存储 | `.env` → `OSS_*` 环境变量 |
+| MySQL 8.0 | 主数据库 | `.env` → `DB_*` 环境变量 / docker-compose |
+| JWT Secret | 身份验证签名 | `.env` → `JWT_SECRET` |
+| SSL 证书 | HTTPS 服务 | `ssl/` 目录 |
 
-### 数据库依赖
-- **MySQL 8.0+**：主数据存储
-  - 连接配置：通过环境变量配置（DB_HOST, DB_PORT, DB_USER等）
-  - 默认数据库名：`device_management`
-  - 默认用户：`els` / 密码：`111111`（开发环境）
+> `.env` 文件已加入 `.gitignore`，**不提交到版本控制**。参考 `env.example` 创建本地配置。
 
-### SSL证书
-- 位置：`ssl/` 目录
-- 用途：HTTPS服务（生产环境）
-- 配置文件：`openssl.conf`
+---
 
-### 环境变量
-项目依赖 `.env` 文件配置（参考 `env.example`）：
-- 数据库连接信息
-- JWT密钥和过期时间
-- 服务器端口和环境模式
-- 前端API地址
+## 重要约束
 
-### 外部服务（可选扩展）
-- 文件存储：当前使用本地存储，可扩展至 OSS/S3
-- 邮件服务：用于问题通知（待实现）
-- 监控服务：应用性能监控（待实现）
-
-### 开发工具依赖
-- **npm** 或 **yarn**：包管理器
-- **PowerShell**：Windows环境推荐使用（避免中文乱码）
-- **Git**：版本控制
+1. **生产数据保护**：禁止执行 DELETE / TRUNCATE / DROP TABLE / 种子数据脚本
+2. **数据库迁移**：必须先在开发环境测试，人工审核后方可在生产执行
+3. **OpenSpec 工作流**：新功能、架构变更、API 破坏性修改须先创建 `proposal.md` 并通过审批
+4. **OSS 密钥安全**：AccessKey 仅存于 `.env`，不得硬编码或提交到 Git
+5. **前端构建产物**：`client/build/` 已存在并由后端 serve，部署前执行 `npm run build` 更新

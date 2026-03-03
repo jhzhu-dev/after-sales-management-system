@@ -354,26 +354,6 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    // ==================== 设备维护SOP模板 ====================
-
-    // SOP 模板表 (用于设备维护检查流程)
-    await pool.execute(`
-      CREATE TABLE IF NOT EXISTS sop_templates (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        category ENUM('日常维护', '故障排查', '定期检查', '升级流程', '其他') NOT NULL DEFAULT '日常维护',
-        product_line_id INT DEFAULT NULL,
-        version VARCHAR(20) NOT NULL DEFAULT 'v1.0',
-        content JSON NOT NULL,
-        description TEXT,
-        is_active BOOLEAN DEFAULT TRUE,
-        created_by VARCHAR(100),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (product_line_id) REFERENCES product_lines(id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-
     // ==================== Schema Migrations ====================
 
     // 迁移：将设备类型改为产品线

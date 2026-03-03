@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Issue, IssueFormData } from '../types';
 import { deviceApi, moduleApi } from '../services/api';
 
@@ -26,7 +26,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
     assignee: '',
     notes: ''
   });
-  const [devices, setDevices] = useState<Array<{id: string, name: string}>>([]);
+  const [devices, setDevices] = useState<Array<{id: string, name: string, device_code: string, customer_name: string}>>([]);
   const [modules, setModules] = useState<Array<{id: string, name: string, device_id: string}>>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -34,8 +34,27 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
   const [uploadingCount, setUploadingCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 设备模糊搜索状态
+  const [deviceSearch, setDeviceSearch] = useState('');
+  const [deviceDropdownOpen, setDeviceDropdownOpen] = useState(false);
+  const [deviceLoading, setDeviceLoading] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<{id: string, name: string, device_code: string, customer_name: string} | null>(null);
+  const deviceSearchRef = useRef<HTMLDivElement>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 点击外部关闭下拉
   useEffect(() => {
-    fetchDevices();
+    const handleClickOutside = (e: MouseEvent) => {
+      if (deviceSearchRef.current && !deviceSearchRef.current.contains(e.target as Node)) {
+        setDeviceDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    fetchDevices('');
     if (issue) {
       setFormData({
         device_id: issue.device_id || '',
@@ -48,6 +67,13 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
       });
       if (issue.device_id) {
         fetchModules(issue.device_id);
+        // 编辑时恢复已选设备显示
+        setSelectedDevice({
+          id: issue.device_id,
+          name: issue.device_name || issue.device_id,
+          device_code: (issue as any).device_code || '',
+          customer_name: issue.customer_name || ''
+        });
       }
       // 加载已有附件
       if ((issue as any).attachments) {
@@ -61,18 +87,53 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
     }
   }, [issue]);
 
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async (search: string) => {
+    setDeviceLoading(true);
     try {
-      const response = await deviceApi.getDevices({ limit: 1000 });
+      const params: any = { limit: 30 };
+      if (search) params.search = search;
+      const response = await deviceApi.getDevices(params);
       if (response.success) {
         setDevices(response.data.map((device: any) => ({
           id: device.id,
-          name: device.name
+          name: device.name,
+          device_code: device.device_code || '',
+          customer_name: device.customer_name || ''
         })));
       }
     } catch (error) {
       console.error('获取设备列表失败:', error);
+    } finally {
+      setDeviceLoading(false);
     }
+  }, []);
+
+  const handleDeviceSearchChange = (value: string) => {
+    setDeviceSearch(value);
+    setDeviceDropdownOpen(true);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      fetchDevices(value);
+    }, 300);
+  };
+
+  const handleDeviceSelect = (device: {id: string, name: string, device_code: string, customer_name: string}) => {
+    setSelectedDevice(device);
+    setFormData(prev => ({ ...prev, device_id: device.id, module_id: undefined }));
+    setModules([]);
+    setDeviceSearch('');
+    setDeviceDropdownOpen(false);
+    fetchModules(device.id);
+    if (errors.device_id) setErrors(prev => ({ ...prev, device_id: '' }));
+  };
+
+  const handleDeviceClear = () => {
+    setSelectedDevice(null);
+    setFormData(prev => ({ ...prev, device_id: '', module_id: undefined }));
+    setModules([]);
+    setDeviceSearch('');
+    setDevices([]);
+    fetchDevices('');
   };
 
   const fetchModules = async (deviceId: string) => {
@@ -181,26 +242,81 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* 设备选择 */}
+          {/* 设备搜索选择 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               设备 <span className="text-red-500">*</span>
             </label>
-            <select
-              name="device_id"
-              value={formData.device_id}
-              onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.device_id ? 'border-red-500' : 'border-gray-300'
-              }`}
-            >
-              <option value="">请选择设备</option>
-              {devices.map(device => (
-                <option key={device.id} value={device.id}>
-                  {device.name}
-                </option>
-              ))}
-            </select>
+            <div ref={deviceSearchRef} className="relative">
+              {/* 已选中设备显示 */}
+              {selectedDevice ? (
+                <div className={`flex items-center justify-between w-full px-3 py-2 border rounded-md bg-white ${
+                  errors.device_id ? 'border-red-500' : 'border-gray-300'
+                }`}>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-medium text-gray-900 truncate">{selectedDevice.name}</span>
+                    <span className="text-xs text-gray-500 truncate">
+                      {[selectedDevice.device_code, selectedDevice.customer_name].filter(Boolean).join(' · ')}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDeviceClear}
+                    className="ml-2 flex-shrink-0 text-gray-400 hover:text-gray-600"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                /* 搜索输入框 */
+                <div className={`flex items-center w-full px-3 py-2 border rounded-md focus-within:ring-2 focus-within:ring-blue-500 bg-white ${
+                  errors.device_id ? 'border-red-500' : 'border-gray-300'
+                }`}>
+                  <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 flex-shrink-0 mr-2" />
+                  <input
+                    type="text"
+                    value={deviceSearch}
+                    onChange={e => handleDeviceSearchChange(e.target.value)}
+                    onFocus={() => { setDeviceDropdownOpen(true); if (!deviceSearch) fetchDevices(''); }}
+                    placeholder="搜索设备名称、客户、序列号..."
+                    className="flex-1 bg-transparent outline-none text-sm text-gray-900 placeholder-gray-400"
+                  />
+                  {deviceLoading && (
+                    <svg className="animate-spin h-4 w-4 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                  )}
+                </div>
+              )}
+
+              {/* 下拉列表 */}
+              {deviceDropdownOpen && !selectedDevice && (
+                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {devices.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-500">
+                      {deviceLoading ? '搜索中...' : '未找到匹配设备'}
+                    </div>
+                  ) : (
+                    devices.map(device => (
+                      <button
+                        key={device.id}
+                        type="button"
+                        onMouseDown={e => { e.preventDefault(); handleDeviceSelect(device); }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors"
+                      >
+                        <div className="text-sm font-medium text-gray-900">{device.name}</div>
+                        {(device.device_code || device.customer_name) && (
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {[device.device_code, device.customer_name].filter(Boolean).join(' · ')}
+                          </div>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
             {errors.device_id && (
               <p className="mt-1 text-sm text-red-600">{errors.device_id}</p>
             )}

@@ -6,6 +6,8 @@ import { Device, FilterOptions, DeviceFormData } from '../types';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import DeviceForm from '../components/DeviceForm';
+import ExportButton from '../components/ExportButton';
+import { exportToExcel } from '../utils/exportUtils';
 import { formatDate, getStatusColor, getDeviceTypeColor } from '../utils';
 
 export default function Devices() {
@@ -62,7 +64,8 @@ export default function Devices() {
         device.name.toLowerCase().includes(searchLower) ||
         device.id.toLowerCase().includes(searchLower) ||
         (device.customer_name && device.customer_name.toLowerCase().includes(searchLower)) ||
-        (device.customer_short_name && device.customer_short_name.toLowerCase().includes(searchLower))
+        (device.customer_short_name && device.customer_short_name.toLowerCase().includes(searchLower)) ||
+        (device.remote_code && device.remote_code.toLowerCase().includes(searchLower))
       );
     }
 
@@ -252,13 +255,34 @@ export default function Devices() {
         d.name.toLowerCase().includes(s) ||
         d.id.toLowerCase().includes(s) ||
         (d.customer_name && d.customer_name.toLowerCase().includes(s)) ||
-        (d.customer_short_name && d.customer_short_name.toLowerCase().includes(s))
+        (d.customer_short_name && d.customer_short_name.toLowerCase().includes(s)) ||
+        (d.remote_code && d.remote_code.toLowerCase().includes(s))
       );
     }
     if (filters.type) filtered = filtered.filter(d => d.product_line_name === filters.type);
     if (filters.status) filtered = filtered.filter(d => d.status === filters.status);
     return filtered;
   })();
+
+  const DEVICE_EXPORT_COLUMNS = [
+    { key: 'id', label: '生产序列号' },
+    { key: 'device_code', label: '设备编码' },
+    { key: 'name', label: '设备名称' },
+    { key: 'product_line_name', label: '产品线' },
+    { key: 'product_model', label: '产品型号' },
+    { key: 'customer_name', label: '客户' },
+    { key: 'customer_short_name', label: '客户简称' },
+    { key: 'remote_code', label: '远程码' },
+    { key: 'status', label: '状态' },
+    { key: 'open_issues', label: '待解决问题' },
+    { key: 'created_at', label: '创建时间' },
+  ];
+
+  const handleExport = () => {
+    const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
+    const filename = `设备管理_${timestamp}`;
+    exportToExcel(allFilteredDevices as any[], DEVICE_EXPORT_COLUMNS, filename);
+  };
 
   const handleDeviceSubmit = async (data: DeviceFormData) => {
     try {
@@ -371,6 +395,15 @@ export default function Devices() {
       )
     },
     {
+      key: 'remote_code' as keyof Device,
+      title: <SortableHeader field="remote_code" title="远程码" />,
+      render: (value: string) => (
+        value
+          ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-white text-blue-600 border border-blue-200">{value}</span>
+          : <span className="text-gray-300">—</span>
+      )
+    },
+    {
       key: 'status' as keyof Device,
       title: <SortableHeader field="status" title="状态" />,
       render: (value: string) => (
@@ -448,6 +481,9 @@ export default function Devices() {
         <div className="flex justify-between items-center no-print">
           <h1 className="text-2xl font-bold text-gray-900">设备管理</h1>
           <div className="flex items-center gap-2">
+            <ExportButton
+              onExport={handleExport}
+            />
             <button
               onClick={handlePrint}
               className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
@@ -474,7 +510,7 @@ export default function Devices() {
               </label>
               <input
                 type="text"
-                placeholder="搜索设备名称或编号"
+                placeholder="搜索设备名称、编号或远程码"
                 value={filters.search || ''}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
