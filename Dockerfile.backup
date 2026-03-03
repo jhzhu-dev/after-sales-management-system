@@ -1,0 +1,34 @@
+# =============================================================================
+# Dockerfile.backup — 数据库备份容器镜像（Linux 部署专用）
+# 基于 ubuntu:22.04，安装 MySQL 客户端 + cron + smbclient
+# 容器内 cron 每日调度：
+#   01:00 → /backup.sh（mysqldump 全量备份）
+#   02:00 → /nas-sync.sh（smbclient 同步到 NAS）
+#
+# 注：不使用 mysql:8.0 作为基础镜像，因其新版基于 Oracle Linux（无 apt-get）
+# =============================================================================
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 安装 MySQL 客户端（mysqldump/mysqladmin）+ cron + smbclient + 工具包
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      mysql-client \
+      cron \
+      smbclient \
+      tzdata \
+      findutils \
+      procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# 复制脚本
+COPY scripts/backup-entrypoint.sh  /backup.sh
+COPY scripts/nas-sync-linux.sh     /nas-sync.sh
+COPY scripts/cron-entrypoint.sh    /entrypoint.sh
+
+RUN chmod +x /backup.sh /nas-sync.sh /entrypoint.sh && \
+    mkdir -p /backups
+
+ENTRYPOINT ["/entrypoint.sh"]

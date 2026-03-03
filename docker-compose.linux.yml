@@ -1,3 +1,18 @@
+# =============================================================================
+# docker-compose.linux.yml — Linux 部署专用配置
+# 部署目标：192.168.0.181（els 账户），Docker standalone 模式
+#
+# 与 Windows 版 docker-compose.yml 的主要差异：
+#   1. mem_limit 使用顶层语法（standalone compose 兼容，无需 deploy.resources）
+#   2. db-backup 容器内置 cron 调度（不依赖 Windows Task Scheduler）
+#   3. ssl 目录 volume mount 到 app 容器（支持 HTTPS）
+#   4. NAS 同步由容器内 smbclient 完成（替代 robocopy）
+#   5. MySQL 不对外暴露端口（仅容器内网访问，提升安全性）
+#
+# 启动命令：
+#   docker compose -f docker-compose.linux.yml up -d --build
+# =============================================================================
+
 services:
   # ─── MySQL 数据库 ─────────────────────────────────────────────────────────────
   mysql:
@@ -12,11 +27,12 @@ services:
       TZ: Asia/Shanghai
     volumes:
       - mysql_data:/var/lib/mysql
-    ports:
-      - "3307:3306"  # 映射到3307避免与本地MySQL冲突
+    # 仅容器内网暴露，不映射到宿主机端口（安全）
+    expose:
+      - "3306"
     networks:
       - device-manager-network
-    # 性能调优参数
+    # 性能调优参数（与 Windows 版一致）
     command: >
       --default-authentication-plugin=mysql_native_password
       --innodb-buffer-pool-size=256M
@@ -26,11 +42,9 @@ services:
       --slow-query-log-file=/var/lib/mysql/slow.log
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
-    # 资源限制：防止 OOM 冲击宿主机
-    deploy:
-      resources:
-        limits:
-          memory: 512m
+    # 内存限制（standalone compose 顶层语法）
+    mem_limit: 512m
+    memswap_limit: 512m
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "device_user", "-pdevice_pass_123"]
       interval: 10s
@@ -40,7 +54,10 @@ services:
 
   # ─── 应用服务 ─────────────────────────────────────────────────────────────────
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: device-manager-app:latest
     container_name: device-manager-app
     restart: unless-stopped
     environment:
@@ -51,17 +68,18 @@ services:
       DB_USER: device_user
       DB_PASSWORD: device_pass_123
       DB_NAME: device_management
-      # 阿里云 OSS 配置
       OSS_REGION: ${OSS_REGION:-oss-cn-shanghai}
       OSS_BUCKET: ${OSS_BUCKET:-els-pub-04}
-      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID}
-      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET}
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
       OSS_BASE_PATH: ${OSS_BASE_PATH:-static/After-sales management system}
       USE_OSS_STORAGE: ${USE_OSS_STORAGE:-false}
     volumes:
       - ./uploads:/app/uploads
+      - ./ssl:/app/ssl:ro          # SSL 证书（只读挂载，有证书则自动启用 HTTPS）
     ports:
-      - "5000:5000"
+      - "5000:5000"                # HTTP
+      - "5001:5001"                # HTTPS（有 SSL 证书时自动启用）
     depends_on:
       mysql:
         condition: service_healthy
@@ -69,12 +87,14 @@ services:
       - device-manager-network
 
   # ─── 数据库备份容器 ───────────────────────────────────────────────────────────
-  # 提供 mysqldump 工具环境，容器本身保持常驻（sleep infinity）
-  # 备份调度由 Windows 计划任务（setup-backup-task.ps1 注册）负责：
-  #   每日 01:00 → docker exec device-manager-db-backup /bin/bash /backup.sh
-  #   每日 02:00 → .\backup.ps1 同步到 NAS
+  # Linux 版：容器内 cron 调度，无需宿主机计划任务
+  #   每日 01:00 → mysqldump 全量备份 → /backups/（本地保留 7 天）
+  #   每日 02:00 → smbclient 同步到 NAS（NAS 保留 14 天）
   db-backup:
-    image: mysql:8.0
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    image: device-manager-backup:latest
     container_name: device-manager-db-backup
     restart: unless-stopped
     environment:
@@ -85,21 +105,19 @@ services:
       MYSQL_DATABASE: device_management
       TZ: Asia/Shanghai
       BACKUP_RETAIN_DAYS: 7
+      NAS_HOST: 192.168.0.50
+      NAS_SHARE: jhzhu
+      NAS_DIR: After-sales-service
+      NAS_USER: jhzhu
+      NAS_PASS: Zhujiahao123
+      NAS_RETAIN_DAYS: 14
     volumes:
       - ./backups:/backups
-      - ./scripts/backup-entrypoint.sh:/backup.sh:ro
     depends_on:
       mysql:
         condition: service_healthy
     networks:
       - device-manager-network
-    # 容器保持常驻，调度由宿主机 Windows 计划任务完成
-    entrypoint: ["/bin/bash", "-c"]
-    command:
-      - |
-        chmod +x /backup.sh
-        echo "=== DB Backup container ready. Triggered externally by Windows Task Scheduler ==="
-        sleep infinity
 
 volumes:
   mysql_data:
