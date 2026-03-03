@@ -19,9 +19,8 @@ import {
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import VersionReleaseForm from '../components/VersionReleaseForm';
-import { versionReleaseApi, moduleTypeApi, productLineApi } from '../services/api';
+import api, { versionReleaseApi, moduleTypeApi, productLineApi } from '../services/api';
 import { VersionRelease } from '../types';
-import axios from 'axios';
 
 const ReleaseLibrary: React.FC = () => {
     const [releases, setReleases] = useState<VersionRelease[]>([]);
@@ -133,7 +132,7 @@ const ReleaseLibrary: React.FC = () => {
 
             if (editingRelease) {
                 // 更新版本
-                const response = await axios.put(`/api/version-releases/${editingRelease.id}`, formData);
+                const response = await api.put(`/version-releases/${editingRelease.id}`, formData);
                 if (response.data.success) {
                     releaseId = editingRelease.id;
                     setSuccessMessage('版本更新成功');
@@ -157,7 +156,7 @@ const ReleaseLibrary: React.FC = () => {
                 const fd = new FormData();
                 files.forEach(f => fd.append('files', f));
                 try {
-                    await axios.post(`/api/version-releases/${releaseId}/attachments`, fd, {
+                    await api.post(`/version-releases/${releaseId}/attachments`, fd, {
                         headers: { 'Content-Type': 'multipart/form-data' }
                     });
                     setSuccessMessage(prev => (prev || '') + `，已上传${files.length}个附件`);
@@ -181,7 +180,7 @@ const ReleaseLibrary: React.FC = () => {
         }
 
         try {
-            const response = await axios.delete(`/api/version-releases/${release.id}`);
+            const response = await api.delete(`/version-releases/${release.id}`);
             if (response.data.success) {
                 setSuccessMessage('版本删除成功');
                 await fetchReleases();
@@ -198,7 +197,7 @@ const ReleaseLibrary: React.FC = () => {
         setShowDetailModal(true);
         // 获取附件
         try {
-            const res = await axios.get(`/api/version-releases/${release.id}/attachments`);
+            const res = await api.get(`/version-releases/${release.id}/attachments`);
             if (res.data.success) {
                 setDetailAttachments(res.data.data);
             }
@@ -209,7 +208,7 @@ const ReleaseLibrary: React.FC = () => {
 
     const handleDownloadAttachment = async (attachment: any) => {
         try {
-            const res = await axios.get(`/api/version-releases/attachments/${attachment.id}/download`);
+            const res = await api.get(`/version-releases/attachments/${attachment.id}/download`);
             if (res.data.success && res.data.data?.url) {
                 window.open(res.data.data.url, '_blank');
             }
@@ -222,7 +221,7 @@ const ReleaseLibrary: React.FC = () => {
     const handleDeleteAttachment = async (attachment: any) => {
         if (!window.confirm(`确定要删除附件"${attachment.original_name}"吗？`)) return;
         try {
-            const res = await axios.delete(`/api/version-releases/attachments/${attachment.id}`);
+            const res = await api.delete(`/version-releases/attachments/${attachment.id}`);
             if (res.data.success) {
                 setDetailAttachments(prev => prev.filter(a => a.id !== attachment.id));
             }

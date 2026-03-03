@@ -385,8 +385,9 @@ router.post('/:id/attachments', upload.array('files', 10), async (req, res) => {
                 try {
                     const safeSeg = (s) => (s || 'unknown').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '_').trim();
                     const moduleTypeName = safeSeg(release.module_type_name);
+                    const category = safeSeg(release.category);
                     const versionNumber = safeSeg(release.version_number);
-                    const ossPath = `${ossService.basePath}/version-releases/${moduleTypeName}/${versionNumber}/${originalName}`;
+                    const ossPath = `${ossService.basePath}/version-releases/${moduleTypeName}/${category}/${versionNumber}/${originalName}`;
                     
                     const ossResult = await ossService.client.put(ossPath, file.path);
                     filePath = `oss://${ossService.bucket}/${ossPath}`;

@@ -3,9 +3,8 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ProductForm from '../components/ProductForm';
 import { Product, ProductLine, ApiResponse } from '../types';
-import { productApi, productLineApi } from '../services/api';
+import api, { productApi, productLineApi } from '../services/api';
 import { PencilIcon, TrashIcon, PrinterIcon, Squares2X2Icon, ListBulletIcon } from '@heroicons/react/24/outline';
-import axios from 'axios';
 
 const Products: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -71,14 +70,14 @@ const Products: React.FC = () => {
         try {
             if (editingProduct) {
                 // 更新产品
-                const response = await axios.put(`/api/products/${editingProduct.id}`, formData);
+                const response = await api.put(`/products/${editingProduct.id}`, formData);
                 if (response.data.success) {
                     setSuccessMessage('产品更新成功');
                     await fetchInitialData();
                 }
             } else {
                 // 创建产品
-                const response = await axios.post('/api/products', formData);
+                const response = await api.post('/products', formData);
                 if (response.data.success) {
                     setSuccessMessage('产品创建成功');
                     await fetchInitialData();
@@ -99,7 +98,7 @@ const Products: React.FC = () => {
         }
 
         try {
-            const response = await axios.delete(`/api/products/${product.id}`);
+            const response = await api.delete(`/products/${product.id}`);
             if (response.data.success) {
                 setSuccessMessage('产品删除成功');
                 await fetchInitialData();
@@ -113,7 +112,7 @@ const Products: React.FC = () => {
 
     const handleToggleActive = async (product: Product) => {
         try {
-            const response = await axios.put(`/api/products/${product.id}`, {
+            const response = await api.put(`/products/${product.id}`, {
                 is_active: !product.is_active
             });
             if (response.data.success) {

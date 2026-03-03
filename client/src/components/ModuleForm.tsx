@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Module, ModuleFormData } from '../types';
-import { moduleTypeApi } from '../services/api';
-import axios from 'axios';
+import api, { moduleTypeApi } from '../services/api';
 
 interface ModuleFormProps {
   module?: Module | null;
@@ -56,7 +55,7 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
     }
     setLoadingVersions(true);
     try {
-      const response = await axios.get(`/api/version-releases?module_type_id=${moduleTypeId}`);
+      const response = await api.get(`/version-releases?module_type_id=${moduleTypeId}`);
       if (response.data.success) {
         setVersions(response.data.data || []);
       }
