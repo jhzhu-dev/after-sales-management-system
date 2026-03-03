@@ -33,7 +33,10 @@ const api = axios.create({
 // 请求拦截器
 api.interceptors.request.use(
   (config) => {
-    // 可以在这里添加认证token
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -48,6 +51,14 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API请求错误:', error);
+
+    // 处理401错误（未授权/token失效）
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_username');
+      window.location.href = '/login';
+      return Promise.reject(error);
+    }
 
     // 处理429错误（请求过于频繁）
     if (error.response && error.response.status === 429) {

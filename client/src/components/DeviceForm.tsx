@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { Device, DeviceFormData, Customer } from '../types';
+import { productLineApi, customerApi, productApi, productModuleApi } from '../services/api';
 
 interface DeviceFormProps {
   device?: Device | null;
@@ -68,8 +69,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       return;
     }
     try {
-      const response = await fetch(`/api/products?product_line_id=${productLineId}&is_active=1`);
-      const result = await response.json();
+      const result = await productApi.getProducts({ product_line_id: Number(productLineId), is_active: true });
       if (result.success) {
         setProducts(result.data);
       }
@@ -85,8 +85,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       return;
     }
     try {
-      const response = await fetch(`/api/product-modules/${productId}/modules`);
-      const result = await response.json();
+      const result = await productModuleApi.getProductModules(productId);
       if (result.success) {
         setModuleTypes(result.data.map((m: any) => ({
           id: m.module_type_id,
@@ -102,8 +101,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
 
   const fetchProductLines = async () => {
     try {
-      const response = await fetch('/api/product-lines?is_active=1');
-      const result = await response.json();
+      const result = await productLineApi.getProductLines({ is_active: true });
       if (result.success) {
         setProductLines(result.data);
       }
@@ -114,8 +112,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch('/api/customers');
-      const result = await response.json();
+      const result = await customerApi.getCustomers();
       if (result.success) {
         setCustomers(result.data);
       }
@@ -146,12 +143,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       return;
     }
     try {
-      const response = await fetch('/api/customers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newCustomerName.trim(), short_name: newCustomerShortName.trim() })
-      });
-      const result = await response.json();
+      const result = await customerApi.createCustomer({ name: newCustomerName.trim(), short_name: newCustomerShortName.trim() });
       if (result.success) {
         await fetchCustomers();
         setFormData(prev => ({ ...prev, customer_id: result.data.id }));

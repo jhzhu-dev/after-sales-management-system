@@ -1,14 +1,16 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   HomeIcon,
   DevicePhoneMobileIcon,
   ChartBarIcon,
   Cog6ToothIcon,
   CubeIcon,
-  WrenchScrewdriverIcon
+  WrenchScrewdriverIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
 import { cn } from '../utils';
+import { useAuth } from '../context/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,6 +27,13 @@ const navigation = [
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -74,6 +83,19 @@ export default function Layout({ children }: LayoutProps) {
               <div className="text-sm text-gray-500">
                 {new Date().toLocaleDateString('zh-CN')}
               </div>
+              {user && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-600">{user.username}</span>
+                  <button
+                    onClick={handleLogout}
+                    title="退出登录"
+                    className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 hover:text-red-600 transition-colors"
+                  >
+                    <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                    <span>退出</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>

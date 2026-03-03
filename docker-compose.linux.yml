@@ -74,6 +74,10 @@ services:
       OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
       OSS_BASE_PATH: ${OSS_BASE_PATH:-static/After-sales management system}
       USE_OSS_STORAGE: ${USE_OSS_STORAGE:-false}
+      JWT_SECRET: ${JWT_SECRET:-change_this_secret_in_production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      LOGIN_USERNAME: ${LOGIN_USERNAME:-elsvision}
+      LOGIN_PASSWORD: ${LOGIN_PASSWORD:-elsvisiongo666}
     volumes:
       - ./uploads:/app/uploads
       - ./ssl:/app/ssl:ro          # SSL 证书（只读挂载，有证书则自动启用 HTTPS）
@@ -121,7 +125,8 @@ services:
 
 volumes:
   mysql_data:
-    driver: local
+    external: true          # 使用已有 volume，不自动创建（避免覆盖生产数据）
+    name: device-manager_mysql_data
 
 networks:
   device-manager-network:

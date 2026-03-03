@@ -16,6 +16,8 @@ const fs = require('fs');
 require('dotenv').config();
 
 const { initializeDatabase } = require('./database');
+const authRoutes = require('./routes/auth');
+const authenticate = require('./middleware/authenticate');
 const deviceRoutes = require('./routes/devices');
 const moduleRoutes = require('./routes/modules');
 const versionRoutes = require('./routes/versions');
@@ -142,6 +144,22 @@ app.use('/uploads', express.static('uploads'));
 // 提供前端静态文件（开发和生产环境都支持）
 app.use(express.static(path.join(__dirname, '../client/build')));
 
+// 认证路由（无需鉴权，公开访问）
+app.use('/api/auth', authRoutes);
+
+// 健康检查（公开，允许无 token 访问）
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    message: '售后登记系统API运行正常'
+  });
+});
+
+// 所有其他 /api/* 路由均需要认证
+app.use('/api', authenticate);
+
 // 现有路由
 app.use('/api/devices', deviceRoutes);
 app.use('/api/modules', moduleRoutes);
@@ -166,16 +184,6 @@ app.use('/api/customers', customerRoutes);
 // Phase 4: 售后管理集成路由
 app.use('/api/after-sales', afterSalesRoutes);
 app.use('/api/device-upgrades', deviceUpgradeRoutes);
-
-// 健康检查端点
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0',
-    message: '售后登记系统API运行正常'
-  });
-});
 
 // 所有非API路由都返回前端应用
 app.get('*', (req, res) => {

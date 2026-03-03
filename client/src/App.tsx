@@ -1,7 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
+import { AuthProvider } from './context/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
 
+const Login = React.lazy(() => import('./pages/Login'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Devices = React.lazy(() => import('./pages/Devices'));
 const DeviceDetail = React.lazy(() => import('./pages/DeviceDetail'));
@@ -15,27 +18,33 @@ const Products = React.lazy(() => import('./pages/Products'));
 
 function App() {
   return (
-    <Router>
-      <div className="App">
-        <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">加载中...</div>}>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/devices" element={<Devices />} />
-            <Route path="/devices/new" element={<Devices />} />
-            <Route path="/devices/:id" element={<DeviceDetail />} />
-            <Route path="/issues" element={<Issues />} />
-            <Route path="/issues/:id" element={<IssueDetail />} />
-            <Route path="/releases" element={<ReleaseLibrary />} />
-            <Route path="/product-lines" element={<ProductLines />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/products/:id" element={<ProductDetail />} />
-            <Route path="/after-sales" element={<Navigate to="/issues" replace />} />
-            <Route path="/upgrades" element={<Navigate to="/issues" replace />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </React.Suspense>
-      </div>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <div className="App">
+          <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">加载中...</div>}>
+            <Routes>
+              {/* 公开路由 */}
+              <Route path="/login" element={<Login />} />
+
+              {/* 受保护路由 */}
+              <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/devices" element={<PrivateRoute><Devices /></PrivateRoute>} />
+              <Route path="/devices/new" element={<PrivateRoute><Devices /></PrivateRoute>} />
+              <Route path="/devices/:id" element={<PrivateRoute><DeviceDetail /></PrivateRoute>} />
+              <Route path="/issues" element={<PrivateRoute><Issues /></PrivateRoute>} />
+              <Route path="/issues/:id" element={<PrivateRoute><IssueDetail /></PrivateRoute>} />
+              <Route path="/releases" element={<PrivateRoute><ReleaseLibrary /></PrivateRoute>} />
+              <Route path="/product-lines" element={<PrivateRoute><ProductLines /></PrivateRoute>} />
+              <Route path="/products" element={<PrivateRoute><Products /></PrivateRoute>} />
+              <Route path="/products/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
+              <Route path="/after-sales" element={<Navigate to="/issues" replace />} />
+              <Route path="/upgrades" element={<Navigate to="/issues" replace />} />
+              <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+            </Routes>
+          </React.Suspense>
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 

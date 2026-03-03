@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PencilIcon, TrashIcon, EyeIcon, ChevronUpIcon, ChevronDownIcon, PlusIcon, PrinterIcon } from '@heroicons/react/24/outline';
-import { deviceApi, moduleApi } from '../services/api';
+import { deviceApi, moduleApi, productLineApi } from '../services/api';
 import { Device, FilterOptions, DeviceFormData } from '../types';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
@@ -14,7 +14,7 @@ export default function Devices() {
   const navigate = useNavigate();
   const [allDevices, setAllDevices] = useState<Device[]>([]);
   const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
-  const [productLines, setProductLines] = useState<Array<{ id: string, name: string }>>([]);
+  const [productLines, setProductLines] = useState<Array<{ id: number, name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -163,8 +163,7 @@ export default function Devices() {
   const fetchProductLines = async () => {
     try {
       console.log('开始获取产品线列表...');
-      const response = await fetch('/api/product-lines?is_active=1');
-      const result = await response.json();
+      const result = await productLineApi.getProductLines({ is_active: true });
       console.log('产品线API响应:', result);
       if (result.success) {
         console.log('设置产品线数据:', result.data);

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { Product, ProductDocument, ProductModule, ModuleType, ApiResponse } from '../types';
 import { productModuleApi, moduleTypeApi } from '../services/api';
+import api from '../services/api';
 import { PlusIcon, TrashIcon, ArrowUpTrayIcon, DocumentIcon, XMarkIcon, PrinterIcon } from '@heroicons/react/24/outline';
 
 const DOC_TYPES = ['规格书', '使用说明', '用户手册', '其他'] as const;
@@ -41,8 +42,7 @@ const ProductDetail: React.FC = () => {
 
     const fetchProductDetail = async () => {
         try {
-            const response = await fetch(`/api/products/${id}`);
-            const data: ApiResponse<Product> = await response.json();
+            const { data } = await api.get(`/products/${id}`);
             if (data.success) {
                 setProduct(data.data);
             } else {
@@ -58,8 +58,7 @@ const ProductDetail: React.FC = () => {
 
     const fetchDocuments = async () => {
         try {
-            const response = await fetch(`/api/product-documents?product_id=${id}`);
-            const data: ApiResponse<ProductDocument[]> = await response.json();
+            const { data } = await api.get(`/product-documents`, { params: { product_id: id } });
             if (data.success) {
                 setDocuments(data.data);
             }
@@ -163,11 +162,7 @@ const ProductDetail: React.FC = () => {
                 formData.append('uploaded_by', uploadBy.trim());
             }
 
-            const response = await fetch('/api/product-documents/upload', {
-                method: 'POST',
-                body: formData,
-            });
-            const data = await response.json();
+            const { data } = await api.post('/product-documents/upload', formData);
 
             if (data.success) {
                 resetUploadForm();
@@ -188,10 +183,7 @@ const ProductDetail: React.FC = () => {
             return;
         }
         try {
-            const response = await fetch(`/api/product-documents/${docId}`, {
-                method: 'DELETE',
-            });
-            const data = await response.json();
+            const { data } = await api.delete(`/product-documents/${docId}`);
             if (data.success) {
                 fetchDocuments();
             } else {

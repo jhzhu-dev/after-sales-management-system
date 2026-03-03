@@ -21,6 +21,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { Device, Module, Issue, ModuleFormData, DeviceFormData, VersionRelease, DeviceUpgrade } from '../types';
 import { deviceApi, moduleApi, issueApi, versionReleaseApi, moduleVersionApi, deviceUpgradeApi } from '../services/api';
+import api from '../services/api';
 import Layout from '../components/Layout';
 import ModuleForm from '../components/ModuleForm';
 import DeviceForm from '../components/DeviceForm';
@@ -119,8 +120,7 @@ const DeviceDetail: React.FC = () => {
   const fetchDeviceUpgrades = async () => {
     if (!id) return;
     try {
-      const response = await fetch(`/api/versions?device_id=${id}&limit=200`);
-      const result = await response.json();
+      const { data: result } = await api.get('/versions', { params: { device_id: id, limit: 200 } });
       if (result.success) {
         const allVersions = result.data;
         // 按模块分组，按时间排序
@@ -166,8 +166,7 @@ const DeviceDetail: React.FC = () => {
   const fetchDeviceDocuments = async () => {
     if (!id) return;
     try {
-      const res = await fetch(`/api/device-documents?device_id=${id}`);
-      const result = await res.json();
+      const { data: result } = await api.get('/device-documents', { params: { device_id: id } });
       if (result.success) {
         setDeviceDocuments(result.data);
         // 提取所有分类
@@ -198,11 +197,7 @@ const DeviceDetail: React.FC = () => {
       formData.append('category', category);
       if (docUploadBy.trim()) formData.append('uploaded_by', docUploadBy.trim());
 
-      const res = await fetch('/api/device-documents/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const result = await res.json();
+      const { data: result } = await api.post('/device-documents/upload', formData);
       if (result.success) {
         setDocUploadProgress('');
         await fetchDeviceDocuments();
@@ -223,8 +218,7 @@ const DeviceDetail: React.FC = () => {
   const handleDeleteDocument = async (docId: number) => {
     if (!window.confirm('确定要删除这个文件吗？')) return;
     try {
-      const res = await fetch(`/api/device-documents/${docId}`, { method: 'DELETE' });
-      const result = await res.json();
+      const { data: result } = await api.delete(`/device-documents/${docId}`);
       if (result.success) {
         await fetchDeviceDocuments();
       } else {
@@ -265,12 +259,7 @@ const DeviceDetail: React.FC = () => {
     if (selectedDocIds.size === 0) return;
     if (!window.confirm(`确定要删除选中的 ${selectedDocIds.size} 个文件吗？`)) return;
     try {
-      const res = await fetch('/api/device-documents/batch-delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: Array.from(selectedDocIds) })
-      });
-      const result = await res.json();
+      const { data: result } = await api.post('/device-documents/batch-delete', { ids: Array.from(selectedDocIds) });
       if (result.success) {
         setSelectedDocIds(new Set());
         setDocSelectMode(false);
@@ -305,8 +294,7 @@ const DeviceDetail: React.FC = () => {
         handleDownloadDocument(docId);
         return;
       }
-      const res = await fetch(`/api/device-documents/${docId}/preview`);
-      const result = await res.json();
+      const { data: result } = await api.get(`/device-documents/${docId}/preview`);
       if (result.success) {
         const fileType = previewableImage ? 'image' : 'pdf';
         setPreviewDoc({ url: result.data.url, title: result.data.title || originalName, type: fileType });

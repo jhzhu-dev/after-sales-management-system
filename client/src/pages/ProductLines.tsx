@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ProductLineForm from '../components/ProductLineForm';
-import { ProductLine, ApiResponse } from '../types';
+import { ProductLine } from '../types';
 import { PencilIcon, TrashIcon, PrinterIcon, Squares2X2Icon, ListBulletIcon } from '@heroicons/react/24/outline';
-import axios from 'axios';
+import { productLineApi } from '../services/api';
 
 const ProductLines: React.FC = () => {
     const [productLines, setProductLines] = useState<ProductLine[]>([]);
@@ -23,8 +23,7 @@ const ProductLines: React.FC = () => {
     const fetchProductLines = async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/product-lines');
-            const data: ApiResponse<ProductLine[]> = await response.json();
+            const data = await productLineApi.getProductLines();
 
             if (data.success) {
                 setProductLines(data.data);
@@ -58,15 +57,15 @@ const ProductLines: React.FC = () => {
         try {
             if (editingProductLine) {
                 // 更新产品线
-                const response = await axios.put(`/api/product-lines/${editingProductLine.id}`, formData);
-                if (response.data.success) {
+                const response = await productLineApi.updateProductLine(editingProductLine.id, formData);
+                if (response.success) {
                     setSuccessMessage('产品线更新成功');
                     await fetchProductLines();
                 }
             } else {
                 // 创建产品线
-                const response = await axios.post('/api/product-lines', formData);
-                if (response.data.success) {
+                const response = await productLineApi.createProductLine(formData);
+                if (response.success) {
                     setSuccessMessage('产品线创建成功');
                     await fetchProductLines();
                 }
@@ -86,8 +85,8 @@ const ProductLines: React.FC = () => {
         }
 
         try {
-            const response = await axios.delete(`/api/product-lines/${productLine.id}`);
-            if (response.data.success) {
+            const response = await productLineApi.deleteProductLine(productLine.id);
+            if (response.success) {
                 setSuccessMessage('产品线删除成功');
                 await fetchProductLines();
                 setTimeout(() => setSuccessMessage(null), 3000);
@@ -100,10 +99,10 @@ const ProductLines: React.FC = () => {
 
     const handleToggleActive = async (productLine: ProductLine) => {
         try {
-            const response = await axios.put(`/api/product-lines/${productLine.id}`, {
+            const response = await productLineApi.updateProductLine(productLine.id, {
                 is_active: !productLine.is_active
             });
-            if (response.data.success) {
+            if (response.success) {
                 setSuccessMessage(`产品线已${!productLine.is_active ? '启用' : '停用'}`);
                 await fetchProductLines();
                 setTimeout(() => setSuccessMessage(null), 3000);

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Issue, IssueFormData } from '../types';
 import { deviceApi, moduleApi } from '../services/api';
+import api from '../services/api';
 
 interface UploadedAttachment {
   name: string;
@@ -456,8 +457,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
                     if (formData.device_id) fd.append('device_id', formData.device_id);
                     const selModule = modules.find(m => String(m.id) === String(formData.module_id));
                     if (selModule) fd.append('module_name', selModule.name);
-                    const resp = await fetch('/api/issues/upload-attachment', { method: 'POST', body: fd });
-                    const result = await resp.json();
+                    const { data: result } = await api.post('/issues/upload-attachment', fd);
                     if (result.success) {
                       setAttachments(prev => [...prev, ...result.data]);
                     } else {

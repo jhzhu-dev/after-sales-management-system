@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { PlusIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon, ChatBubbleLeftRightIcon, ArrowPathIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
-import { issueApi } from '../services/api';
+import { issueApi, customerApi, moduleTypeApi, productLineApi, moduleVersionApi } from '../services/api';
 import { Issue, FilterOptions, IssueFormData } from '../types';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
@@ -45,8 +45,8 @@ export default function Issues() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedIssues, setSelectedIssues] = useState<number[]>([]);
   const [showIssueForm, setShowIssueForm] = useState(false);
-  const [moduleTypes, setModuleTypes] = useState<Array<{id: string, name: string}>>([]);
-  const [productLines, setProductLines] = useState<Array<{id: string, name: string}>>([]);
+  const [moduleTypes, setModuleTypes] = useState<Array<{id: number, name: string}>>([]);
+const [productLines, setProductLines] = useState<Array<{id: number, name: string}>>([]);
 
   // 版本演进 State
   const [upgrades, setUpgrades] = useState<any[]>([]);
@@ -89,8 +89,7 @@ export default function Issues() {
 
   const fetchCustomers = async () => {
     try {
-      const res = await fetch('/api/customers');
-      const result = await res.json();
+      const result = await customerApi.getCustomers();
       if (result.success) {
         setCustomers(result.data);
       }
@@ -106,8 +105,7 @@ export default function Issues() {
       if (upgradeFilters.search) params.append('search', upgradeFilters.search);
       if (upgradeFilters.version_type) params.append('version_type', upgradeFilters.version_type);
 
-      const res = await fetch(`/api/versions?${params.toString()}`);
-      const result = await res.json();
+      const result = await moduleVersionApi.getModuleVersions(Object.fromEntries(params.entries()));
       if (result.success) {
         let allData = result.data;
         // 按模块分组，计算每条update记录的旧版本号
@@ -148,8 +146,7 @@ export default function Issues() {
 
   const fetchModuleTypes = async () => {
     try {
-      const response = await fetch('/api/module-types/active');
-      const result = await response.json();
+      const result = await moduleTypeApi.getActiveModuleTypes();
       if (result.success) {
         setModuleTypes(result.data);
       }
@@ -160,8 +157,7 @@ export default function Issues() {
 
   const fetchProductLines = async () => {
     try {
-      const response = await fetch('/api/product-lines?is_active=1');
-      const result = await response.json();
+      const result = await productLineApi.getProductLines({ is_active: true });
       if (result.success) {
         setProductLines(result.data);
       }
