@@ -1,6 +1,20 @@
 import { clsx, type ClassValue } from 'clsx';
 import { format, parseISO, isValid } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { useState, useEffect } from 'react';
+
+// 检测是否为 1080P 或更小分辨率的屏幕
+export function useIs1080p(): boolean {
+  const [is1080p, setIs1080p] = useState(() => window.innerWidth <= 1920);
+
+  useEffect(() => {
+    const handler = () => setIs1080p(window.innerWidth <= 1920);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
+  return is1080p;
+}
 
 // 合并CSS类名
 export function cn(...inputs: ClassValue[]) {

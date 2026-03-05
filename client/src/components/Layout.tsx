@@ -38,13 +38,13 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 侧边栏 */}
-      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg no-print">
-        <div className="flex h-16 items-center justify-center border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-900">售后登记系统</h1>
+      <div className="fixed inset-y-0 left-0 z-50 w-56 3xl:w-64 bg-white shadow-lg no-print">
+        <div className="flex h-14 3xl:h-16 items-center justify-center border-b border-gray-200">
+          <h1 className="text-base 3xl:text-xl font-bold text-gray-900">售后登记系统</h1>
         </div>
 
-        <nav className="mt-8 px-4">
-          <ul className="space-y-2">
+        <nav className="mt-4 3xl:mt-8 px-3 3xl:px-4">
+          <ul className="space-y-1 3xl:space-y-2">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
               return (
@@ -69,10 +69,10 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* 主内容区域 */}
-      <div className="pl-64 print:pl-0">
+      <div className="pl-56 3xl:pl-64 print:pl-0">
         {/* 顶部导航栏 */}
         <header className="bg-white shadow-sm border-b border-gray-200 no-print">
-          <div className="flex h-16 items-center justify-between px-6">
+          <div className="flex h-14 3xl:h-16 items-center justify-between px-4 3xl:px-6">
             <div className="flex items-center">
               <h2 className="text-lg font-semibold text-gray-900">
                 {navigation.find(item => item.href === location.pathname)?.name || '售后登记系统'}
@@ -101,7 +101,7 @@ export default function Layout({ children }: LayoutProps) {
         </header>
 
         {/* 页面内容 */}
-        <main className="p-6 print:p-0">
+        <main className="p-4 3xl:p-6 print:p-0">
           {children}
         </main>
       </div>

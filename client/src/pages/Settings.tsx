@@ -231,10 +231,10 @@ export default function Settings() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 3xl:space-y-6">
         <div className="flex items-center space-x-3">
           <CogIcon className="h-8 w-8 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900">基础设置</h1>
+          <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">基础设置</h1>
         </div>
 
         <div className="border-b border-gray-200">
@@ -321,7 +321,7 @@ export default function Settings() {
             {/* 模块类型表单对话框 */}
             {showModuleTypeModal && (
               <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+                <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-4 3xl:p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-gray-900">
                       {editingModuleType ? '编辑模块类型' : '新增模块类型'}
@@ -493,7 +493,7 @@ export default function Settings() {
             {/* 客户表单对话框 */}
             {showCustomerModal && (
               <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+                <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-4 3xl:p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-gray-900">
                       {editingCustomer ? '编辑客户' : '新增客户'}

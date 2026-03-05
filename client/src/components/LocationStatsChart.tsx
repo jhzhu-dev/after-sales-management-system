@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import ChartCard from './ChartCard';
+import { useIs1080p } from '../utils';
 
 interface LocationData {
   location: string;
@@ -15,6 +16,8 @@ interface LocationStatsChartProps {
 }
 
 const LocationStatsChart: React.FC<LocationStatsChartProps> = React.memo(({ data }) => {
+  const is1080p = useIs1080p();
+  const chartHeight = is1080p ? 240 : 300;
   if (!data || data.length === 0) {
     return (
       <ChartCard title="位置统计" description="按位置统计设备数量和状态分布">
@@ -53,7 +56,7 @@ const LocationStatsChart: React.FC<LocationStatsChartProps> = React.memo(({ data
 
   return (
     <ChartCard title="位置统计" description="按位置统计设备数量和状态分布">
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={chartHeight}>
         <BarChart
           data={data}
           margin={{ top: 20, right: 30, left: 20, bottom: 5 }}

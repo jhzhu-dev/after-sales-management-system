@@ -161,9 +161,9 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
     return (
     <>
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[85vh] overflow-y-auto">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
                     <h2 className="text-xl font-semibold text-gray-900">
                         {version ? '编辑迭代版本' : '新增迭代版本'}
                     </h2>
@@ -173,7 +173,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-4 3xl:p-6 space-y-4">
                     {/* 版本号 */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>

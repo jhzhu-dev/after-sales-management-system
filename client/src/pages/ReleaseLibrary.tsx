@@ -246,10 +246,10 @@ const ReleaseLibrary: React.FC = () => {
 
     return (
         <Layout>
-            <div className="space-y-6">
+            <div className="space-y-4 3xl:space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">版本发布中心</h1>
+                        <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">版本发布中心</h1>
                         <p className="text-gray-600 mt-1">管理各模块类型的正式发布版本</p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -316,7 +316,7 @@ const ReleaseLibrary: React.FC = () => {
                         </nav>
                     </div>
 
-                    <div className="p-6">
+                    <div className="p-4 3xl:p-6">
                         {/* 分类过滤 */}
                         {existingCategories.length > 0 && (
                             <div className="flex items-center gap-2 mb-4 flex-wrap no-print">
@@ -379,7 +379,7 @@ const ReleaseLibrary: React.FC = () => {
                             return (
                             viewMode === 'grid' ? (
                                 // 方块视图 - 突出版本描述
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 3xl:gap-6">
                                     {filteredReleases.map((release) => (
                                         <div key={release.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50">
                                             <div className="flex justify-between items-start mb-4">
@@ -564,9 +564,9 @@ const ReleaseLibrary: React.FC = () => {
                                 <PlusIcon className="h-6 w-6 rotate-45" />
                             </button>
                         </div>
-                        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                        <div className="p-4 3xl:p-6 space-y-4 3xl:space-y-6 max-h-[70vh] overflow-y-auto">
                             {/* 基本信息 */}
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-2 gap-4 3xl:gap-6">
                                 <div className="space-y-2">
                                     <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">版本号</label>
                                     <div className="flex items-center gap-2">
@@ -691,7 +691,7 @@ const ReleaseLibrary: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                        <div className="px-4 py-3 3xl:px-6 3xl:py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
                             <button
                                 onClick={() => setShowDetailModal(false)}
                                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"

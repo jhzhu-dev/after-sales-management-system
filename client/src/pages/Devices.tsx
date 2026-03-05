@@ -8,7 +8,7 @@ import DataTable from '../components/DataTable';
 import DeviceForm from '../components/DeviceForm';
 import ExportButton from '../components/ExportButton';
 import { exportToExcel } from '../utils/exportUtils';
-import { formatDate, getStatusColor, getDeviceTypeColor } from '../utils';
+import { formatDate, getStatusColor } from '../utils';
 
 export default function Devices() {
   const navigate = useNavigate();
@@ -63,6 +63,7 @@ export default function Devices() {
       filtered = filtered.filter(device =>
         device.name.toLowerCase().includes(searchLower) ||
         device.id.toLowerCase().includes(searchLower) ||
+        (device.product_name && device.product_name.toLowerCase().includes(searchLower)) ||
         (device.customer_name && device.customer_name.toLowerCase().includes(searchLower)) ||
         (device.customer_short_name && device.customer_short_name.toLowerCase().includes(searchLower)) ||
         (device.remote_code && device.remote_code.toLowerCase().includes(searchLower)) ||
@@ -277,8 +278,7 @@ export default function Devices() {
     { key: 'id', label: '生产序列号' },
     { key: 'device_code', label: '设备编码' },
     { key: 'name', label: '订单号' },
-    { key: 'product_line_name', label: '产品线' },
-    { key: 'product_model', label: '产品型号' },
+    { key: 'product_name', label: '产品名称' },
     { key: 'product_version_number', label: '迭代版本' },
     { key: 'product_version_name', label: '版本名称' },
     { key: 'customer_name', label: '客户' },
@@ -385,11 +385,11 @@ export default function Devices() {
       )
     },
     {
-      key: 'product_line_name' as keyof Device,
-      title: <SortableHeader field="product_line_name" title="产品线 / 产品型号" />,
-      render: (value: string, record: Device) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDeviceTypeColor(value || '')}`}>
-          {[value, record.product_model].filter(Boolean).join(' / ') || '-'}
+      key: 'product_name' as keyof Device,
+      title: <SortableHeader field="product_name" title="产品名称" />,
+      render: (_value: string, record: Device) => (
+        <span className="text-sm text-gray-900">
+          {record.product_name || '-'}
         </span>
       )
     },
@@ -488,7 +488,7 @@ export default function Devices() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 3xl:space-y-6">
         {/* 仅打印可见的页眉 */}
         <div className="hidden print:block print-header">
           <div className="flex items-center justify-between" style={{marginBottom: '3pt'}}>
@@ -507,7 +507,7 @@ export default function Devices() {
 
         {/* 页面标题和操作 */}
         <div className="flex justify-between items-center no-print">
-          <h1 className="text-2xl font-bold text-gray-900">设备管理</h1>
+          <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">设备管理</h1>
           <div className="flex items-center gap-2">
             <ExportButton
               onExport={handleExport}
@@ -530,7 +530,7 @@ export default function Devices() {
         </div>
 
         {/* 筛选器 */}
-        <div className="bg-white rounded-lg shadow p-6 no-print">
+        <div className="bg-white rounded-lg shadow p-4 3xl:p-6 no-print">
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -538,7 +538,7 @@ export default function Devices() {
               </label>
               <input
                 type="text"
-                placeholder="搜索设备名称、编号或远程码"
+                placeholder="搜索订单号、序列号、产品名称或远程码"
                 value={filters.search || ''}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -626,7 +626,7 @@ export default function Devices() {
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>生产序列号</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>设备编码</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>订单号</th>
-                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>产品线 / 型号</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>产品名称</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>迭代版本</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>客户</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>状态</th>
@@ -639,7 +639,7 @@ export default function Devices() {
                   <td style={{padding:'3pt 6pt', fontFamily:'monospace'}}>{d.id}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.device_code || '-'}</td>
                   <td style={{padding:'3pt 6pt', fontWeight:'500'}}>{d.name}</td>
-                  <td style={{padding:'3pt 6pt'}}>{[d.product_line_name, d.product_model].filter(Boolean).join(' / ') || '-'}</td>
+                  <td style={{padding:'3pt 6pt'}}>{d.product_name || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.product_version_number ? `${d.product_version_number}${d.product_version_name ? ` ${d.product_version_name}` : ''}` : '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.customer_name || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.status}</td>

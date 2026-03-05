@@ -104,7 +104,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     try {
       setUpgradeLoading(true);
       const params = new URLSearchParams({ page: '1', limit: '200' });
-      if (upgradeFilters.search) params.append('search', upgradeFilters.search);
       if (upgradeFilters.version_type) params.append('version_type', upgradeFilters.version_type);
 
       const result = await moduleVersionApi.getModuleVersions(Object.fromEntries(params.entries()));
@@ -130,6 +129,15 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
           return v;
         });
         let filteredData = allData;
+        if (upgradeFilters.search) {
+          const s = upgradeFilters.search.toLowerCase();
+          filteredData = filteredData.filter((item: any) =>
+            [item.device_name, item.device_id, item.product_name, item.customer_name,
+             item.module_type, item.version_number, item.old_version,
+             item.description, item.updated_by]
+              .some(v => v && String(v).toLowerCase().includes(s))
+          );
+        }
         if (upgradeFilters.module_type) {
           filteredData = filteredData.filter((item: any) => item.module_type === upgradeFilters.module_type);
         }
@@ -323,8 +331,8 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
   const UPGRADE_EXPORT_COLUMNS = [
     { key: 'device_name', label: '订单号' },
     { key: 'device_id', label: '设备序列号' },
-    { key: 'product_line_name', label: '产品线' },
-    { key: 'product_model', label: '产品型号' },
+    { key: 'product_name', label: '产品名称' },
+    { key: 'customer_name', label: '客户' },
     { key: 'product_version_display', label: '迭代版本' },
     { key: 'module_type', label: '模块类型' },
     { key: 'old_version', label: '旧版本号' },
@@ -360,8 +368,8 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
       ...v,
       version_label: versionTypeMap[v.version_type] || v.version_type,
       release_date: v.release_date ? new Date(v.release_date).toLocaleDateString('zh-CN') : '',
-      product_line_name: v.device_type || '-',
-      product_model: v.product_model || '-',
+      product_name: v.product_name || '-',
+      customer_name: v.customer_name || '-',
       product_version_display: v.product_version_number ? `${v.product_version_number}${v.product_version_name ? ' - ' + v.product_version_name : ''}` : '-',
     }));
     const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
@@ -582,13 +590,17 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         )
       },
       {
-        key: 'product_info',
-        title: '产品线/产品型号',
+        key: 'product_name',
+        title: '产品名称',
         render: (_: any, item: any) => (
-          <div>
-            <div className="font-medium text-gray-900">{item.device_type || '-'}</div>
-            <div className="text-xs text-gray-500">{item.product_model || '-'}</div>
-          </div>
+          <div className="text-sm text-gray-900">{item.product_name || '-'}</div>
+        )
+      },
+      {
+        key: 'customer_name',
+        title: '客户',
+        render: (_: any, item: any) => (
+          <div className="text-sm text-gray-900">{item.customer_name || '-'}</div>
         )
       },
       {
@@ -672,7 +684,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="搜索订单号、子模块名称..."
+                placeholder="搜索订单号、产品名称、客户、版本号、变更说明..."
                 className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500"
                 value={upgradeFilters.search}
                 onChange={e => setUpgradeFilters(f => ({ ...f, search: e.target.value }))}
@@ -737,7 +749,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 3xl:space-y-6">
         {/* 打印专用页眉 */}
         <div className="hidden print:block print-header">
           <div className="print-flex-row" style={{justifyContent:'space-between'}}>
@@ -753,10 +765,10 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         </div>
 
         {/* 顶部标题与Tab切换 */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 no-print">
+        <div className="bg-white p-4 3xl:p-6 rounded-2xl shadow-sm border border-gray-100 no-print">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-black text-gray-900 tracking-tight">故障与升级</h1>
+              <h1 className="text-xl 3xl:text-2xl font-black text-gray-900 tracking-tight">故障与升级</h1>
               <p className="text-gray-500 text-sm mt-1 font-medium">统一管理全生命周期的故障报修与升级演进</p>
             </div>
             <div className="flex items-center gap-3">
@@ -837,7 +849,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         )}
 
         {/* 筛选器 */}
-        <div className="bg-white rounded-lg shadow p-6 no-print">
+        <div className="bg-white rounded-lg shadow p-4 3xl:p-6 no-print">
           <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

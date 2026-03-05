@@ -206,6 +206,49 @@ code {
   }
 }
 
+/* ============================================================
+   1080P 显示器适配 (viewport ≤ 1920px)
+   通过调整根字号(16px→14px)，所有 rem 单位自动等比缩放 87.5%
+   ============================================================ */
+@media (max-width: 1920px) {
+  html {
+    font-size: 14px;
+  }
+
+  /* 表格单元格更紧凑 */
+  table thead th {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  table tbody td {
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  /* 卡片内边距 */
+  .card {
+    @apply p-4;
+  }
+
+  /* 按钮紧凑 */
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    @apply px-3 py-1.5 text-sm;
+  }
+
+  /* 表单元素紧凑 */
+  .form-input,
+  .form-select {
+    @apply px-2.5 py-1.5 text-sm;
+  }
+
+  /* 状态标签 */
+  .status-badge {
+    @apply px-2 py-0.5;
+  }
+}
+
 /* 打印样式 */
 @media print {
   .no-print {

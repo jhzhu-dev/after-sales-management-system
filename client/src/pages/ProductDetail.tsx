@@ -295,7 +295,7 @@ const ProductDetail: React.FC = () => {
     if (!product) {
         return (
             <Layout>
-                <div className="p-6 text-center text-red-600">
+                <div className="p-4 3xl:p-6 text-center text-red-600">
                     {error || '产品不存在'}
                 </div>
             </Layout>
@@ -304,7 +304,7 @@ const ProductDetail: React.FC = () => {
 
     return (
         <Layout>
-            <div className="p-6">
+            <div className="p-4 3xl:p-6">
                 {/* 顶部面包屑和标题 */}
                 <div className="mb-6">
                     <div className="flex items-center text-sm text-gray-500 mb-2">
@@ -313,7 +313,7 @@ const ProductDetail: React.FC = () => {
                         <span className="text-gray-900">{product.name}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                        <h1 className="text-2xl font-bold text-gray-900">
+                        <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">
                             {product.name}
                             <span className="ml-3 text-sm font-normal text-gray-500 px-2 py-1 bg-gray-100 rounded">
                                 {product.model}
@@ -383,11 +383,11 @@ const ProductDetail: React.FC = () => {
                 </div>
 
                 {/* 标签页内容 */}
-                <div className="bg-white shadow rounded-lg p-6">
+                <div className="bg-white shadow rounded-lg p-4 3xl:p-6">
                     {activeTab === 'info' && (
                         <div>
                             {/* 产品详情 */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 3xl:gap-6">
                                 <div>
                                     <h3 className="text-lg font-medium text-gray-900 mb-4">产品详情</h3>
                                     <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
@@ -718,7 +718,7 @@ const ProductDetail: React.FC = () => {
                             {/* 新增模块配置表单对话框 */}
                             {showModuleForm && (
                                 <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-                                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
+                                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-4 3xl:p-6">
                                         <h3 className="text-lg font-bold text-gray-900 mb-4">新增模块配置</h3>
 
                                         <div className="space-y-4">
@@ -944,7 +944,7 @@ const ProductDetail: React.FC = () => {
                             </div>
 
                             {/* 弹窗底部按钮 */}
-                            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                            <div className="px-4 py-3 3xl:px-6 3xl:py-4 border-t border-gray-200 flex justify-end space-x-3">
                                 <button
                                     onClick={resetUploadForm}
                                     disabled={uploading}

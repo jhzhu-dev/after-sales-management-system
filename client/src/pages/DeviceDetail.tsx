@@ -607,7 +607,7 @@ const DeviceDetail: React.FC = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 3xl:space-y-6">
         {/* 页面头部 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -619,7 +619,7 @@ const DeviceDetail: React.FC = () => {
               返回设备列表
             </button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{device.name}</h1>
+              <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">{device.name}</h1>
               <p className="text-gray-600 mt-1">设备详细信息</p>
             </div>
           </div>
@@ -642,9 +642,9 @@ const DeviceDetail: React.FC = () => {
         </div>
 
         {/* 设备基本信息 */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-4 3xl:p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">基本信息</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:grid-cols-2 print:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 3xl:gap-6 print:grid-cols-2 print:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">生产序列号</label>
               <p className="text-lg font-mono print:text-base">{device.id}</p>
@@ -724,8 +724,8 @@ const DeviceDetail: React.FC = () => {
         </div>
 
         {/* 统计信息 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 3xl:gap-6">
+          <div className="bg-white rounded-lg shadow p-4 3xl:p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
@@ -734,13 +734,13 @@ const DeviceDetail: React.FC = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">模块数量</p>
-                <p className="text-2xl font-semibold text-gray-900">{modules.length}</p>
+                <p className="text-xl 3xl:text-2xl font-semibold text-gray-900">{modules.length}</p>
               </div>
             </div>
           </div>
 
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-4 3xl:p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-red-100 rounded-md flex items-center justify-center">
@@ -749,7 +749,7 @@ const DeviceDetail: React.FC = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">问题数量</p>
-                <p className="text-2xl font-semibold text-gray-900">{issues.length}</p>
+                <p className="text-xl 3xl:text-2xl font-semibold text-gray-900">{issues.length}</p>
                 <div className="flex items-center gap-3 mt-1 text-xs">
                   <span className="text-red-600">待处理 {issues.filter(i => i.status === 'open').length}</span>
                   <span className="text-yellow-600">处理中 {issues.filter(i => i.status === 'in_progress').length}</span>
@@ -760,7 +760,7 @@ const DeviceDetail: React.FC = () => {
           </div>
 
           <div
-            className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow border-2 border-transparent hover:border-green-300"
+            className="bg-white rounded-lg shadow p-4 3xl:p-6 cursor-pointer hover:shadow-md transition-shadow border-2 border-transparent hover:border-green-300"
             onClick={() => setActiveTab('documents' as any)}
           >
             <div className="flex items-center">
@@ -771,7 +771,7 @@ const DeviceDetail: React.FC = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">出厂资料</p>
-                <p className="text-2xl font-semibold text-gray-900">{deviceDocuments.length}</p>
+                <p className="text-xl 3xl:text-2xl font-semibold text-gray-900">{deviceDocuments.length}</p>
               </div>
             </div>
           </div>
@@ -780,7 +780,7 @@ const DeviceDetail: React.FC = () => {
         {/* 标签页导航 */}
         <div className="bg-white rounded-lg shadow">
           <div className="border-b border-gray-200 no-print">
-            <nav className="-mb-px flex space-x-8 px-6">
+            <nav className="-mb-px flex space-x-8 px-4 3xl:px-6">
               {[
                 { key: 'modules', label: '模块信息', count: modules.length },
                 { key: 'after-sales', label: '售后服务', count: issues.length + deviceUpgrades.length },
@@ -806,7 +806,7 @@ const DeviceDetail: React.FC = () => {
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 3xl:p-6">
             {/* 模块信息标签页 */}
             {activeTab === 'modules' && (
               <div className="space-y-4">
@@ -935,7 +935,7 @@ const DeviceDetail: React.FC = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-4 3xl:space-y-6">
                     {deviceDocCategories.map(cat => {
                       const docs = deviceDocuments.filter(d => d.category === cat);
                       if (docs.length === 0) return null;
@@ -1029,12 +1029,12 @@ const DeviceDetail: React.FC = () => {
 
             {/* 售后中心标签页 */}
             {activeTab === 'after-sales' && (
-              <div className="space-y-6">
+              <div className="space-y-4 3xl:space-y-6">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">售后与版本迭代</h3>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 3xl:gap-6">
                   {/* 历史故障问题 */}
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                     <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
@@ -1139,7 +1139,7 @@ const DeviceDetail: React.FC = () => {
       {showModuleVersionHistory && selectedModuleForVersion && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
                 {selectedModuleForVersion.module_type} - 版本历史
               </h3>
@@ -1154,7 +1154,7 @@ const DeviceDetail: React.FC = () => {
                 <XCircleIcon className="h-6 w-6" />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
+            <div className="p-4 3xl:p-6 overflow-y-auto max-h-[60vh]">
               {moduleVersions.length > 0 ? (
                 <div className="space-y-4">
                   {moduleVersions.map((version, index) => (
@@ -1207,7 +1207,7 @@ const DeviceDetail: React.FC = () => {
       {showVersionUpdateForm && selectedModuleForVersion && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <div className="px-4 py-3 3xl:px-6 3xl:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h3 className="text-lg font-bold text-gray-900">
                 {(selectedModuleForVersion as any).current_version ? '版本更新登记' : '设置出厂版本'} - {selectedModuleForVersion.module_type}
               </h3>
@@ -1222,7 +1222,7 @@ const DeviceDetail: React.FC = () => {
                 <XCircleIcon className="h-6 w-6" />
               </button>
             </div>
-            <div className="p-6 space-y-5">
+            <div className="p-4 3xl:p-6 space-y-5">
               {/* 版本库必选区 */}
               <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
                 <label className="block text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
@@ -1335,7 +1335,7 @@ const DeviceDetail: React.FC = () => {
       {showIssueForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">添加问题</h3>
               <button
                 onClick={handleCloseIssueForm}
@@ -1344,7 +1344,7 @@ const DeviceDetail: React.FC = () => {
                 <XCircleIcon className="h-6 w-6" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-4 3xl:p-6">
               <form onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target as HTMLFormElement);
@@ -1430,7 +1430,7 @@ const DeviceDetail: React.FC = () => {
       {showResolveForm && selectedIssueForResolve && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">解决问题</h3>
               <button
                 onClick={handleCloseResolveForm}
@@ -1439,7 +1439,7 @@ const DeviceDetail: React.FC = () => {
                 <XCircleIcon className="h-6 w-6" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-4 3xl:p-6">
               <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-2">问题描述:</p>
                 <p className="text-sm font-medium text-gray-900">{selectedIssueForResolve.description}</p>
@@ -1502,7 +1502,7 @@ const DeviceDetail: React.FC = () => {
       {showDocUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-green-50">
+            <div className="flex items-center justify-between px-4 py-3 3xl:px-6 3xl:py-4 border-b border-gray-200 bg-green-50">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <ArrowUpTrayIcon className="h-5 w-5 text-green-600" />
                 批量上传出厂资料
@@ -1637,7 +1637,7 @@ const DeviceDetail: React.FC = () => {
             </div>
 
             {/* 底部按钮 */}
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="px-4 py-3 3xl:px-6 3xl:py-4 border-t border-gray-200 flex items-center justify-between">
               <span className="text-xs text-gray-500">
                 {docUploadFiles.length > 0 ? `已选择 ${docUploadFiles.length} 个文件` : ''}
                 {docUploadProgress && ` · ${docUploadProgress}`}
@@ -1679,7 +1679,7 @@ const DeviceDetail: React.FC = () => {
       {/* 文件预览弹窗 */}
       {previewDoc && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50" onClick={() => setPreviewDoc(null)}>
-          <div className="relative max-w-5xl w-full mx-4 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="relative max-w-5xl w-full mx-4 max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             {/* 顶部工具栏 */}
             <div className="flex items-center justify-between bg-gray-900 px-4 py-2 rounded-t-lg">
               <span className="text-white text-sm truncate">{previewDoc.title}</span>

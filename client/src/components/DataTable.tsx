@@ -68,7 +68,7 @@ export default function DataTable<T extends Record<string, any>>({
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
+        <div className="p-4 3xl:p-6">
           <div className="animate-pulse">
             <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
             <div className="space-y-3">
@@ -93,7 +93,7 @@ export default function DataTable<T extends Record<string, any>>({
                   key={String(column.key)}
                   className={cn(
                     'text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap',
-                    compact ? 'px-3 py-2' : 'px-6 py-3',
+                    compact ? 'px-3 py-2' : 'px-4 py-2 3xl:px-6 3xl:py-3',
                     column.sortable && 'cursor-pointer hover:bg-gray-100'
                   )}
                   style={{ width: column.width }}
@@ -147,7 +147,7 @@ export default function DataTable<T extends Record<string, any>>({
                 {columns.map((column) => (
                   <td key={String(column.key)} className={cn(
                     'whitespace-nowrap text-sm text-gray-900',
-                    compact ? 'px-3 py-2.5' : 'px-6 py-4'
+                    compact ? 'px-3 py-2.5' : 'px-4 py-3 3xl:px-6 3xl:py-4'
                   )}>
                     {column.render
                       ? column.render(record[column.key], record)

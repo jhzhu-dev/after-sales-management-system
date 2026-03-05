@@ -1,6 +1,7 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import ChartCard from './ChartCard';
+import { useIs1080p } from '../utils';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6'];
 
@@ -16,6 +17,9 @@ interface ProductLineChartProps {
 }
 
 const ProductLineChart: React.FC<ProductLineChartProps> = React.memo(({ data }) => {
+  const is1080p = useIs1080p();
+  const chartHeight = is1080p ? 240 : 300;
+  const pieRadius = is1080p ? 80 : 100;
   if (!data || data.length === 0) {
     return (
       <ChartCard title="产品线分布" description="按产品线统计设备数量和占比">
@@ -73,7 +77,7 @@ const ProductLineChart: React.FC<ProductLineChartProps> = React.memo(({ data }) 
 
   return (
     <ChartCard title="产品线分布" description="按产品线统计设备数量和占比">
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={chartHeight}>
         <PieChart>
           <Pie
             data={normalizedData}
@@ -81,7 +85,7 @@ const ProductLineChart: React.FC<ProductLineChartProps> = React.memo(({ data }) 
             cy="50%"
             labelLine={false}
             label={renderCustomLabel}
-            outerRadius={100}
+            outerRadius={pieRadius}
             fill="#8884d8"
             dataKey="count"
           >

@@ -67,7 +67,7 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-4 3xl:p-6 space-y-4">
                     {!deviceId && (
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">选择设备 *</label>

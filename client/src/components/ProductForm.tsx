@@ -109,7 +109,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[85vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
           <h2 className="text-xl font-semibold text-gray-800">
@@ -124,7 +124,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 3xl:p-6 space-y-4">
           {/* 产品线选择 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

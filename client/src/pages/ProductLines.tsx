@@ -126,7 +126,7 @@ const ProductLines: React.FC = () => {
 
                 <div className="flex justify-between items-center mb-6 print:hidden">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">产品线管理</h1>
+                        <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">产品线管理</h1>
                         <p className="mt-1 text-sm text-gray-600">
                             管理公司的核心产品线系列
                         </p>
@@ -183,14 +183,14 @@ const ProductLines: React.FC = () => {
                     </div>
                 ) : viewMode === 'grid' ? (
                     // 方块视图
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 3xl:gap-6">
                         {productLines.map((line) => (
                             <div
                                 key={line.id}
                                 onClick={() => navigate(`/products?product_line_id=${line.id}`)}
                                 className="bg-white rounded-lg shadow hover:shadow-lg hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer overflow-hidden"
                             >
-                                <div className="p-6">
+                                <div className="p-4 3xl:p-6">
                                     <div className="flex justify-between items-start mb-2">
                                         <h3 className="text-lg font-bold text-gray-900 leading-snug flex-1 min-w-0 mr-3">
                                             {line.name}

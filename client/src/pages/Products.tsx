@@ -130,7 +130,7 @@ const Products: React.FC = () => {
 
     return (
         <Layout>
-            <div className="p-6">
+            <div className="p-4 3xl:p-6">
                 {/* 打印专用页眉 */}
                 <div className="hidden print:block print-header" style={{marginBottom:'8pt'}}>
                   <h1 style={{fontSize:'13pt',fontWeight:'800',margin:0}}>产品管理</h1>
@@ -139,7 +139,7 @@ const Products: React.FC = () => {
 
                 <div className="flex justify-between items-center mb-6 print:hidden">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">产品管理</h1>
+                        <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">产品管理</h1>
                         <p className="mt-1 text-sm text-gray-600">管理各产品线下的具体产品型号</p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -215,11 +215,11 @@ const Products: React.FC = () => {
                     </div>
                 ) : viewMode === 'grid' ? (
                     // 方块视图
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 3xl:gap-6">
                         {products.map(product => (
                             <div key={product.id}
                                 onClick={() => navigate(`/products/${product.id}`)}
-                                className="bg-white rounded-lg shadow hover:shadow-lg hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer p-6 border border-gray-100"
+                                className="bg-white rounded-lg shadow hover:shadow-lg hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer p-4 3xl:p-6 border border-gray-100"
                             >
                                 <div className="flex justify-between items-start mb-3">
                                     <h3 className="font-bold text-base text-gray-900 leading-snug flex-1 min-w-0 mr-3">{product.name}</h3>

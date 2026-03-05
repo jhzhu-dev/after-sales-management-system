@@ -176,7 +176,7 @@ export default function IssueDetail() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 3xl:space-y-6">
         {/* 仅打印可见的页眉 */}
         <div className="hidden print:block print-header">
           <div className="flex items-center justify-between" style={{marginBottom: '3pt'}}>
@@ -282,7 +282,7 @@ export default function IssueDetail() {
         </div>
 
         {/* 详细信息网格 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2 print:gap-4 print-2col-grid">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 3xl:gap-6 print:grid-cols-2 print:gap-4 print-2col-grid">
           {/* 设备信息卡片 */}
           <div className="bg-white rounded-lg shadow print:shadow-none print:border">
             <div className="px-6 py-4 border-b border-gray-200">
@@ -480,7 +480,7 @@ export default function IssueDetail() {
         {showResolveForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">解决问题</h3>
                 <button
                   onClick={() => setShowResolveForm(false)}
@@ -493,7 +493,7 @@ export default function IssueDetail() {
                 </button>
               </div>
 
-              <div className="p-6">
+              <div className="p-4 3xl:p-6">
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     解决说明

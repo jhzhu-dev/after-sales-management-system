@@ -55,7 +55,7 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachments, initia
       {/* Modal */}
       <div
         className="relative z-10 flex flex-col bg-white rounded-xl shadow-2xl max-w-5xl w-full mx-4"
-        style={{ maxHeight: '90vh' }}
+        style={{ maxHeight: '85vh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}

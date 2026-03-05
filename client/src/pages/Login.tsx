@@ -31,7 +31,7 @@ export default function Login() {
       <div className="bg-white rounded-2xl shadow-lg w-full max-w-sm p-8">
         {/* Logo / 标题 */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">售后登记系统</h1>
+          <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">售后登记系统</h1>
           <p className="mt-1 text-sm text-gray-500">请登录后继续使用</p>
         </div>
 

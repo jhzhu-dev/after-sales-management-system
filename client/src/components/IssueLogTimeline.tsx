@@ -264,7 +264,7 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
             暂无处理记录
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 3xl:space-y-6">
             {logs.map((log, index) => (
               <div key={log.id} className="relative pl-8">
                 {/* 时间线 */}

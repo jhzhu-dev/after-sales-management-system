@@ -17,7 +17,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
 }) => {
   return (
     <div className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 ${className}`}>
-      <div className="px-6 py-4 border-b border-gray-200">
+      <div className="px-4 py-3 3xl:px-6 3xl:py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
@@ -32,7 +32,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
           )}
         </div>
       </div>
-      <div className="p-6">
+      <div className="p-4 3xl:p-6">
         {children}
       </div>
     </div>

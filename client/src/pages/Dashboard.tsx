@@ -15,6 +15,7 @@ import StatsCard from '../components/StatsCard';
 import ProductLineChart from '../components/ProductLineChart';
 import ChartCard from '../components/ChartCard';
 import { formatDate } from '../utils';
+import { useIs1080p } from '../utils';
 import { 
   BarChart, 
   Bar, 
@@ -35,6 +36,10 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const is1080p = useIs1080p();
+  const chartHeight = is1080p ? 240 : 300;
+  const largeChartHeight = is1080p ? 280 : 400;
+  const pieRadius = is1080p ? 80 : 100;
   const [expandedSections, setExpandedSections] = useState({
     overview: true,
     distribution: true,
@@ -72,11 +77,11 @@ export default function Dashboard() {
   if (loading) {
     return (
       <Layout>
-        <div className="animate-pulse space-y-6">
+        <div className="animate-pulse space-y-4 3xl:space-y-6">
           <div className="h-10 bg-gray-200 rounded w-1/3"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 3xl:gap-6">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg shadow p-6">
+              <div key={i} className="bg-white rounded-lg shadow p-4 3xl:p-6">
                 <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
                 <div className="h-8 bg-gray-200 rounded w-1/3"></div>
               </div>
@@ -99,7 +104,7 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 3xl:space-y-6">
         {/* 打印专用页眉 */}
         <div className="hidden print:block print-header">
           <h1 style={{fontSize:'13pt',fontWeight:'800',margin:0}}>系统仪表盘</h1>
@@ -109,7 +114,7 @@ export default function Dashboard() {
         {/* 页面标题 */}
         <div className="flex items-center justify-between print:hidden">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">系统仪表盘</h1>
+            <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">系统仪表盘</h1>
             <p className="mt-1 text-sm text-gray-600">实时监控系统运行状态和关键指标</p>
           </div>
           <button
@@ -123,7 +128,7 @@ export default function Dashboard() {
 
         {/* 核心指标卡片 */}
         <section>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 3xl:gap-6">
             <StatsCard
               title="设备总数"
               value={stats.basicStats.total_devices}
@@ -166,13 +171,13 @@ export default function Dashboard() {
           </button>
           
           {expandedSections.distribution && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 3xl:gap-6">
               {/* 产品线分布 */}
               <ProductLineChart data={stats.deviceTypeDistribution} />
 
               {/* 设备状态分布 */}
               <ChartCard title="设备状态分布" description="设备当前运行状态统计">
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={chartHeight}>
                   <PieChart>
                     <Pie
                       data={stats.deviceStatusDistribution}
@@ -180,7 +185,7 @@ export default function Dashboard() {
                       cy="50%"
                       labelLine={false}
                       label={({ status, count }) => `${status}: ${count}`}
-                      outerRadius={100}
+                      outerRadius={pieRadius}
                       fill="#8884d8"
                       dataKey="count"
                     >
@@ -195,7 +200,7 @@ export default function Dashboard() {
 
               {/* 问题严重性分布 */}
               <ChartCard title="问题严重性分布" description="按严重程度分类统计">
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={chartHeight}>
                   <BarChart data={stats.issueSeverityDistribution}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="severity" />
@@ -208,7 +213,7 @@ export default function Dashboard() {
 
               {/* 问题状态分布 */}
               <ChartCard title="问题状态分布" description="问题处理进度统计">
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={chartHeight}>
                   <BarChart data={stats.issueStatusDistribution}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="status" />
@@ -239,7 +244,7 @@ export default function Dashboard() {
 
           {expandedSections.trends && (
             <ChartCard title="月度活动趋势" description="过去12个月的系统活动统计">
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={largeChartHeight}>
                 <LineChart data={stats.monthlyTrends}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
@@ -277,7 +282,7 @@ export default function Dashboard() {
               <div className="divide-y divide-gray-200">
                 {stats.recentActivities.length > 0 ? (
                   stats.recentActivities.map((activity, index) => (
-                    <div key={index} className="px-6 py-4 flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+                    <div key={index} className="px-4 py-3 3xl:px-6 3xl:py-4 flex items-center space-x-4 hover:bg-gray-50 transition-colors">
                       <div className="flex-shrink-0">
                         <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
                           activity.type === 'device' ? 'bg-blue-100' :
@@ -312,7 +317,7 @@ export default function Dashboard() {
                     </div>
                   ))
                 ) : (
-                  <div className="px-6 py-12 text-center text-gray-500">
+                  <div className="px-4 py-8 3xl:px-6 3xl:py-12 text-center text-gray-500">
                     暂无最近活动
                   </div>
                 )}
