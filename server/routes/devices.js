@@ -166,7 +166,7 @@ router.get('/:id', async (req, res) => {
 // 创建设备
 router.post('/', [
   body('id').optional({ nullable: true }).isString().withMessage('设备ID必须是字符串'),
-  body('name').notEmpty().withMessage('设备名称不能为空'),
+  body('name').optional({ nullable: true }).isString().withMessage('订单号必须是字符串'),
   body('product_line_id').notEmpty().isInt().withMessage('产品线ID必须是整数'),
   body('customer_id').optional({ nullable: true }).isInt().withMessage('客户ID必须是整数'),
   body('status').optional({ nullable: true }).isIn(['正常', '异常', '维护中']).withMessage('状态必须是：正常、异常或维护中'),
@@ -212,7 +212,7 @@ router.post('/', [
       VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    await query(insertQuery, [deviceId, name, device_code || null, product_line_id, product_id || null, customer_id || null, status, remote_code || null, password || null]);
+    await query(insertQuery, [deviceId, name ?? null, device_code || null, product_line_id, product_id || null, customer_id || null, status, remote_code || null, password || null]);
 
     res.status(201).json({
       success: true,

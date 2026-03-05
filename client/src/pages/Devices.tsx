@@ -266,7 +266,7 @@ export default function Devices() {
   const DEVICE_EXPORT_COLUMNS = [
     { key: 'id', label: '生产序列号' },
     { key: 'device_code', label: '设备编码' },
-    { key: 'name', label: '设备名称' },
+    { key: 'name', label: '订单号' },
     { key: 'product_line_name', label: '产品线' },
     { key: 'product_model', label: '产品型号' },
     { key: 'customer_name', label: '客户' },
@@ -367,7 +367,7 @@ export default function Devices() {
     },
     {
       key: 'name' as keyof Device,
-      title: <SortableHeader field="name" title="名称" />,
+      title: <SortableHeader field="name" title="订单号" />,
       render: (value: string) => (
         <div className="font-medium text-gray-900">{value}</div>
       )
@@ -581,7 +581,7 @@ export default function Devices() {
               <tr style={{borderBottom:'1pt solid #374151', backgroundColor:'#f9fafb'}}>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>生产序列号</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>设备编码</th>
-                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>名称</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>订单号</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>产品线 / 型号</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>客户</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>状态</th>

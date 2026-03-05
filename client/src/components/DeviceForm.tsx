@@ -230,8 +230,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
     const newErrors: Record<string, string> = {};
 
     if (!device) {
-      // 新增模式：所有字段必填
-      if (!formData.name.trim()) newErrors.name = '设备名称不能为空';
+      // 新增模式：部分字段必填
       if (!formData.device_code?.trim()) newErrors.device_code = '设备编码不能为空';
       if (!formData.id?.trim()) newErrors.id = '生产序列号不能为空';
       if (!formData.customer_id) newErrors.customer_id = '请选择客户';
@@ -308,7 +307,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
           {device && (
             <div className="bg-gray-50 rounded-lg p-4 space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">名称</span>
+                <span className="text-gray-500">订单号</span>
                 <span className="font-medium text-gray-900">{device.name}</span>
               </div>
               {device.device_code && (
@@ -342,20 +341,19 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
             </div>
           )}
 
-          {/* 新增模式：1. 名称 */}
+          {/* 新增模式：1. 订单号（非必填） */}
           {!device && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                名称 <span className="text-red-500">*</span>
+                订单号
               </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
-                placeholder="请输入名称"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入订单号（选填）"
               />
-              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
             </div>
           )}
 

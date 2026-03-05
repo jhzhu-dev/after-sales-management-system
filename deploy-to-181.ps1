@@ -38,7 +38,7 @@ function Step-Fail {
 }
 
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host " 综合管理系统  →  $RemoteHost"              -ForegroundColor Cyan
+Write-Host " 售后登记系统  →  $RemoteHost"              -ForegroundColor Cyan
 Write-Host " 开始时间: $(Get-Date -Format 'HH:mm:ss')"  -ForegroundColor Cyan
 if ($SkipBuild) {
     Write-Host " 模式: 跳过构建，直接部署现有镜像"      -ForegroundColor DarkCyan
@@ -47,7 +47,7 @@ Write-Host "============================================" -ForegroundColor Cyan
 
 # ── Step 1（可选）：构建 Docker 镜像 ────────────────────────
 if (-not $SkipBuild) {
-    Step-Header "构建 Docker 镜像 (manger-app:latest)"
+    Step-Header "构建 Docker 镜像 (device-manager-app:latest)"
     Write-Host "  构建上下文: $(Get-Location)" -ForegroundColor DarkGray
 
     # 实时输出构建日志，构建完成后再判断结果
@@ -118,7 +118,7 @@ if (Test-Path ".env") {
 }
 
 Write-Host "  传输部署脚本 ..." -ForegroundColor DarkGray
-scp remote-deploy.sh "${RemoteUser}@${RemoteHost}:${RemotePath}/remote-deploy.sh"
+scp scripts/remote-deploy.sh "${RemoteUser}@${RemoteHost}:${RemotePath}/remote-deploy.sh"
 if ($LASTEXITCODE -ne 0) { Step-Fail "部署脚本传输失败" }
 
 Step-OK

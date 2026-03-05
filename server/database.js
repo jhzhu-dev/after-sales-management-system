@@ -133,7 +133,7 @@ async function createTables() {
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS devices (
         id VARCHAR(50) PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NULL,
         product_line_id INT NOT NULL,
         customer_id INT,
         status ENUM('正常', '异常', '维护中') DEFAULT '正常',
@@ -415,6 +415,14 @@ async function createTables() {
         console.log('🔄 正在为 devices 表添加 device_code 字段...');
         await pool.execute("ALTER TABLE devices ADD COLUMN device_code VARCHAR(100) AFTER name");
         console.log('✅ device_code 字段添加成功');
+      }
+
+      // 将 name 字段改为允许 NULL（订单号改为非必填）
+      const [deviceNameCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'name'");
+      if (deviceNameCols.length > 0 && deviceNameCols[0].Null === 'NO') {
+        console.log('🔄 正在将 devices.name 字段改为允许 NULL...');
+        await pool.execute("ALTER TABLE devices MODIFY COLUMN name VARCHAR(255) NULL");
+        console.log('✅ devices.name 字段已允许 NULL');
       }
 
       // 添加 product_id 字段
