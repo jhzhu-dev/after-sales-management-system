@@ -174,8 +174,8 @@ router.get('/', async (req, res) => {
     }
 
     if (search) {
-      whereConditions.push('(i.description LIKE ? OR d.name LIKE ? OR d.id LIKE ? OR i.contact_person LIKE ? OR i.contact_phone LIKE ? OR c.name LIKE ?)');
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+      whereConditions.push('(i.description LIKE ? OR d.name LIKE ? OR d.id LIKE ? OR i.contact_person LIKE ? OR i.contact_phone LIKE ? OR c.name LIKE ? OR d.nickname LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
@@ -185,12 +185,14 @@ router.get('/', async (req, res) => {
       `FROM issues i
        INNER JOIN devices d ON i.device_id = d.id
        INNER JOIN product_lines pl ON d.product_line_id = pl.id
+       LEFT JOIN products p ON d.product_id = p.id
        LEFT JOIN customers c ON d.customer_id = c.id
        INNER JOIN modules m ON i.module_id = m.id
        INNER JOIN module_types mt ON m.type_id = mt.id` :
       `FROM issues i
        LEFT JOIN devices d ON i.device_id = d.id
        LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+       LEFT JOIN products p ON d.product_id = p.id
        LEFT JOIN customers c ON d.customer_id = c.id
        LEFT JOIN modules m ON i.module_id = m.id
        LEFT JOIN module_types mt ON m.type_id = mt.id`;
@@ -199,7 +201,9 @@ router.get('/', async (req, res) => {
       SELECT 
         i.*,
         d.name as device_name,
+        d.nickname as device_nickname,
         pl.name as device_type,
+        p.name as product_name,
         c.name as customer_name,
         c.short_name as customer_short_name,
         mt.name as module_category
@@ -216,12 +220,14 @@ router.get('/', async (req, res) => {
       `FROM issues i
        INNER JOIN devices d ON i.device_id = d.id
        INNER JOIN product_lines pl ON d.product_line_id = pl.id
+       LEFT JOIN products p ON d.product_id = p.id
        LEFT JOIN customers c ON d.customer_id = c.id
        INNER JOIN modules m ON i.module_id = m.id
        INNER JOIN module_types mt ON m.type_id = mt.id` :
       `FROM issues i
        LEFT JOIN devices d ON i.device_id = d.id
        LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+       LEFT JOIN products p ON d.product_id = p.id
        LEFT JOIN customers c ON d.customer_id = c.id
        LEFT JOIN modules m ON i.module_id = m.id
        LEFT JOIN module_types mt ON m.type_id = mt.id`;

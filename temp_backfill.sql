@@ -1,0 +1,1 @@
+﻿UPDATE devices d JOIN customers c ON d.customer_id = c.id JOIN products p ON d.product_id = p.id SET d.nickname = CONCAT(c.name, p.short_name, SUBSTRING(REGEXP_REPLACE(d.id, '[^0-9]', ''), -2), '号') WHERE c.name IS NOT NULL AND p.short_name IS NOT NULL;

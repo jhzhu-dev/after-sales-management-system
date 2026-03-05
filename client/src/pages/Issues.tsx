@@ -133,7 +133,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
           const s = upgradeFilters.search.toLowerCase();
           filteredData = filteredData.filter((item: any) =>
             [item.device_name, item.device_id, item.product_name, item.customer_name,
-             item.module_type, item.version_number, item.old_version,
+             item.device_nickname, item.module_type, item.version_number, item.old_version,
              item.description, item.updated_by]
               .some(v => v && String(v).toLowerCase().includes(s))
           );
@@ -331,7 +331,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
   const UPGRADE_EXPORT_COLUMNS = [
     { key: 'device_name', label: '订单号' },
     { key: 'device_id', label: '设备序列号' },
-    { key: 'product_name', label: '产品名称' },
+    { key: 'device_nickname', label: '设备简称' },
     { key: 'customer_name', label: '客户' },
     { key: 'product_version_display', label: '迭代版本' },
     { key: 'module_type', label: '模块类型' },
@@ -492,11 +492,17 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
       title: <SortableHeader field="device_name" title="订单号" />,
       render: (value: string, record: Issue) => (
         <div>
-          <div className="font-medium text-gray-900">{value}</div>
-          <div className="text-sm text-gray-500">{record.device_type || '-'}</div>
+          <div className="font-medium text-gray-900">
+            {value}{record.device_id ? <span className="text-gray-400 font-normal"> · {record.device_id.slice(-4)}</span> : ''}
+          </div>
+          {record.device_nickname ? (
+            <div className="text-xs text-blue-600 font-medium">{record.device_nickname}</div>
+          ) : (
+            <div className="text-xs text-gray-500">{record.product_name || record.device_type || '-'}</div>
+          )}
         </div>
       ),
-      width: '140px'
+      width: '180px'
     },
     {
       key: 'customer_name' as keyof Issue,
@@ -590,10 +596,10 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         )
       },
       {
-        key: 'product_name',
-        title: '产品名称',
+        key: 'device_nickname',
+        title: '设备简称',
         render: (_: any, item: any) => (
-          <div className="text-sm text-gray-900">{item.product_name || '-'}</div>
+          <div className="text-sm text-blue-600 font-medium">{item.device_nickname || '-'}</div>
         )
       },
       {
@@ -674,7 +680,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="搜索订单号、产品名称、客户、版本号、变更说明..."
+                placeholder="搜索订单号、产品名称、客户、简称、版本号、变更说明..."
                 className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500"
                 value={upgradeFilters.search}
                 onChange={e => setUpgradeFilters(f => ({ ...f, search: e.target.value }))}
@@ -847,7 +853,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               </label>
               <input
                 type="text"
-                placeholder="搜索问题描述或订单号"
+                placeholder="搜索问题描述、订单号或简称"
                 value={filters.search || ''}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

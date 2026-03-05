@@ -23,6 +23,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
   const [formData, setFormData] = useState({
     product_line_id: '',
     name: '',
+    short_name: '',
     model: '',
     description: '',
     is_active: true
@@ -35,6 +36,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
       setFormData({
         product_line_id: product.product_line_id.toString(),
         name: product.name || '',
+        short_name: (product as any).short_name || '',
         model: product.model || '',
         description: product.description || '',
         is_active: product.is_active !== undefined ? product.is_active : true
@@ -172,6 +174,25 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
             {errors.name && (
               <p className="mt-1 text-sm text-red-500">{errors.name}</p>
             )}
+          </div>
+
+          {/* 产品简称 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              产品简称
+            </label>
+            <input
+              type="text"
+              name="short_name"
+              value={formData.short_name}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="例如：侧面、底盘、胎纹、龙门"
+              maxLength={20}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              用于自动生成设备俗称，如"美国侧扫29"
+            </p>
           </div>
 
           {/* 产品型号 */}

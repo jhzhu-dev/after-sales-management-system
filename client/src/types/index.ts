@@ -11,6 +11,7 @@ export interface Customer {
 export interface Device {
   id: string;
   name: string;
+  nickname?: string | null;
   device_code?: string | null;
   product_line_id?: number;
   product_line_name?: string;
@@ -80,7 +81,9 @@ export interface Issue {
   created_at: string;
   updated_at: string;
   device_name?: string;
+  device_nickname?: string;
   device_type?: string;
+  product_name?: string;
   customer_name?: string;
   customer_short_name?: string;
   module_category?: string;

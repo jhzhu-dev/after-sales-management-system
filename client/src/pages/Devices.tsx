@@ -371,17 +371,17 @@ export default function Devices() {
       )
     },
     {
-      key: 'device_code' as keyof Device,
-      title: <SortableHeader field="device_code" title="设备编码" />,
-      render: (value: string) => (
-        <div className="text-gray-700 text-sm">{value || <span className="text-gray-300">—</span>}</div>
-      )
-    },
-    {
       key: 'name' as keyof Device,
       title: <SortableHeader field="name" title="订单号" />,
-      render: (value: string) => (
-        <div className="font-medium text-gray-900">{value}</div>
+      render: (value: string, record: Device) => (
+        <div>
+          <div className="font-medium text-gray-900">
+            {value}{record.id ? <span className="text-gray-400 font-normal"> · {record.id.slice(-4)}</span> : ''}
+          </div>
+          {record.nickname && (
+            <div className="text-xs text-blue-600 font-medium">{record.nickname}</div>
+          )}
+        </div>
       )
     },
     {
@@ -538,7 +538,7 @@ export default function Devices() {
               </label>
               <input
                 type="text"
-                placeholder="搜索订单号、序列号、产品名称或远程码"
+                placeholder="搜索订单号、序列号、产品名称、远程码或简称"
                 value={filters.search || ''}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

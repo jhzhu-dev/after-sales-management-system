@@ -89,7 +89,7 @@ router.get('/:id', async (req, res) => {
 // 创建产品
 router.post('/', async (req, res) => {
     try {
-        const { product_line_id, name, model, description, specifications, is_active } = req.body;
+        const { product_line_id, name, model, description, specifications, is_active, short_name } = req.body;
 
         // 验证必填字段
         if (!product_line_id || !name) {
@@ -109,10 +109,11 @@ router.post('/', async (req, res) => {
         }
 
         const result = await query(
-            'INSERT INTO products (product_line_id, name, model, description, specifications, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+            'INSERT INTO products (product_line_id, name, short_name, model, description, specifications, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [
                 product_line_id,
                 name,
+                short_name || null,
                 model || null,
                 description || null,
                 specifications ? JSON.stringify(specifications) : null,
@@ -126,6 +127,7 @@ router.post('/', async (req, res) => {
                 id: result.insertId,
                 product_line_id,
                 name,
+                short_name,
                 model,
                 description,
                 specifications,
@@ -147,9 +149,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { product_line_id, name, model, description, specifications, is_active } = req.body;
-
-        // 检查产品是否存在
+        const { product_line_id, name, model, description, specifications, is_active, short_name } = req.body;
         const existing = await query('SELECT id FROM products WHERE id = ?', [id]);
         if (existing.length === 0) {
             return res.status(404).json({
@@ -172,6 +172,10 @@ router.put('/:id', async (req, res) => {
             }
             updates.push('product_line_id = ?');
             params.push(product_line_id);
+        }
+        if (short_name !== undefined) {
+            updates.push('short_name = ?');
+            params.push(short_name || null);
         }
         if (name !== undefined) {
             updates.push('name = ?');

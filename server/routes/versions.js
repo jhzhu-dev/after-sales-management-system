@@ -42,6 +42,7 @@ router.get('/', async (req, res) => {
         pl.name as device_type,
         c.name as customer_name,
         p.name as product_name,
+        d.nickname as device_nickname,
         p.model as product_model,
         pv.version_number as product_version_number,
         pv.version_name as product_version_name

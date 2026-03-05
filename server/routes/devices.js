@@ -28,8 +28,8 @@ router.get('/', async (req, res) => {
     }
 
     if (search) {
-      whereConditions.push('(d.name LIKE ? OR d.id LIKE ? OR d.device_code LIKE ? OR c.name LIKE ? OR d.remote_code LIKE ? OR p.name LIKE ?)');
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+      whereConditions.push('(d.name LIKE ? OR d.id LIKE ? OR d.device_code LIKE ? OR c.name LIKE ? OR d.remote_code LIKE ? OR p.name LIKE ? OR d.nickname LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
@@ -215,16 +215,42 @@ router.post('/', [
     }
 
     const insertQuery = `
-      INSERT INTO devices(id, name, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password)
-      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO devices(id, name, nickname, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password)
+      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    await query(insertQuery, [deviceId, name ?? null, device_code || null, product_line_id, product_id || null, product_version_id || null, customer_id || null, status, remote_code || null, password || null]);
+    // 自动生成设备俗称：{客户中文名称}{产品简称}{生产序列号末2位数字}号
+    let nickname = null;
+    try {
+      let customerName = '';
+      let productShort = '';
+      if (customer_id) {
+        const cRows = await query('SELECT name FROM customers WHERE id = ?', [customer_id]);
+        if (cRows.length > 0) customerName = cRows[0].name || '';
+      }
+      if (product_id) {
+        const pRows = await query('SELECT short_name FROM products WHERE id = ?', [product_id]);
+        if (pRows.length > 0) productShort = pRows[0].short_name || '';
+      }
+      // 从生产序列号中提取所有数字，取最后2位
+      let idSuffix = '';
+      if (deviceId) {
+        const digits = deviceId.replace(/\D/g, '');
+        idSuffix = digits.length >= 2 ? digits.slice(-2) : digits;
+      }
+      if (customerName && productShort && idSuffix) {
+        nickname = `${customerName}${productShort}${idSuffix}`;
+      }
+    } catch (e) {
+      console.warn('生成设备俗称失败:', e.message);
+    }
+
+    await query(insertQuery, [deviceId, name ?? null, nickname, device_code || null, product_line_id, product_id || null, product_version_id || null, customer_id || null, status, remote_code || null, password || null]);
 
     res.status(201).json({
       success: true,
       message: '设备创建成功',
-      data: { id: deviceId, name, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password }
+      data: { id: deviceId, name, nickname, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password }
     });
   } catch (error) {
     console.error('创建设备失败:', error);
@@ -281,7 +307,7 @@ router.put('/:id', [
     }
 
     // 只允许更新存在的字段（白名单）
-    const allowedFields = ['name', 'device_code', 'product_line_id', 'product_id', 'product_version_id', 'customer_id', 'status', 'remote_code', 'password'];
+    const allowedFields = ['name', 'nickname', 'device_code', 'product_line_id', 'product_id', 'product_version_id', 'customer_id', 'status', 'remote_code', 'password'];
     const filteredUpdates = {};
     Object.keys(updates).forEach(key => {
       if (allowedFields.includes(key) && updates[key] !== undefined) {

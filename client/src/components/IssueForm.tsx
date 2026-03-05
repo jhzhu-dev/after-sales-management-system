@@ -27,7 +27,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
     assignee: '',
     notes: ''
   });
-  const [devices, setDevices] = useState<Array<{id: string, name: string, device_code: string, customer_name: string, product_name: string, remote_code: string}>>([]); 
+  const [devices, setDevices] = useState<Array<{id: string, name: string, device_code: string, customer_name: string, product_name: string, remote_code: string, nickname: string}>>([]); 
   const [modules, setModules] = useState<Array<{id: string, name: string, device_id: string}>>([])
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -39,7 +39,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
   const [deviceSearch, setDeviceSearch] = useState('');
   const [deviceDropdownOpen, setDeviceDropdownOpen] = useState(false);
   const [deviceLoading, setDeviceLoading] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<{id: string, name: string, device_code: string, customer_name: string, product_name: string, remote_code: string} | null>(null);
+  const [selectedDevice, setSelectedDevice] = useState<{id: string, name: string, device_code: string, customer_name: string, product_name: string, remote_code: string, nickname: string} | null>(null);
   const deviceSearchRef = useRef<HTMLDivElement>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -75,7 +75,8 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
           device_code: (issue as any).device_code || '',
           customer_name: issue.customer_name || '',
           product_name: (issue as any).product_name || '',
-          remote_code: (issue as any).remote_code || ''
+          remote_code: (issue as any).remote_code || '',
+          nickname: (issue as any).device_nickname || ''
         });
       }
       // 加载已有附件
@@ -103,7 +104,8 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
           device_code: device.device_code || '',
           customer_name: device.customer_name || '',
           product_name: device.product_name || '',
-          remote_code: device.remote_code || ''
+          remote_code: device.remote_code || '',
+          nickname: device.nickname || ''
         })));
       }
     } catch (error) {
@@ -122,7 +124,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
     }, 300);
   };
 
-  const handleDeviceSelect = (device: {id: string, name: string, device_code: string, customer_name: string, product_name: string, remote_code: string}) => {
+  const handleDeviceSelect = (device: {id: string, name: string, device_code: string, customer_name: string, product_name: string, remote_code: string, nickname: string}) => {
     setSelectedDevice(device);
     setFormData(prev => ({ ...prev, device_id: device.id, module_id: undefined }));
     setModules([]);
@@ -259,7 +261,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
                   errors.device_id ? 'border-red-500' : 'border-gray-300'
                 }`}>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-medium text-gray-900 truncate">{[selectedDevice.customer_name, selectedDevice.product_name].filter(Boolean).join(' · ') || selectedDevice.name}</span>
+                    <span className="text-sm font-medium text-gray-900 truncate">{selectedDevice.nickname || [selectedDevice.customer_name, selectedDevice.product_name].filter(Boolean).join(' · ') || selectedDevice.name}</span>
                     <span className="text-xs text-gray-500 truncate">
                       {[selectedDevice.name, selectedDevice.id, selectedDevice.remote_code].filter(Boolean).join(' · ')}
                     </span>
@@ -283,7 +285,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
                     value={deviceSearch}
                     onChange={e => handleDeviceSearchChange(e.target.value)}
                     onFocus={() => { setDeviceDropdownOpen(true); if (!deviceSearch) fetchDevices(''); }}
-                    placeholder="搜索订单号、客户、序列号、远程码..."
+                    placeholder="搜索订单号、客户、序列号、远程码、简称..."
                     className="flex-1 bg-transparent outline-none text-sm text-gray-900 placeholder-gray-400"
                   />
                   {deviceLoading && (
@@ -310,7 +312,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
                         onMouseDown={e => { e.preventDefault(); handleDeviceSelect(device); }}
                         className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors"
                       >
-                      <div className="text-sm font-medium text-gray-900">{[device.customer_name, device.product_name].filter(Boolean).join(' · ') || device.name}</div>
+                      <div className="text-sm font-medium text-gray-900">{device.nickname || [device.customer_name, device.product_name].filter(Boolean).join(' · ') || device.name}</div>
                         <div className="text-xs text-gray-500 mt-0.5">
                           {[device.name, device.id, device.remote_code].filter(Boolean).join(' · ')}
                         </div>

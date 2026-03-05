@@ -519,6 +519,22 @@ async function createTables() {
       `);
       console.log('✅ device_upgrades 表就绪');
 
+      // 给 products 表添加 short_name（产品简称）
+      try {
+        await pool.execute("ALTER TABLE products ADD COLUMN short_name VARCHAR(20) NULL AFTER name");
+        console.log('✅ products 表添加 short_name 字段成功');
+      } catch (e) {
+        if (!e.message.includes('Duplicate column')) throw e;
+      }
+
+      // 给 devices 表添加 nickname（设备俗称）
+      try {
+        await pool.execute("ALTER TABLE devices ADD COLUMN nickname VARCHAR(50) NULL AFTER name");
+        console.log('✅ devices 表添加 nickname 字段成功');
+      } catch (e) {
+        if (!e.message.includes('Duplicate column')) throw e;
+      }
+
     } catch (err) {
       console.warn('⚠️ 数据库迁移警告:', err.message);
     }
