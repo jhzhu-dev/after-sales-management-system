@@ -1,157 +1,191 @@
-# OSS 文件存储路径结构说明
+﻿# OSS 文件存储路径结构说明
 
 ## 概述
-系统使用阿里云OSS存储文件，采用层级化的目录结构组织文件。
 
-## 路径结构
+系统使用阿里云 OSS 存储文件，以**设备为核心**组织目录层级，所有与设备相关的文件都归入统一的设备文件夹，便于按设备维度查找和归档。
 
-### 基础路径
+路径构建统一通过 `ossService.buildPathByType(type, params)` 方法完成，不允许在各路由中内联拼接路径字符串。
+
+## 基础路径
+
 ```
 oss://els-pub-04/static/After-sales management system/
 ```
 
-### 1. 产品文档 (Product Documents)
+以下路径描述中均省略此前缀，用 `{base}` 表示。
 
-**路径格式：**
-```
-oss://els-pub-04/static/After-sales management system/{产品线名称}/{产品型号}/文件名
-```
+---
 
-**示例：**
-- 产品线：龙门
-- 产品型号：ELS-DM-2024-V1
-- 文件：用户手册.pdf
+## 路径规则
 
-**完整路径：**
+### 1. 产品文档 (product_documents)
+
+产品型号维度的通用技术文档，所有同型号设备共用。
+
 ```
-oss://els-pub-04/static/After-sales management system/龙门/ELS-DM-2024-V1/用户手册.pdf
+{base}/product-docs/{产品线}/{产品型号}/{文件名}
 ```
 
-**说明：**
-- 产品文档按 **产品线 → 产品型号** 两级目录组织
-- 产品型号为空时，文件直接存储在产品线目录下
-- 特殊字符会被自动转换为安全字符（空格→下划线）
-
-### 2. 生产留底资料 (Production Materials)
-
-**路径格式：**
+示例：
 ```
-oss://els-pub-04/static/After-sales management system/productions/文件名
+product-docs/龙门/ELS-DM-2024-V1/用户手册.pdf
 ```
 
-**示例：**
-```
-oss://els-pub-04/static/After-sales management system/productions/prod-1707896543210-123456789.pdf
-```
-
-**说明：**
-- 生产留底资料统一存储在 `productions` 目录下
-- 不按产品线分类，便于批量管理
-
-## 路径规范化规则
-
-### 产品线名称规范化
+代码调用：
 ```javascript
-// 原始名称: "龙门 系统"
-// 规范化后: "龙门_系统"
-
-// 规则:
-// 1. 移除文件系统不允许的字符: < > : " / \ | ? *
-// 2. 空格替换为下划线: ' ' → '_'
-// 3. 去除首尾空白
+const ossKey = ossService.buildPathByType('product-docs', {
+    productLine : product.product_line_name,
+    productModel: product.model,
+    fileName    : '用户手册.pdf'
+});
 ```
 
-### 产品型号规范化
+---
+
+### 2. 版本附件 (version_releases)
+
+版本发布包、固件等，按模块类型和版本号组织。
+
+```
+{base}/version-releases/{模块类型}/{分类}/{版本号}/{文件名}
+```
+
+示例：
+```
+version-releases/主控板/firmware/v2.1.0/升级包_v2.1.0.bin
+```
+
+---
+
+### 3. 设备出厂资料 (device_documents)
+
+某台具体设备的出厂/维保随机资料（出厂检测报告、接线图、安装说明、生产留底等）。
+
+```
+{base}/devices/{设备标识}/device-docs/{分类}/{文件名}
+```
+
+代码调用：
 ```javascript
-// 原始型号: "ELS-DM 2024-V1"
-// 规范化后: "ELS-DM_2024-V1"
-
-// 规则同产品线名称规范化
+const ossKey = ossService.buildPathByType('device-docs', {
+    device  : deviceInfo,  // 含 customer_short_name, id, name, product_name
+    category: '出厂检测报告',
+    fileName : '检测报告.pdf'
+});
 ```
 
-## 代码实现
+---
 
-### OSS 服务方法
+### 4. 问题附件 (issues.attachments)
 
-#### uploadFile()
+客户报障时上传的故障照片/日志，采用**两阶段上传**：
+
+上传阶段（issue 尚未创建，无 issue_id）：
+```
+{base}/devices/{设备标识}/issues/pending/{timestamp}_{文件名}
+```
+
+提交阶段（issue 创建成功后，服务端自动移动）：
+```
+{base}/devices/{设备标识}/issues/{issue_id}/{timestamp}_{文件名}
+```
+
+---
+
+### 5. 问题日志附件 (issue_logs.attachments)
+
+技术员处理问题后上传的维修照片/报告，有明确的 `issue_id`。
+
+```
+{base}/devices/{设备标识}/issues/{issue_id}/logs/{timestamp}_{文件名}
+```
+
+代码调用：
 ```javascript
-/**
- * 上传文件到OSS
- * @param {Object} file - Multer上传的文件对象
- * @param {string} productLineName - 产品线名称
- * @param {string} productModel - 产品型号（可选）
- * @param {string} category - 文件类别 ('product-documents' | 'productions')
- * @returns {Promise<Object>} { ossPath, url, name }
- */
-await ossService.uploadFile(file, '龙门', 'ELS-DM-2024-V1', 'product-documents');
+const ossKey = ossService.buildPathByType('issue-log-attachments', {
+    device  : deviceInfo,
+    issueId : 'ISS1709000000000',
+    fileName: `${Date.now()}_维修报告.pdf`
+});
 ```
 
-#### buildOSSPath()
-```javascript
-/**
- * 构建OSS完整路径
- * @param {string} productLineName - 产品线名称
- * @param {string} productModel - 产品型号（可选）
- * @param {string} fileName - 文件名
- * @param {string} category - 文件类别
- * @returns {string} OSS路径
- */
-const path = ossService.buildOSSPath('龙门', 'ELS-DM-2024-V1', 'manual.pdf', 'product-documents');
-// 返回: "static/After-sales management system/龙门/ELS-DM-2024-V1/manual.pdf"
+---
+
+## 设备标识格式
+
+所有设备相关目录使用统一的设备标识作为文件夹名：
+
+```
+{客户简称}-{生产序列号}-{订单号}-{产品名}
 ```
 
-## 使用场景
+字段来源：
+- 客户简称：customers.short_name（无则用 customers.name）
+- 生产序列号：devices.id（VARCHAR 主键）
+- 订单号：devices.name
+- 产品名：products.name
 
-### 1. 产品资料上传
-当用户上传产品文档时：
-1. 系统查询产品信息（包括产品线名称和产品型号）
-2. 调用 `ossService.uploadFile(file, productLineName, productModel, 'product-documents')`
-3. 文件自动上传到对应的产品线/产品型号目录
-4. 返回OSS路径保存到数据库
+特殊字符会被移除，空格替换为下划线。
 
-### 2. 生产资料上传
-当上传生产留底材料时：
-1. 直接调用 `ossService.uploadFile(file, 'productions', null, 'productions')`
-2. 文件统一存储在 productions 目录
-3. 返回OSS路径保存到数据库
+---
 
-### 3. 文件下载
-当用户下载文件时：
-1. 从数据库读取OSS路径
-2. 调用 `ossService.getSignedUrl(ossPath, expiresInSeconds)`
-3. 生成带签名的临时下载链接（有效期1小时）
-4. 重定向到签名URL或返回给前端
+## 目录树示例
 
-## 优势
+```
+oss://els-pub-04/static/After-sales management system/
 
-### 1. 清晰的层级结构
-- 产品线 → 产品型号 → 文件
-- 便于管理和查找
-- 符合业务逻辑
+ product-docs/                          # 产品文档
+    龙门/
+        ELS-DM-2024-V1/
+            用户手册.pdf
 
-### 2. 灵活的存储策略
-- 产品文档按产品分类存储
-- 生产资料统一集中管理
-- 可根据需求扩展目录结构
+ version-releases/                      # 版本附件（路径不变）
+    主控板/
+        firmware/
+            v2.1.0/
+                升级包_v2.1.0.bin
 
-### 3. 自动路径规范化
-- 自动处理特殊字符
-- 保证路径合法性
-- 避免存储冲突
+ devices/                               # 所有设备相关文件
+     某客户-SN001-ORD123-龙门机/
+         device-docs/                   # 出厂资料（含生产留底分类）
+            出厂检测报告/
+               检测报告.pdf
+            生产留底/
+                生产记录.pdf
+         issues/
+             pending/                   # 问题附件临时暂存
+                1709000000000_故障截图.jpg
+             ISS1709000000001/          # 具体问题的附件
+                 1709000000001_故障截图.jpg
+                 logs/                  # 处理记录附件
+                     1709000000002_维修报告.pdf
+```
 
-### 4. 兼容本地存储
-- OSS未启用时自动降级到本地存储
-- 接口保持一致
-- 平滑迁移
+---
+
+## 历史文件迁移
+
+已有旧路径文件可使用 `scripts/oss-migrate.js` 迁移到新路径：
+
+```bash
+# 预览（不实际操作，推荐先执行）
+node scripts/oss-migrate.js --dry-run
+
+# 仅迁移某一类
+node scripts/oss-migrate.js --table=device-docs --dry-run
+
+# 正式迁移
+node scripts/oss-migrate.js
+```
+
+支持 --table 参数：product-docs | device-docs | issues | issue-logs
+
+---
 
 ## 配置
 
-### 环境变量 (.env)
 ```env
-# 启用OSS存储
 USE_OSS_STORAGE=true
-
-# OSS配置
 OSS_REGION=oss-cn-shanghai
 OSS_ACCESS_KEY_ID=your_access_key_id
 OSS_ACCESS_KEY_SECRET=your_access_key_secret
@@ -159,52 +193,8 @@ OSS_BUCKET=els-pub-04
 OSS_BASE_PATH=static/After-sales management system
 ```
 
-### 禁用OSS（使用本地存储）
-```env
-USE_OSS_STORAGE=false
-```
-
-## 测试示例
-
-### 测试上传产品文档
-```bash
-curl -X POST http://localhost:5000/api/product-documents/upload \
-  -F "file=@/path/to/manual.pdf" \
-  -F "product_id=1" \
-  -F "doc_type=manual" \
-  -F "title=产品使用手册"
-```
-
-### 测试上传生产资料
-```bash
-curl -X POST http://localhost:5000/api/uploads/productions \
-  -F "file=@/path/to/production-record.pdf"
-```
-
-### 测试下载文件
-```bash
-curl http://localhost:5000/api/product-documents/1/download
-# 自动重定向到OSS签名URL
-```
-
 ## 注意事项
 
-1. **产品型号的重要性**
-   - 建议为每个产品设置清晰的型号
-   - 型号将作为OSS路径的一部分
-   - 修改型号不会自动迁移OSS文件
-
-2. **文件名冲突**
-   - 同名文件会被覆盖
-   - 建议使用时间戳生成唯一文件名
-   - 系统已自动处理文件名唯一性
-
-3. **权限控制**
-   - OSS Bucket 建议配置为私有
-   - 使用签名URL控制访问权限
-   - 签名URL默认有效期1小时
-
-4. **迁移策略**
-   - 旧文件路径格式: `产品线/文件名`
-   - 新文件路径格式: `产品线/产品型号/文件名`
-   - 系统向后兼容，支持两种路径格式
+1. **生产留底资料已归并**：/api/uploads/productions 接口已废弃（返回 410），生产留底资料改通过 /api/device-documents/upload 上传，分类名填「生产留底」。
+2. **问题附件两阶段**：前端在 pending/ 中获取的 URL 是临时路径，issue 创建成功后服务端自动移动，前端无需额外处理。
+3. **设备标识需要 JOIN**：getDeviceInfo 查询必须 JOIN customers 和 products 表才能获取完整字段，各路由已更新。

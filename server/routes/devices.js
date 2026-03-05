@@ -28,8 +28,8 @@ router.get('/', async (req, res) => {
     }
 
     if (search) {
-      whereConditions.push('(d.name LIKE ? OR d.id LIKE ? OR d.device_code LIKE ? OR c.name LIKE ? OR d.remote_code LIKE ?)');
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+      whereConditions.push('(d.name LIKE ? OR d.id LIKE ? OR d.device_code LIKE ? OR c.name LIKE ? OR d.remote_code LIKE ? OR p.name LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
@@ -67,6 +67,7 @@ router.get('/', async (req, res) => {
       SELECT COUNT(DISTINCT d.id) as total
       FROM devices d
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+      LEFT JOIN products p ON d.product_id = p.id
       LEFT JOIN customers c ON d.customer_id = c.id
       ${whereClause}
     `;

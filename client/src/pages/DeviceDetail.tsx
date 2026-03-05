@@ -232,7 +232,8 @@ const DeviceDetail: React.FC = () => {
 
   // 下载设备资料
   const handleDownloadDocument = (docId: number) => {
-    window.open(`/api/device-documents/${docId}/download`, '_blank');
+    const token = localStorage.getItem('auth_token');
+    window.open(`/api/device-documents/${docId}/download?token=${token}`, '_blank');
   };
 
   // 切换文档选择
@@ -276,9 +277,10 @@ const DeviceDetail: React.FC = () => {
   // 批量下载
   const handleBatchDownloadDocs = () => {
     if (selectedDocIds.size === 0) return;
+    const token = localStorage.getItem('auth_token');
     selectedDocIds.forEach(docId => {
       setTimeout(() => {
-        window.open(`/api/device-documents/${docId}/download`, '_blank');
+        window.open(`/api/device-documents/${docId}/download?token=${token}`, '_blank');
       }, 0);
     });
   };

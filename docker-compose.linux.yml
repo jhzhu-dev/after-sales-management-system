@@ -27,9 +27,9 @@ services:
       TZ: Asia/Shanghai
     volumes:
       - mysql_data:/var/lib/mysql
-    # 仅容器内网暴露，不映射到宿主机端口（安全）
-    expose:
-      - "3306"
+    # 映射到宿主机，允许局域网直连（DBeaver 等工具访问）
+    ports:
+      - "3306:3306"
     networks:
       - device-manager-network
     # 性能调优参数（与 Windows 版一致）

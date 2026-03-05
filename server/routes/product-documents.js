@@ -89,7 +89,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
         // 验证产品是否存在并获取产品线信息
         const products = await query(
-            `SELECT p.id, p.model, p.product_line_id, pl.name as product_line_name, pl.code as product_line_code
+            `SELECT p.id, p.name as product_name, p.model, p.product_line_id, pl.name as product_line_name, pl.code as product_line_code
              FROM products p
              JOIN product_lines pl ON p.product_line_id = pl.id
              WHERE p.id = ?`,
@@ -111,14 +111,17 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         // 如果启用了OSS存储，上传到阿里云
         if (ossService.enabled) {
             try {
-                // 使用产品线名称和产品型号构建路径
-                const ossResult = await ossService.uploadFile(
-                    req.file,
-                    product.product_line_name || product.product_line_code,
-                    product.model,  // 传入产品型号
-                    'product-documents'
-                );
-                filePath = ossResult.ossPath;
+                // 使用新规范路径: Product Line Information/{产品线}/{型号-产品名}/{doc_type}/{文件名}
+                const fileName = path.basename(req.file.originalname || req.file.filename);
+                const ossKey = ossService.buildPathByType('product-docs', {
+                    productLine: product.product_line_name || product.product_line_code,
+                    productModel: product.model,
+                    productName: product.product_name,
+                    docType: doc_type,
+                    fileName
+                });
+                await ossService.client.put(ossKey, req.file.path);
+                filePath = `oss://${ossService.bucket}/${ossKey}`;
                 
                 // 上传成功后删除本地临时文件
                 fs.unlinkSync(req.file.path);

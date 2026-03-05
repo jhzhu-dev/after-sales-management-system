@@ -41,18 +41,23 @@ router.post('/upload-attachment', issueUpload.array('files', 10), async (req, re
     if (uploaded.length === 0)
       return res.status(400).json({ success: false, error: '没有上传文件' });
 
-    // 查询设备信息构建 OSS 路径
+    // 查询设备信息构建 OSS 路径（含客户简称和产品名，用于设备标识）
     let deviceInfo = null;
     if (device_id) {
       const rows = await query(
-        `SELECT d.id, d.name, pl.name as product_line_name
-         FROM devices d LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+        `SELECT d.id, d.name,
+                pl.name as product_line_name,
+                c.short_name as customer_short_name, c.name as customer_name,
+                p.name as product_name
+         FROM devices d
+         LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+         LEFT JOIN customers c ON d.customer_id = c.id
+         LEFT JOIN products p ON d.product_id = p.id
          WHERE d.id = ?`, [device_id]
       );
       deviceInfo = rows[0] || null;
     }
 
-    const safeSeg = s => (s || 'unknown').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '_').trim();
     const results = [];
 
     for (const file of uploaded) {
@@ -64,16 +69,14 @@ router.post('/upload-attachment', issueUpload.array('files', 10), async (req, re
 
       if (ossService.enabled) {
         try {
-          const productLine = safeSeg(deviceInfo?.product_line_name);
-          const deviceFolder = deviceInfo
-            ? `${safeSeg(deviceInfo.name)}-${safeSeg(deviceInfo.id)}`
-            : 'unknown-device';
-          const moduleFolder = safeSeg(module_name || 'general');
-          const ossPath = `${ossService.basePath}/${productLine}/${deviceFolder}/issue-attachments/${moduleFolder}/${Date.now()}_${originalName}`;
-          await issueOssUploadWithRetry(ossPath, file.path);
-          filePath = `oss://${ossService.bucket}/${ossPath}`;
+          // 先上传到 pending 临时目录，提交 issue 后服务端移动到正式路径
+          const device = deviceInfo || { id: device_id || 'unknown', name: 'unknown', customer_short_name: 'unknown', product_name: 'unknown' };
+          const fileName = `${Date.now()}_${originalName}`;
+          const ossKey = ossService.buildPathByType('issue-attachments-pending', { device, fileName });
+          await issueOssUploadWithRetry(ossKey, file.path);
+          filePath = `oss://${ossService.bucket}/${ossKey}`;
           try { fs.unlinkSync(file.path); } catch (_) {}
-          console.log(`✅ 问题附件已上传OSS: ${filePath}`);
+          console.log(`✅ 问题附件已上传OSS(pending): ${filePath}`);
         } catch (err) {
           console.error('OSS上传失败，保留本地文件:', err.message);
         }
@@ -362,8 +365,16 @@ router.post('/', [
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    // 生成唯一 issue ID（前缀 ISS + 13位时间戳，共16位，在 varchar(20) 范围内）
-    const issueId = `ISS${Date.now()}`;
+    // 生成 issue ID：ISS + 提交时间 年月日时分秒（北京时间）
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const MM = pad(now.getMonth() + 1);
+    const dd = pad(now.getDate());
+    const hh = pad(now.getHours());
+    const mm = pad(now.getMinutes());
+    const ss = pad(now.getSeconds());
+    const issueId = `ISS${yyyy}${MM}${dd}${hh}${mm}${ss}`;
 
     // 处理JSON字段
     const attachmentsJson = attachments ? JSON.stringify(attachments) : null;
@@ -372,6 +383,50 @@ router.post('/', [
       issueId, device_id, processedModuleId, category, description, severity, status,
       assignee, contact_person, contact_phone, is_visit_required, visit_at || null, attachmentsJson
     ]);
+
+    // ── 两阶段上传：将 pending 附件移动到正式路径 issues/{issueId}/ ──
+    if (ossService.enabled && attachments && attachments.length > 0) {
+      try {
+        const devRows = await query(
+          `SELECT d.id, d.name,
+                  c.short_name as customer_short_name, c.name as customer_name,
+                  p.name as product_name
+           FROM devices d
+           LEFT JOIN customers c ON d.customer_id = c.id
+           LEFT JOIN products p ON d.product_id = p.id
+           WHERE d.id = ?`, [device_id]
+        );
+        const devInfo = devRows[0];
+        if (devInfo) {
+          const movedAttachments = [];
+          for (const att of attachments) {
+            if (att.ossPath && att.ossPath.includes('/issues/pending/')) {
+              try {
+                const fileName = att.ossPath.split('/').pop();
+                const newOssKey = ossService.buildPathByType('issue-attachments', {
+                  device: devInfo,
+                  issueId,
+                  fileName
+                });
+                const newOssPath = `oss://${ossService.bucket}/${newOssKey}`;
+                await ossService.moveObject(att.ossPath, newOssPath);
+                movedAttachments.push({ ...att, ossPath: newOssPath, url: newOssPath });
+              } catch (moveErr) {
+                console.error('附件移动失败，保留原路径:', moveErr.message);
+                movedAttachments.push(att);
+              }
+            } else {
+              movedAttachments.push(att);
+            }
+          }
+          await query('UPDATE issues SET attachments = ? WHERE id = ?', [
+            JSON.stringify(movedAttachments), issueId
+          ]);
+        }
+      } catch (moveError) {
+        console.error('问题附件路径迁移失败（不影响创建）:', moveError.message);
+      }
+    }
 
     res.status(201).json({
       success: true,

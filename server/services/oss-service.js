@@ -236,6 +236,98 @@ class OSSService {
   isOSSPath(filePath) {
     return filePath && filePath.startsWith('oss://');
   }
+
+  /**
+   * 构建设备文件夹名称（用于OSS路径）
+   * 格式: {客户简称}-{生产序列号}-{订单号}-{产品名}
+   * @param {Object} device - 设备对象，需包含 id, name, customer_short_name|customer_name, product_name|product_model
+   * @returns {string} 安全的设备文件夹名称
+   */
+  buildDeviceFolder(device) {
+    const safe = (s) => (s || 'unknown').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '_').trim();
+    const customer = safe(device.customer_short_name || device.customer_name);
+    const serial   = safe(device.id);
+    const order    = safe(device.name);
+    const product  = safe(device.product_name || device.product_model);
+    return `${customer}-${serial}-${order}-${product}`;
+  }
+
+  /**
+   * 统一路径构建器（新规范）
+   * @param {string} type - 路径类型
+   *   'product-docs'              → product-docs/{产品线}/{型号}/{文件名}
+   *   'device-docs'               → devices/{设备标识}/device-docs/{分类}/{文件名}
+   *   'issue-attachments-pending' → devices/{设备标识}/issues/pending/{文件名}
+   *   'issue-attachments'         → devices/{设备标识}/issues/{issueId}/{文件名}
+   *   'issue-log-attachments'     → devices/{设备标识}/issues/{issueId}/logs/{文件名}
+   * @param {Object} params - 路径参数
+   * @returns {string} OSS 对象 key（不含 oss://bucket/ 前缀）
+   */
+  buildPathByType(type, params) {
+    const safe = (s) => (s || 'unknown').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '_').trim();
+    const base = this.basePath;
+
+    switch (type) {
+      case 'product-docs': {
+        const safe2 = (s) => (s || '').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '_').trim();
+        const modelFolder = safe2(params.productModel)
+          ? (safe2(params.productName)
+              ? `${safe2(params.productModel)}-${safe2(params.productName)}`
+              : safe2(params.productModel))
+          : (safe2(params.productName) || 'default');
+        const docFolder = safe(params.docType) || '\u4ea7\u54c1\u6587\u6863';
+        return `${base}/Product Line Information/${safe(params.productLine)}/${modelFolder}/${docFolder}/${params.fileName}`;
+      }
+
+      case 'device-docs': {
+        const deviceFolder = this.buildDeviceFolder(params.device);
+        return `${base}/devices/${deviceFolder}/device-docs/${safe(params.category)}/${params.fileName}`;
+      }
+
+      case 'issue-attachments-pending': {
+        const deviceFolder = this.buildDeviceFolder(params.device);
+        return `${base}/devices/${deviceFolder}/issues/pending/${params.fileName}`;
+      }
+
+      case 'issue-attachments': {
+        const deviceFolder = this.buildDeviceFolder(params.device);
+        return `${base}/devices/${deviceFolder}/issues/${params.issueId}/${params.fileName}`;
+      }
+
+      case 'issue-log-attachments': {
+        const deviceFolder = this.buildDeviceFolder(params.device);
+        return `${base}/devices/${deviceFolder}/issues/${params.issueId}/logs/${params.fileName}`;
+      }
+
+      default:
+        throw new Error(`buildPathByType: 未知路径类型 "${type}"`);
+    }
+  }
+
+  /**
+   * 将 OSS 对象从旧路径移动到新路径（CopyObject + DeleteObject）
+   * @param {string} oldOssPath - 源路径（oss://bucket/key 格式）
+   * @param {string} newOssPath - 目标路径（oss://bucket/key 格式）
+   */
+  async moveObject(oldOssPath, newOssPath) {
+    if (!this.enabled) throw new Error('OSS服务未启用');
+
+    const parseOss = (p) => {
+      const m = p.match(/^oss:\/\/([^/]+)\/(.+)$/);
+      if (!m) throw new Error(`无效的OSS路径: ${p}`);
+      return { bucket: m[1], key: m[2] };
+    };
+
+    const src = parseOss(oldOssPath);
+    const dst = parseOss(newOssPath);
+
+    // 复制到新位置（同桶内 copy，第二参数为源 key 字符串）
+    await this.client.copy(dst.key, src.key);
+    // 删除旧位置
+    await this.client.delete(src.key);
+
+    console.log(`✅ OSS对象已移动: ${src.key} → ${dst.key}`);
+  }
 }
 
 // 导出单例

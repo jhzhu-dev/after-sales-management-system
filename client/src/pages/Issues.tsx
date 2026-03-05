@@ -624,16 +624,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         )
       },
       {
-        key: 'module_name',
-        title: '模块',
-        render: (_: any, item: any) => (
-          <div>
-            <div className="font-medium text-gray-900">{item.module_type || '-'}</div>
-            <div className="text-xs text-gray-500">{item.device_name || '-'}</div>
-          </div>
-        )
-      },
-      {
         key: 'version_number',
         title: '版本号',
         render: (val: string, item: any) => (

@@ -56,26 +56,24 @@ router.post('/upload-attachment', issueLogUpload.array('files', 10), async (req,
     if (uploaded.length === 0)
       return res.status(400).json({ success: false, error: '没有上传文件' });
 
-    // 查询问题关联的设备和产品线信息
+    // 查询问题关联的设备信息（含客户和产品信息，用于构建设备标识）
     let deviceInfo = null;
     if (issue_id) {
       const rows = await query(
         `SELECT i.id as issue_id,
-                d.id as device_id, d.name as device_name,
-                pl.name as product_line_name,
-                mt.name as module_name
+                d.id, d.name,
+                c.short_name as customer_short_name, c.name as customer_name,
+                p.name as product_name
          FROM issues i
          LEFT JOIN devices d ON i.device_id = d.id
-         LEFT JOIN product_lines pl ON d.product_line_id = pl.id
-         LEFT JOIN modules m ON i.module_id = m.id
-         LEFT JOIN module_types mt ON m.type_id = mt.id
+         LEFT JOIN customers c ON d.customer_id = c.id
+         LEFT JOIN products p ON d.product_id = p.id
          WHERE i.id = ?`,
         [issue_id]
       );
       if (rows[0]) deviceInfo = rows[0];
     }
 
-    const safeSeg = s => (s || 'unknown').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '_').trim();
     const results = [];
 
     for (const file of uploaded) {
@@ -87,15 +85,16 @@ router.post('/upload-attachment', issueLogUpload.array('files', 10), async (req,
 
       if (ossService.enabled) {
         try {
-          const productLine = safeSeg(deviceInfo?.product_line_name);
-          const deviceFolder = deviceInfo
-            ? `${safeSeg(deviceInfo.device_name)}-${safeSeg(deviceInfo.device_id)}`
-            : 'unknown-device';
-          const moduleFolder = safeSeg(deviceInfo?.module_name || 'general');
-          const logIssueId = issue_id || 'unknown';
-          const ossPath = `${ossService.basePath}/${productLine}/${deviceFolder}/issue-attachments/${moduleFolder}/logs/${logIssueId}/${Date.now()}_${originalName}`;
-          await issueLogOssUploadWithRetry(ossPath, file.path);
-          filePath = `oss://${ossService.bucket}/${ossPath}`;
+          // devices/{设备标识}/issues/{issue_id}/logs/{文件名}
+          const device = deviceInfo || { id: 'unknown', name: 'unknown', customer_short_name: 'unknown', product_name: 'unknown' };
+          const fileName = `${Date.now()}_${originalName}`;
+          const ossKey = ossService.buildPathByType('issue-log-attachments', {
+            device,
+            issueId: issue_id || 'unknown',
+            fileName
+          });
+          await issueLogOssUploadWithRetry(ossKey, file.path);
+          filePath = `oss://${ossService.bucket}/${ossKey}`;
           try { fs.unlinkSync(file.path); } catch (_) {}
           console.log(`✅ 处理记录附件已上传OSS: ${filePath}`);
         } catch (err) {

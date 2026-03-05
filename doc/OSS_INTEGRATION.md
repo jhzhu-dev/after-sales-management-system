@@ -19,14 +19,23 @@
 oss://els-pub-04/
 └── static/
     └── After-sales management system/
-        ├── {产品线名称}/          # 产品文档按产品线存储
-        │   ├── file1.pdf
-        │   ├── file2.docx
-        │   └── ...
-        └── productions/            # 生产资料统一存储
-            ├── prod-xxx.pdf
-            └── ...
+        ├── product-docs/               # 产品文档（按产品线/型号）
+        │   └── {产品线}/{产品型号}/file.pdf
+        ├── version-releases/           # 版本附件
+        │   └── {模块类型}/{分类}/{版本号}/file.bin
+        └── devices/                    # 所有设备相关文件
+            └── {客户简称}-{序列号}-{订单号}-{产品名}/
+                ├── device-docs/        # 出厂资料（含生产留底分类）
+                │   └── {分类}/file.pdf
+                └── issues/
+                    ├── pending/        # 问题附件临时暂存
+                    └── {issue_id}/     # 按问题归档
+                        ├── file.jpg
+                        └── logs/       # 处理记录附件
+                            └── file.pdf
 ```
+
+> 详细规则见 [OSS_STORAGE_STRUCTURE.md](OSS_STORAGE_STRUCTURE.md)
 
 ## 环境配置
 
@@ -91,12 +100,19 @@ npm run dev
 ### 1. 自动上传到OSS
 
 **产品文档上传**:
-- 上传时自动获取产品所属的产品线
-- 文件存储在 `{产品线名称}/` 目录下
-- 产品线名称会自动标准化（移除特殊字符、空格转下划线）
+- 文件存储在 `product-docs/{产品线}/{产品型号}/` 目录下
+- 路径通过 `ossService.buildPathByType('product-docs', {...})` 构建
 
-**生产资料上传**:
-- 所有生产资料统一存储在 `productions/` 目录下
+**设备出厂资料上传**（含生产留底）:
+- 文件存储在 `devices/{设备标识}/device-docs/{分类}/` 下
+- ⚠️ `/api/uploads/productions` 接口已废弃（返回 410），生产留底资料改用 `/api/device-documents/upload`，分类名填「生产留底」
+
+**问题附件上传（两阶段）**:
+- 上传时（尚无 issue_id）先存入 `devices/{设备标识}/issues/pending/`
+- 提交 issue 后服务端自动移动到 `devices/{设备标识}/issues/{issue_id}/`
+
+**问题日志附件**:
+- 直接存入 `devices/{设备标识}/issues/{issue_id}/logs/`
 
 ### 2. 下载功能
 
@@ -203,8 +219,14 @@ USE_OSS_STORAGE=false
 
 3. **路由修改**:
    - `server/routes/product-documents.js` - 产品文档路由
-   - `server/routes/uploads.js` - 生产资料路由
+   - `server/routes/device-documents.js` - 设备出厂资料路由
+   - `server/routes/issues.js` - 问题及问题附件（两阶段上传）
+   - `server/routes/issue-logs.js` - 处理记录附件
+   - `server/routes/uploads.js` - 已废弃（productions 接口返回 410）
    - `server/routes/version-releases.js` - 版本发布附件
+
+4. **迁移工具**:
+   - `scripts/oss-migrate.js` - 旧路径历史文件迁移脚本
 
 4onst ossService = require('./services/oss-service');
 

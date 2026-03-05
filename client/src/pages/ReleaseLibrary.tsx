@@ -156,9 +156,7 @@ const ReleaseLibrary: React.FC = () => {
                 const fd = new FormData();
                 files.forEach(f => fd.append('files', f));
                 try {
-                    await api.post(`/version-releases/${releaseId}/attachments`, fd, {
-                        headers: { 'Content-Type': 'multipart/form-data' }
-                    });
+                    await api.post(`/version-releases/${releaseId}/attachments`, fd);
                     setSuccessMessage(prev => (prev || '') + `，已上传${files.length}个附件`);
                 } catch (uploadErr) {
                     console.error('附件上传失败:', uploadErr);

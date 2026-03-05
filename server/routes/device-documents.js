@@ -96,28 +96,21 @@ router.get('/categories', async (req, res) => {
     }
 });
 
-// 获取设备信息辅助函数
+// 获取设备信息辅助函数（含客户和产品信息，用于构建设备标识）
 async function getDeviceInfo(device_id) {
     const devices = await query(
         `SELECT d.id, d.name, d.product_line_id,
-                pl.name as product_line_name
+                pl.name as product_line_name,
+                c.short_name as customer_short_name, c.name as customer_name,
+                p.name as product_name
          FROM devices d
          LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+         LEFT JOIN customers c ON d.customer_id = c.id
+         LEFT JOIN products p ON d.product_id = p.id
          WHERE d.id = ?`,
         [device_id]
     );
     return devices.length > 0 ? devices[0] : null;
-}
-
-// 构建设备资料的完整OSS路径 (每段独立标准化，避免/被吞)
-// 最终: basePath/产品线/设备名-序列号/分类/文件名
-function buildDeviceDocOSSPath(device, category, originalName) {
-    const safeSeg = (s) => (s || 'unknown').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '_').trim();
-    const productLineName = safeSeg(device.product_line_name);
-    const deviceFolder = `${safeSeg(device.name)}-${safeSeg(device.id)}`;
-    const safeCategory = safeSeg(category);
-    // 使用原始文件名
-    return `${ossService.basePath}/${productLineName}/${deviceFolder}/${safeCategory}/${originalName}`;
 }
 
 // OSS上传带重试 (最多3次，间隔2秒)
@@ -180,12 +173,16 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
             let filePath = file.path;
             let fileSize = file.size;
 
-            // OSS上传: 产品线/产品(型号)/设备名-序列号/分类/原始文件名
+            // OSS上传: devices/{设备标识}/device-docs/{分类}/{原始文件名}
             if (ossService.enabled) {
                 try {
-                    const ossPath = buildDeviceDocOSSPath(device, category, file.originalname);
-                    await ossUploadWithRetry(ossPath, file.path);
-                    filePath = `oss://${ossService.bucket}/${ossPath}`;
+                    const ossKey = ossService.buildPathByType('device-docs', {
+                        device,
+                        category,
+                        fileName: file.originalname
+                    });
+                    await ossUploadWithRetry(ossKey, file.path);
+                    filePath = `oss://${ossService.bucket}/${ossKey}`;
                     fs.unlinkSync(file.path);
                     console.log(`✅ 设备出厂资料已上传到OSS: ${filePath}`);
                 } catch (ossError) {

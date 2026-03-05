@@ -1,7 +1,8 @@
 ﻿# 售后登记系统
 
-> ** 生产环境运行中**  
+> **生产环境运行中**  
 > 本项目已于 **2026年2月27日** 投入生产，包含真实业务数据。  
+> 最近更新：**2026年3月5日**（1080P 响应式适配、设备/问题页面列显示优化）  
 > 详见：[doc/PRODUCTION.md](doc/PRODUCTION.md)
 
 一个面向设备生命周期管理的完整 Web 系统，涵盖产品线、设备、模块版本、售后问题、客户等核心业务，支持阿里云 OSS 附件存储与 Docker 一键部署。
@@ -30,8 +31,8 @@
 | **产品线管理** | 产品线的增删改查，关联产品管理 |
 | **产品管理** | 产品信息、产品文档上传（OSS），按产品线分类 |
 | **版本库中心** | 模块版本发布记录，附件按「模块类型/分类/版本号」存储至 OSS |
-| **设备管理** | 设备台账、设备文档、模块追踪、升级记录 |
-| **售后问题** | 问题工单全生命周期（新建处理中已解决），跟进日志附件 |
+| **设备管理** | 设备台账、设备文档、模块追踪、升级记录；列表显示**产品名称**，支持按订单号/序列号/产品名称/远程码模糊搜索 |
+| **故障与升级** | 故障工单全生命周期（新建→处理中→已解决）、版本演进记录；列表显示**产品名称**与**客户**，支持全字段模糊搜索 |
 | **客户管理** | 客户档案，关联设备与问题 |
 | **系统设置** | 模块类型配置、客户档案管理 |
 
@@ -57,11 +58,17 @@
 | 技术 | 用途 |
 |------|------|
 | React 18 + TypeScript | 前端框架 |
-| Tailwind CSS | 样式 |
+| Tailwind CSS（含自定义 `3xl: 2200px` 断点） | 样式，支持 1080P / 2K 双分辨率响应式 |
 | Axios（`services/api.ts` 配置实例） | HTTP 客户端，自动携带 Bearer Token |
 | React Router | 路由 |
-| Recharts | 图表 |
+| Recharts | 图表（图表高度随分辨率自适应） |
 | Heroicons | 图标 |
+
+> **1080P 响应式适配说明**  
+> - `tailwind.config.js` 新增 `3xl: 2200px` 屏幕断点  
+> - `App.css` 全局 `@media (max-width: 1920px)` 将根字体缩至 14px，所有 rem 值自动缩放  
+> - 自定义 Hook `useIs1080p()`（`utils/index.ts`）供图表组件做 JS 层适配  
+> - 全部 11 个页面已添加 `3xl:` 响应式类名
 
 ### 基础设施
 
@@ -211,6 +218,11 @@ DB_PASSWORD=your_password
 
 # JWT
 JWT_SECRET=your_jwt_secret
+JWT_EXPIRES_IN=7d
+
+# 登录账号（不填则默认 admin / admin123）
+LOGIN_USERNAME=your_username
+LOGIN_PASSWORD=your_password
 
 # 服务端口
 PORT=5000
@@ -273,9 +285,9 @@ OSS_BASE_PATH=static/After-sales management system
 | `/products` | `Products.tsx` | 产品列表（可按产品线筛选） |
 | `/products/:id` | `ProductDetail.tsx` | 产品详情、文档、模块 |
 | `/release-library` | `ReleaseLibrary.tsx` | 版本库中心（按模块类型/分类筛选，附件下载） |
-| `/devices` | `Devices.tsx` | 设备台账列表 |
+| `/devices` | `Devices.tsx` | 设备台账列表；显示产品名称列，支持订单号/序列号/产品名称/远程码搜索 |
 | `/devices/:id` | `DeviceDetail.tsx` | 设备详情、模块版本、升级记录、问题 |
-| `/issues` | `Issues.tsx` | 售后问题工单列表 |
+| `/issues` | `Issues.tsx` | 故障工单 + 版本演进（双 Tab）；显示产品名称与客户列，支持全字段模糊搜索 |
 | `/issues/:id` | `IssueDetail.tsx` | 问题详情与跟进日志 |
 | `/settings` | `Settings.tsx` | 模块类型 + 客户档案配置 |
 
@@ -327,3 +339,15 @@ OSS_BASE_PATH=static/After-sales management system
 | [doc/BACKUP_GUIDE.md](doc/BACKUP_GUIDE.md) | 数据库备份方案 |
 | [doc/OSS_INTEGRATION.md](doc/OSS_INTEGRATION.md) | 阿里云 OSS 集成说明 |
 | [doc/OSS_STORAGE_STRUCTURE.md](doc/OSS_STORAGE_STRUCTURE.md) | OSS 目录结构规范 |
+
+---
+
+## 更新日志
+
+| 日期 | 变更内容 |
+|------|----------|
+| 2026-03-05 | 版本演进页「产品线/产品型号」列改为「产品名称」，新增「客户」列，搜索覆盖全字段 |
+| 2026-03-05 | 设备列表「产品线/产品型号」列改为「产品名称」，搜索增加产品名称匹配 |
+| 2026-03-05 | `.env` 新增 `LOGIN_USERNAME` / `LOGIN_PASSWORD` 显式登录凭据配置 |
+| 2026-03-05 | 全站 1080P 响应式适配（`3xl` 断点、全局 CSS 缩放、`useIs1080p` Hook） |
+| 2026-02-27 | 系统正式上线（生产环境 192.168.0.181） |

@@ -157,7 +157,8 @@ const ProductDetail: React.FC = () => {
     };
 
     const downloadFile = async (docId: number, title: string) => {
-        window.open(`/api/product-documents/${docId}/download`, '_blank');
+        const token = localStorage.getItem('auth_token');
+        window.open(`/api/product-documents/${docId}/download?token=${token}`, '_blank');
     };
 
     const resetUploadForm = () => {

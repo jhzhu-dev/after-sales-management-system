@@ -353,14 +353,18 @@ router.post('/:id/documents', upload.array('files', 10), async (req, res) => {
             // OSS 上传
             if (ossService.enabled) {
                 try {
-                    // 构建路径: Product Line Information/产品线/产品型号/版本号-版本名称/原始文件名
+                    // 构建路径: Product Line Information/产品线/型号-产品名/版本号/文件名
                     const versionFolder = version.version_name
                         ? `${version.version_number}-${version.version_name}`
                         : version.version_number;
                     const originalName = file.originalname;
                     const normalizedProductLine = ossService.normalizeProductLineName(version.product_line_name || version.product_line_code);
                     const normalizedModel = ossService.normalizeProductModel(version.product_model);
-                    const ossPath = `${ossService.basePath}/Product Line Information/${normalizedProductLine}/${normalizedModel}/${versionFolder}/${originalName}`;
+                    const normalizedProductName = ossService.normalizeProductModel(version.product_name); // reuse same normalization
+                    const modelFolder = normalizedProductName
+                        ? `${normalizedModel}-${normalizedProductName}`
+                        : normalizedModel;
+                    const ossPath = `${ossService.basePath}/Product Line Information/${normalizedProductLine}/${modelFolder}/${versionFolder}/${originalName}`;
                     const result = await ossService.client.put(ossPath, file.path);
                     filePath = `oss://${ossService.bucket}/${ossPath}`;
                     console.log(`✅ 版本文档上传成功: ${ossPath}`);
