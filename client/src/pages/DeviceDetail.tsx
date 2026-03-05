@@ -671,6 +671,11 @@ const DeviceDetail: React.FC = () => {
                 {device.product_model && (
                   <span className="text-gray-500 text-base ml-2">/ {device.product_model}</span>
                 )}
+                {device.product_version_number && (
+                  <span className="text-blue-600 text-sm ml-2">
+                    [{device.product_version_number}{device.product_version_name ? ` - ${device.product_version_name}` : ''}]
+                  </span>
+                )}
               </p>
             </div>
             <div>

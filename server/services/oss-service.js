@@ -66,14 +66,14 @@ class OSSService {
       return `${this.basePath}/productions/${fileName}`;
     }
     
-    // 产品文档按 产品线/产品型号 层级存储
+    // 产品文档按 Product Line Information/产品线/产品型号 层级存储
     if (productModel) {
       const normalizedModel = this.normalizeProductModel(productModel);
-      return `${this.basePath}/${normalizedProductLine}/${normalizedModel}/${fileName}`;
+      return `${this.basePath}/Product Line Information/${normalizedProductLine}/${normalizedModel}/${fileName}`;
     }
     
     // 如果没有产品型号，只按产品线存储
-    return `${this.basePath}/${normalizedProductLine}/${fileName}`;
+    return `${this.basePath}/Product Line Information/${normalizedProductLine}/${fileName}`;
   }
 
   /**

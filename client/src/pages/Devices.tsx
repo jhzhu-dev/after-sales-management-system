@@ -65,13 +65,20 @@ export default function Devices() {
         device.id.toLowerCase().includes(searchLower) ||
         (device.customer_name && device.customer_name.toLowerCase().includes(searchLower)) ||
         (device.customer_short_name && device.customer_short_name.toLowerCase().includes(searchLower)) ||
-        (device.remote_code && device.remote_code.toLowerCase().includes(searchLower))
+        (device.remote_code && device.remote_code.toLowerCase().includes(searchLower)) ||
+        (device.product_version_number && device.product_version_number.toLowerCase().includes(searchLower)) ||
+        (device.product_version_name && device.product_version_name.toLowerCase().includes(searchLower))
       );
     }
 
     // 产品线过滤
     if (filters.type) {
       filtered = filtered.filter(device => device.product_line_name === filters.type);
+    }
+
+    // 迭代版本过滤
+    if ((filters as any).version) {
+      filtered = filtered.filter(device => device.product_version_number === (filters as any).version);
     }
 
     // 状态过滤
@@ -129,7 +136,7 @@ export default function Devices() {
 
   // 实时过滤效果
   useEffect(() => {
-    if (isInitialized && allDevices.length > 0) {
+    if (isInitialized) {
       console.log('执行实时过滤，filters:', filters);
       applyFilters();
     }
@@ -255,10 +262,13 @@ export default function Devices() {
         d.id.toLowerCase().includes(s) ||
         (d.customer_name && d.customer_name.toLowerCase().includes(s)) ||
         (d.customer_short_name && d.customer_short_name.toLowerCase().includes(s)) ||
-        (d.remote_code && d.remote_code.toLowerCase().includes(s))
+        (d.remote_code && d.remote_code.toLowerCase().includes(s)) ||
+        (d.product_version_number && d.product_version_number.toLowerCase().includes(s)) ||
+        (d.product_version_name && d.product_version_name.toLowerCase().includes(s))
       );
     }
     if (filters.type) filtered = filtered.filter(d => d.product_line_name === filters.type);
+    if ((filters as any).version) filtered = filtered.filter(d => d.product_version_number === (filters as any).version);
     if (filters.status) filtered = filtered.filter(d => d.status === filters.status);
     return filtered;
   })();
@@ -269,6 +279,8 @@ export default function Devices() {
     { key: 'name', label: '订单号' },
     { key: 'product_line_name', label: '产品线' },
     { key: 'product_model', label: '产品型号' },
+    { key: 'product_version_number', label: '迭代版本' },
+    { key: 'product_version_name', label: '版本名称' },
     { key: 'customer_name', label: '客户' },
     { key: 'customer_short_name', label: '客户简称' },
     { key: 'remote_code', label: '远程码' },
@@ -382,6 +394,22 @@ export default function Devices() {
       )
     },
     {
+      key: 'product_version_number' as keyof Device,
+      title: <SortableHeader field="product_version_number" title="迭代版本" />,
+      render: (value: string, record: Device) => (
+        value ? (
+          <div>
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+              {value}
+            </span>
+            {record.product_version_name && (
+              <div className="text-xs text-gray-500 mt-0.5">{record.product_version_name}</div>
+            )}
+          </div>
+        ) : <span className="text-gray-300">—</span>
+      )
+    },
+    {
       key: 'customer_name' as keyof Device,
       title: <SortableHeader field="customer_name" title="客户" />,
       render: (value: string, record: Device) => (
@@ -471,6 +499,7 @@ export default function Devices() {
           <div className="print-flex-row" style={{marginTop: '2pt'}}>
             {filters.search && <span style={{fontSize: '8pt', color: '#6b7280'}}>搜索：{filters.search}</span>}
             {filters.type && <span style={{fontSize: '8pt', color: '#6b7280'}}>产品线：{filters.type}</span>}
+            {(filters as any).version && <span style={{fontSize: '8pt', color: '#6b7280'}}>迭代版本：{(filters as any).version}</span>}
             {filters.status && <span style={{fontSize: '8pt', color: '#6b7280'}}>状态：{filters.status}</span>}
             <span style={{fontSize: '8pt', color: '#6b7280'}}>共 {allFilteredDevices.length} 条记录</span>
           </div>
@@ -502,7 +531,7 @@ export default function Devices() {
 
         {/* 筛选器 */}
         <div className="bg-white rounded-lg shadow p-6 no-print">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 搜索
@@ -547,9 +576,24 @@ export default function Devices() {
                 <option value="维护中">维护中</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                迭代版本
+              </label>
+              <select
+                value={(filters as any).version || ''}
+                onChange={(e) => handleFilterChange('version', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">全部版本</option>
+                {Array.from(new Set(allDevices.map(d => d.product_version_number).filter(Boolean))).sort().map((v) => (
+                  <option key={v} value={v!}>{v}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex items-end">
               <button
-                onClick={() => setFilters({ page: 1, limit: 10, search: '', type: '', status: '' })}
+                onClick={() => setFilters({ page: 1, limit: 10, search: '', type: '', status: '' } as any)}
                 className="w-full px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 重置筛选
@@ -583,6 +627,7 @@ export default function Devices() {
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>设备编码</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>订单号</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>产品线 / 型号</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>迭代版本</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>客户</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>状态</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>创建时间</th>
@@ -595,6 +640,7 @@ export default function Devices() {
                   <td style={{padding:'3pt 6pt'}}>{d.device_code || '-'}</td>
                   <td style={{padding:'3pt 6pt', fontWeight:'500'}}>{d.name}</td>
                   <td style={{padding:'3pt 6pt'}}>{[d.product_line_name, d.product_model].filter(Boolean).join(' / ') || '-'}</td>
+                  <td style={{padding:'3pt 6pt'}}>{d.product_version_number ? `${d.product_version_number}${d.product_version_name ? ` ${d.product_version_name}` : ''}` : '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.customer_name || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.status}</td>
                   <td style={{padding:'3pt 6pt'}}>{new Date(d.created_at).toLocaleDateString('zh-CN')}</td>

@@ -17,6 +17,9 @@ export interface Device {
   product_id?: number | null;
   product_name?: string | null;
   product_model?: string | null;
+  product_version_id?: number | null;
+  product_version_number?: string | null;
+  product_version_name?: string | null;
   customer_id?: number;
   customer_name?: string;
   customer_short_name?: string;
@@ -176,6 +179,7 @@ export interface DeviceFormData {
   device_code?: string | null;
   product_line_id: string | number;
   product_id?: number | null;
+  product_version_id?: number | null;
   customer_id?: number | null;
   status: '正常' | '异常' | '维护中';
   remote_code?: string | null;
@@ -243,6 +247,7 @@ export interface FilterOptions {
   category?: string;
   version_type?: string;
   customer_id?: string;
+  customer?: string;
   order_id?: string;
 }
 
@@ -369,4 +374,51 @@ export interface ProductFormData {
   description?: string;
   specifications?: any;
   is_active?: boolean;
+}
+
+// 产品迭代版本类型
+export interface ProductVersion {
+  id: number;
+  product_id: number;
+  version_number: string;
+  version_name?: string;
+  description?: string;
+  specifications?: any;
+  status: '开发中' | '量产中' | '已停产';
+  release_date?: string;
+  is_current: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  product_name?: string;
+  product_model?: string;
+  document_count?: number;
+  device_count?: number;
+  documents?: ProductVersionDocument[];
+}
+
+// 产品迭代版本表单数据
+export interface ProductVersionFormData {
+  product_id: number;
+  version_number: string;
+  version_name?: string;
+  description?: string;
+  specifications?: any;
+  status?: '开发中' | '量产中' | '已停产';
+  release_date?: string;
+  is_current?: boolean;
+  sort_order?: number;
+}
+
+// 产品迭代版本文档类型
+export interface ProductVersionDocument {
+  id: number;
+  product_version_id: number;
+  name: string;
+  file_path: string;
+  file_type?: string;
+  file_size?: number;
+  category: '规格书' | '变更记录' | '图纸' | '其他';
+  uploaded_by?: string;
+  created_at: string;
 }

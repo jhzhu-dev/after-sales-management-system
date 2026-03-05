@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { Product, ProductDocument, ProductModule, ModuleType, ApiResponse } from '../types';
-import { productModuleApi, moduleTypeApi } from '../services/api';
+import ProductVersionForm from '../components/ProductVersionForm';
+import { Product, ProductDocument, ProductModule, ModuleType, ProductVersion, ApiResponse } from '../types';
+import { productModuleApi, moduleTypeApi, productVersionApi } from '../services/api';
 import api from '../services/api';
-import { PlusIcon, TrashIcon, ArrowUpTrayIcon, DocumentIcon, XMarkIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
+import { PlusIcon, TrashIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, DocumentIcon, XMarkIcon, PrinterIcon, CheckCircleIcon, PencilIcon, EyeIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 
 const DOC_TYPES = ['规格书', '使用说明', '用户手册', '其他'] as const;
 
@@ -22,6 +24,14 @@ const ProductDetail: React.FC = () => {
     const [isRequired, setIsRequired] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
+    // 迭代版本相关状态
+    const [versions, setVersions] = useState<ProductVersion[]>([]);
+    const [showVersionForm, setShowVersionForm] = useState(false);
+    const [editingVersion, setEditingVersion] = useState<ProductVersion | null>(null);
+    const [expandedVersionId, setExpandedVersionId] = useState<number | null>(null);
+    const [previewAttachments, setPreviewAttachments] = useState<Attachment[]>([]);
+    const [previewIndex, setPreviewIndex] = useState(0);
+
     // 文档上传相关状态
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -37,6 +47,7 @@ const ProductDetail: React.FC = () => {
             fetchDocuments();
             fetchModules();
             fetchModuleTypes();
+            fetchVersions();
         }
     }, [id]);
 
@@ -87,6 +98,18 @@ const ProductDetail: React.FC = () => {
             }
         } catch (err) {
             console.error('获取模块类型失败:', err);
+        }
+    };
+
+    const fetchVersions = async () => {
+        if (!id) return;
+        try {
+            const response = await productVersionApi.getVersions({ product_id: parseInt(id) });
+            if (response.success) {
+                setVersions(response.data);
+            }
+        } catch (err) {
+            console.error('获取迭代版本失败:', err);
         }
     };
 
@@ -204,6 +227,40 @@ const ProductDetail: React.FC = () => {
             if (!uploadTitle.trim()) {
                 setUploadTitle(file.name.replace(/\.[^/.]+$/, ''));
             }
+        }
+    };
+
+    // 迭代版本操作
+    const handleDeleteVersion = async (versionId: number, versionNumber: string) => {
+        if (!window.confirm(`确定要删除迭代版本「${versionNumber}」吗？此操作不可恢复。`)) return;
+        try {
+            const res = await productVersionApi.deleteVersion(versionId);
+            if (res.success) {
+                fetchVersions();
+            } else {
+                alert(res.error || '删除失败');
+            }
+        } catch (err: any) {
+            alert(err.response?.data?.error || '删除失败');
+        }
+    };
+
+    const handleSetCurrentVersion = async (versionId: number) => {
+        try {
+            await productVersionApi.setCurrentVersion(versionId);
+            fetchVersions();
+        } catch (err) {
+            console.error('设置当前版本失败:', err);
+            alert('设置当前版本失败');
+        }
+    };
+
+    const getVersionStatusColor = (status: string) => {
+        switch (status) {
+            case '量产中': return 'bg-green-100 text-green-800';
+            case '开发中': return 'bg-yellow-100 text-yellow-800';
+            case '已停产': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
         }
     };
 
@@ -328,44 +385,204 @@ const ProductDetail: React.FC = () => {
                 {/* 标签页内容 */}
                 <div className="bg-white shadow rounded-lg p-6">
                     {activeTab === 'info' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-4">产品详情</h3>
-                                <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-                                    <div className="sm:col-span-1">
-                                        <dt className="text-sm font-medium text-gray-500">所属产品线</dt>
-                                        <dd className="mt-1 text-sm text-gray-900">{product.product_line_name}</dd>
+                        <div>
+                            {/* 产品详情 */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 className="text-lg font-medium text-gray-900 mb-4">产品详情</h3>
+                                    <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                                        <div className="sm:col-span-1">
+                                            <dt className="text-sm font-medium text-gray-500">所属产品线</dt>
+                                            <dd className="mt-1 text-sm text-gray-900">{product.product_line_name}</dd>
+                                        </div>
+                                        <div className="sm:col-span-1">
+                                            <dt className="text-sm font-medium text-gray-500">产品型号</dt>
+                                            <dd className="mt-1 text-sm text-gray-900">{product.model}</dd>
+                                        </div>
+                                        <div className="sm:col-span-1">
+                                            <dt className="text-sm font-medium text-gray-500">状态</dt>
+                                            <dd className="mt-1 text-sm text-gray-900">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${product.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                    }`}>
+                                                    {product.is_active ? '启用' : '停用'}
+                                                </span>
+                                            </dd>
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                            <dt className="text-sm font-medium text-gray-500">描述</dt>
+                                            <dd className="mt-1 text-sm text-gray-900">{product.description || '无描述'}</dd>
+                                        </div>
+                                    </dl>
+                                </div>
+
+                                {product.specifications && (
+                                    <div>
+                                        <h3 className="text-lg font-medium text-gray-900 mb-4">技术规格</h3>
+                                        <div className="bg-gray-50 rounded-lg p-4">
+                                            <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
+                                                {JSON.stringify(product.specifications, null, 2)}
+                                            </pre>
+                                        </div>
                                     </div>
-                                    <div className="sm:col-span-1">
-                                        <dt className="text-sm font-medium text-gray-500">产品型号</dt>
-                                        <dd className="mt-1 text-sm text-gray-900">{product.model}</dd>
-                                    </div>
-                                    <div className="sm:col-span-1">
-                                        <dt className="text-sm font-medium text-gray-500">状态</dt>
-                                        <dd className="mt-1 text-sm text-gray-900">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${product.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                                }`}>
-                                                {product.is_active ? '启用' : '停用'}
-                                            </span>
-                                        </dd>
-                                    </div>
-                                    <div className="sm:col-span-2">
-                                        <dt className="text-sm font-medium text-gray-500">描述</dt>
-                                        <dd className="mt-1 text-sm text-gray-900">{product.description || '无描述'}</dd>
-                                    </div>
-                                </dl>
+                                )}
                             </div>
 
-                            {product.specifications && (
-                                <div>
-                                    <h3 className="text-lg font-medium text-gray-900 mb-4">技术规格</h3>
-                                    <div className="bg-gray-50 rounded-lg p-4">
-                                        <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
-                                            {JSON.stringify(product.specifications, null, 2)}
-                                        </pre>
-                                    </div>
+                            {/* 迭代版本部分 */}
+                            <div className="mt-8 border-t border-gray-200 pt-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-medium text-gray-900">迭代版本 ({versions.length})</h3>
+                                    <button
+                                        onClick={() => { setEditingVersion(null); setShowVersionForm(true); }}
+                                        className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 inline-flex items-center gap-1.5"
+                                    >
+                                        <PlusIcon className="h-4 w-4" />
+                                        新增迭代版本
+                                    </button>
                                 </div>
-                            )}
+
+                                {versions.length === 0 ? (
+                                    <div className="text-center py-8 bg-gray-50 rounded-lg">
+                                        <p className="text-gray-500">暂无迭代版本</p>
+                                        <p className="text-sm text-gray-400 mt-1">点击“新增迭代版本”添加产品的硬件/整机迭代</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {versions.map((ver) => (
+                                            <div key={ver.id} className={`border rounded-lg overflow-hidden transition-all ${ver.is_current ? 'border-blue-300 shadow-md' : 'border-gray-200'}`}>
+                                                {/* 版本头部 */}
+                                                <div
+                                                    className={`flex items-center justify-between p-4 cursor-pointer ${ver.is_current ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'}`}
+                                                    onClick={() => setExpandedVersionId(expandedVersionId === ver.id ? null : ver.id)}
+                                                >
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <div className="flex-shrink-0">
+                                                            <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
+                                                                {ver.version_number}
+                                                            </span>
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium text-gray-900">{ver.version_number}</span>
+                                                                {ver.version_name && <span className="text-gray-500">- {ver.version_name}</span>}
+                                                                {ver.is_current && (
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                                                        <CheckCircleIcon className="h-3 w-3" /> 当前
+                                                                    </span>
+                                                                )}
+                                                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getVersionStatusColor(ver.status)}`}>
+                                                                    {ver.status}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                                {ver.release_date && <span>发布: {new Date(ver.release_date).toLocaleDateString('zh-CN')}</span>}
+                                                                {ver.device_count !== undefined && <span className="ml-3">关联 {ver.device_count} 台设备</span>}
+                                                                {ver.document_count !== undefined && ver.document_count > 0 && <span className="ml-3">{ver.document_count} 个文档</span>}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                        {!ver.is_current && (
+                                                            <button
+                                                                onClick={() => handleSetCurrentVersion(ver.id)}
+                                                                className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded"
+                                                                title="设为当前版本"
+                                                            >
+                                                                设为当前
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => { setEditingVersion(ver); setShowVersionForm(true); }}
+                                                            className="p-1.5 text-gray-400 hover:text-blue-600 rounded"
+                                                            title="编辑"
+                                                        >
+                                                            <PencilIcon className="h-4 w-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteVersion(ver.id, ver.version_number)}
+                                                            className="p-1.5 text-gray-400 hover:text-red-600 rounded"
+                                                            title="删除"
+                                                        >
+                                                            <TrashIcon className="h-4 w-4" />
+                                                        </button>
+                                                        {expandedVersionId === ver.id
+                                                            ? <ChevronUpIcon className="h-4 w-4 text-gray-400" />
+                                                            : <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                                                        }
+                                                    </div>
+                                                </div>
+
+                                                {/* 展开详情 */}
+                                                {expandedVersionId === ver.id && (
+                                                    <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-4">
+                                                        {ver.description && (
+                                                            <div>
+                                                                <h4 className="text-sm font-medium text-gray-700 mb-1">变更说明</h4>
+                                                                <p className="text-sm text-gray-600 whitespace-pre-wrap">{ver.description}</p>
+                                                            </div>
+                                                        )}
+                                                        {ver.documents && ver.documents.length > 0 && (
+                                                            <div>
+                                                                <h4 className="text-sm font-medium text-gray-700 mb-1">附件文档</h4>
+                                                                <div className="space-y-1">
+                                                                    {ver.documents.map(doc => (
+                                                                        <div key={doc.id} className="flex items-center justify-between py-1.5 px-3 bg-white rounded text-sm">
+                                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                                <DocumentIcon className="h-4 w-4 text-gray-400" />
+                                                                                <span className="truncate">{doc.name}</span>
+                                                                                <span className="text-xs text-gray-400">({doc.category})</span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                                                                                <button
+                                                                                    onClick={async () => {
+                                                                                        try {
+                                                                                            const allDocs = ver.documents || [];
+                                                                                            const atts: Attachment[] = [];
+                                                                                            for (const d of allDocs) {
+                                                                                                const res = await productVersionApi.previewDocument(d.id);
+                                                                                                if (res.success) {
+                                                                                                    atts.push({ name: d.name, url: res.data.url });
+                                                                                                }
+                                                                                            }
+                                                                                            const idx = allDocs.findIndex(d => d.id === doc.id);
+                                                                                            setPreviewAttachments(atts);
+                                                                                            setPreviewIndex(idx >= 0 ? idx : 0);
+                                                                                        } catch (err) {
+                                                                                            console.error('获取预览链接失败:', err);
+                                                                                            alert('获取预览链接失败');
+                                                                                        }
+                                                                                    }}
+                                                                                    className="text-blue-600 hover:text-blue-800 text-xs inline-flex items-center gap-0.5"
+                                                                                    title="预览/下载"
+                                                                                >
+                                                                                    <EyeIcon className="h-3.5 w-3.5" />
+                                                                                    查看
+                                                                                </button>
+                                                                                <a
+                                                                                    href={productVersionApi.downloadDocument(doc.id)}
+                                                                                    className="text-green-600 hover:text-green-800 text-xs inline-flex items-center gap-0.5"
+                                                                                    title="下载"
+                                                                                    download
+                                                                                >
+                                                                                    <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+                                                                                    下载
+                                                                                </a>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        <div className="text-xs text-gray-400">
+                                                            创建时间: {new Date(ver.created_at).toLocaleString('zh-CN')}
+                                                            {ver.updated_at && <span className="ml-3">更新时间: {new Date(ver.updated_at).toLocaleString('zh-CN')}</span>}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -600,6 +817,24 @@ const ProductDetail: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* 迭代版本表单弹窗 */}
+            {showVersionForm && (
+                <ProductVersionForm
+                    productId={parseInt(id!)}
+                    version={editingVersion}
+                    onClose={() => { setShowVersionForm(false); setEditingVersion(null); }}
+                    onSuccess={fetchVersions}
+                />
+            )}
+
+            {previewAttachments.length > 0 && (
+                <AttachmentViewer
+                    attachments={previewAttachments}
+                    initialIndex={previewIndex}
+                    onClose={() => setPreviewAttachments([])}
+                />
+            )}
 
             {/* 文档上传弹窗 */}
             {showUploadModal && (

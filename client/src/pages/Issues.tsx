@@ -39,7 +39,8 @@ export default function Issues() {
     status: '',
     severity: '',
     module: '',
-    device_type: ''
+    device_type: '',
+    customer: ''
   });
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -85,6 +86,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
   useEffect(() => {
     fetchModuleTypes();
     fetchProductLines();
+    fetchCustomers();
   }, []);
 
   const fetchCustomers = async () => {
@@ -308,7 +310,8 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
 
   const ISSUE_EXPORT_COLUMNS = [
     { key: 'id', label: '问题ID' },
-    { key: 'device_name', label: '设备' },
+    { key: 'device_name', label: '订单号' },
+    { key: 'customer_name', label: '客户' },
     { key: 'module_category', label: '模块' },
     { key: 'description', label: '问题描述' },
     { key: 'severity_label', label: '严重性' },
@@ -318,8 +321,11 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
   ];
 
   const UPGRADE_EXPORT_COLUMNS = [
-    { key: 'device_name', label: '设备名称' },
+    { key: 'device_name', label: '订单号' },
     { key: 'device_id', label: '设备序列号' },
+    { key: 'product_line_name', label: '产品线' },
+    { key: 'product_model', label: '产品型号' },
+    { key: 'product_version_display', label: '迭代版本' },
     { key: 'module_type', label: '模块类型' },
     { key: 'old_version', label: '旧版本号' },
     { key: 'version_number', label: '新版本号' },
@@ -354,6 +360,9 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
       ...v,
       version_label: versionTypeMap[v.version_type] || v.version_type,
       release_date: v.release_date ? new Date(v.release_date).toLocaleDateString('zh-CN') : '',
+      product_line_name: v.device_type || '-',
+      product_model: v.product_model || '-',
+      product_version_display: v.product_version_number ? `${v.product_version_number}${v.product_version_name ? ' - ' + v.product_version_name : ''}` : '-',
     }));
     const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
     exportToExcel(rows, UPGRADE_EXPORT_COLUMNS, `版本演进_${timestamp}`);
@@ -472,7 +481,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     },
     {
       key: 'device_name' as keyof Issue,
-      title: <SortableHeader field="device_name" title="设备" />,
+      title: <SortableHeader field="device_name" title="订单号" />,
       render: (value: string, record: Issue) => (
         <div>
           <div className="font-medium text-gray-900">{value}</div>
@@ -480,6 +489,14 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         </div>
       ),
       width: '140px'
+    },
+    {
+      key: 'customer_name' as keyof Issue,
+      title: <SortableHeader field="customer_name" title="客户" />,
+      render: (value: string) => (
+        <div className="text-gray-900">{value || '-'}</div>
+      ),
+      width: '100px'
     },
     {
       key: 'module_category' as keyof Issue,
@@ -556,11 +573,32 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     const upgradeColumns = [
       {
         key: 'device_name',
-        title: '设备名称',
+        title: '订单号',
         render: (_: any, item: any) => (
           <div>
             <div className="font-medium text-gray-900">{item.device_name}</div>
             <div className="text-xs text-gray-500">{item.device_id}</div>
+          </div>
+        )
+      },
+      {
+        key: 'product_info',
+        title: '产品线/产品型号',
+        render: (_: any, item: any) => (
+          <div>
+            <div className="font-medium text-gray-900">{item.device_type || '-'}</div>
+            <div className="text-xs text-gray-500">{item.product_model || '-'}</div>
+          </div>
+        )
+      },
+      {
+        key: 'product_version',
+        title: '迭代版本',
+        render: (_: any, item: any) => (
+          <div className="text-sm text-gray-900">
+            {item.product_version_number
+              ? `${item.product_version_number}${item.product_version_name ? ' - ' + item.product_version_name : ''}`
+              : '-'}
           </div>
         )
       },
@@ -634,7 +672,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="搜索设备、子模块名称..."
+                placeholder="搜索订单号、子模块名称..."
                 className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500"
                 value={upgradeFilters.search}
                 onChange={e => setUpgradeFilters(f => ({ ...f, search: e.target.value }))}
@@ -800,18 +838,35 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
 
         {/* 筛选器 */}
         <div className="bg-white rounded-lg shadow p-6 no-print">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 搜索
               </label>
               <input
                 type="text"
-                placeholder="搜索问题描述或设备"
+                placeholder="搜索问题描述或订单号"
                 value={filters.search || ''}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                客户
+              </label>
+              <select
+                value={filters.customer || ''}
+                onChange={(e) => handleFilterChange('customer', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">全部客户</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -882,7 +937,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             </div>
             <div className="flex items-end">
               <button
-                onClick={() => setFilters({ page: 1, limit: 10, search: '', status: '', severity: '', module: '', device_type: '' })}
+                onClick={() => setFilters({ page: 1, limit: 10, search: '', status: '', severity: '', module: '', device_type: '', customer: '' })}
                 className="w-full px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 重置筛选
@@ -914,7 +969,8 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             <thead>
               <tr style={{borderBottom:'1pt solid #374151',backgroundColor:'#f9fafb'}}>
                 <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>问题ID</th>
-                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>设备</th>
+                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>订单号</th>
+                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>客户</th>
                 <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>模块</th>
                 <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>问题描述</th>
                 <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>严重性</th>
@@ -927,6 +983,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 <tr key={issue.id} style={{borderBottom:'0.5pt solid #e5e7eb',backgroundColor:i%2===0?'white':'#f9fafb'}}>
                   <td style={{padding:'3pt 6pt',fontFamily:'monospace'}}>#{issue.id}</td>
                   <td style={{padding:'3pt 6pt'}}>{issue.device_name || '-'}</td>
+                  <td style={{padding:'3pt 6pt'}}>{issue.customer_name || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{issue.module_category || '-'}</td>
                   <td style={{padding:'3pt 6pt',maxWidth:'180pt',wordBreak:'break-word'}}>{issue.description}</td>
                   <td style={{padding:'3pt 6pt'}}>{issue.severity === 'low' ? '低' : issue.severity === 'medium' ? '中' : '高'}</td>
@@ -946,7 +1003,10 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:'8pt'}}>
               <thead>
                 <tr style={{borderBottom:'1pt solid #374151',backgroundColor:'#f9fafb'}}>
-                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>设备</th>
+                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>订单号</th>
+                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>产品线</th>
+                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>产品型号</th>
+                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>迭代版本</th>
                   <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>模块类型</th>
                   <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>版本号</th>
                   <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>版本类型</th>
@@ -959,6 +1019,9 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 {upgrades.map((v, i) => (
                   <tr key={v.id} style={{borderBottom:'0.5pt solid #e5e7eb',backgroundColor:i%2===0?'white':'#f9fafb'}}>
                     <td style={{padding:'3pt 6pt'}}>{v.device_name || '-'}</td>
+                    <td style={{padding:'3pt 6pt'}}>{v.device_type || '-'}</td>
+                    <td style={{padding:'3pt 6pt'}}>{v.product_model || '-'}</td>
+                    <td style={{padding:'3pt 6pt'}}>{v.product_version_number ? `${v.product_version_number}${v.product_version_name ? ' - ' + v.product_version_name : ''}` : '-'}</td>
                     <td style={{padding:'3pt 6pt'}}>{v.module_type || '-'}</td>
                     <td style={{padding:'3pt 6pt',fontFamily:'monospace'}}>{v.old_version ? `${v.old_version} → ` : ''}{v.version_number}</td>
                     <td style={{padding:'3pt 6pt'}}>{v.version_type === 'factory' ? '出厂' : '更新'}</td>

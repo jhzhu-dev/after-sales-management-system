@@ -39,12 +39,20 @@ router.get('/', async (req, res) => {
         mt.name as module_type,
         d.id as device_id,
         d.name as device_name,
-        pl.name as device_type
+        pl.name as device_type,
+        c.name as customer_name,
+        p.name as product_name,
+        p.model as product_model,
+        pv.version_number as product_version_number,
+        pv.version_name as product_version_name
       FROM module_versions mv
       LEFT JOIN modules m ON mv.module_id = m.id
       LEFT JOIN module_types mt ON m.type_id = mt.id
       LEFT JOIN devices d ON m.device_id = d.id
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+      LEFT JOIN customers c ON d.customer_id = c.id
+      LEFT JOIN products p ON d.product_id = p.id
+      LEFT JOIN product_versions pv ON d.product_version_id = pv.id
       ${whereClause}
       ORDER BY mv.created_at DESC
       LIMIT ${parseInt(limitNum)} OFFSET ${parseInt(offset)}

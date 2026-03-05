@@ -111,6 +111,7 @@ router.get('/', async (req, res) => {
       category,
       module,
       device_type,
+      customer,
       search,
       sortBy = 'created_at',
       sortOrder = 'DESC'
@@ -164,9 +165,14 @@ router.get('/', async (req, res) => {
       params.push(device_type);
     }
 
+    if (customer) {
+      whereConditions.push('c.name = ?');
+      params.push(customer);
+    }
+
     if (search) {
-      whereConditions.push('(i.description LIKE ? OR d.name LIKE ? OR i.contact_person LIKE ? OR i.contact_phone LIKE ?)');
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+      whereConditions.push('(i.description LIKE ? OR d.name LIKE ? OR d.id LIKE ? OR i.contact_person LIKE ? OR i.contact_phone LIKE ? OR c.name LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { Device, DeviceFormData, Customer } from '../types';
-import { productLineApi, customerApi, productApi, productModuleApi } from '../services/api';
+import { productLineApi, customerApi, productApi, productModuleApi, productVersionApi } from '../services/api';
 
 interface DeviceFormProps {
   device?: Device | null;
@@ -16,15 +16,17 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
     device_code: '',
     product_line_id: '',
     product_id: undefined,
+    product_version_id: undefined,
     customer_id: undefined,
     status: '正常',
     remote_code: '',
     password: ''
   });
 
-  const [productLines, setProductLines] = useState<Array<{ id: number, name: string }>>([]);
-  const [products, setProducts] = useState<Array<{ id: number, name: string, model?: string }>>([]);
-  const [moduleTypes, setModuleTypes] = useState<Array<{ id: number, name: string, code: string }>>([]);
+  const [productLines, setProductLines] = useState<Array<{ id: number, name: string }>>([])
+  const [products, setProducts] = useState<Array<{ id: number, name: string, model?: string }>>([])
+  const [productVersions, setProductVersions] = useState<Array<{ id: number, version_number: string, version_name?: string, is_current: boolean, status: string }>>([])
+  const [moduleTypes, setModuleTypes] = useState<Array<{ id: number, name: string, code: string, is_required: boolean }>>([]);
   const [selectedModuleTypeIds, setSelectedModuleTypeIds] = useState<number[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -45,6 +47,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         device_code: device.device_code || '',
         product_line_id: device.product_line_id || '',
         product_id: device.product_id || undefined,
+        product_version_id: device.product_version_id || undefined,
         customer_id: device.customer_id || undefined,
         status: device.status as '正常' | '异常' | '维护中',
         remote_code: device.remote_code || '',
@@ -55,6 +58,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       }
       if (device.product_id) {
         fetchModuleTypesByProduct(device.product_id);
+        fetchProductVersions(device.product_id);
       }
       if (device.customer_id) {
         const displayName = device.customer_name || '';
@@ -87,15 +91,42 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
     try {
       const result = await productModuleApi.getProductModules(productId);
       if (result.success) {
-        setModuleTypes(result.data.map((m: any) => ({
+        const modules = result.data.map((m: any) => ({
           id: m.module_type_id,
           name: m.module_type_name,
-          code: m.module_type_code
-        })));
-        setSelectedModuleTypeIds([]);
+          code: m.module_type_code,
+          is_required: !!m.is_required
+        }));
+        // 排序：可选模块在前，必选模块在后
+        const sorted = [...modules].sort((a: any, b: any) => (a.is_required === b.is_required ? 0 : a.is_required ? 1 : -1));
+        setModuleTypes(sorted);
+        // 自动勾选必选模块
+        const requiredIds = sorted.filter((m: any) => m.is_required).map((m: any) => m.id);
+        setSelectedModuleTypeIds(requiredIds);
       }
     } catch (error) {
       console.error('获取产品模块类型失败:', error);
+    }
+  };
+
+  const fetchProductVersions = async (productId: number | null | undefined) => {
+    if (!productId) {
+      setProductVersions([]);
+      return;
+    }
+    try {
+      const result = await productVersionApi.getVersions({ product_id: productId });
+      if (result.success) {
+        setProductVersions(result.data.map((v: any) => ({
+          id: v.id,
+          version_number: v.version_number,
+          version_name: v.version_name,
+          is_current: v.is_current,
+          status: v.status
+        })));
+      }
+    } catch (error) {
+      console.error('获取产品迭代版本失败:', error);
     }
   };
 
@@ -163,9 +194,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
   const handleChange = (field: keyof DeviceFormData, value: string | number | undefined) => {
     if (field === 'product_line_id') {
       // 合并成一次 setState，避免覆盖
-      setFormData(prev => ({ ...prev, product_line_id: value as string | number, product_id: undefined }));
+      setFormData(prev => ({ ...prev, product_line_id: value as string | number, product_id: undefined, product_version_id: undefined }));
       fetchProducts(value as string | number);
       fetchModuleTypesByProduct(null);
+      setProductVersions([]);
     } else {
       setFormData(prev => ({ ...prev, [field]: value }));
     }
@@ -174,9 +206,11 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
 
-    // 当产品型号改变时，获取该产品的模块列表
+    // 当产品型号改变时，获取该产品的模块列表和迭代版本
     if (field === 'product_id') {
       fetchModuleTypesByProduct(value as number | null | undefined);
+      fetchProductVersions(value as number | null | undefined);
+      setFormData(prev => ({ ...prev, product_id: value as number | undefined, product_version_id: undefined }));
     }
 
     // 当设备名称改变时，自动匹配产品线
@@ -258,6 +292,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         status: formData.status,
         remote_code: formData.remote_code?.trim() || null,
         password: formData.password?.trim() || null,
+        product_version_id: formData.product_version_id || null,
         name: device.name,
         product_line_id: device.product_line_id || '',
       };
@@ -268,6 +303,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         id: formData.id?.trim() || undefined,
         device_code: formData.device_code?.trim() || null,
         product_id: formData.product_id || null,
+        product_version_id: formData.product_version_id || null,
         customer_id: formData.customer_id || null,
         remote_code: formData.remote_code?.trim() || null,
         password: formData.password?.trim() || null,
@@ -338,6 +374,27 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   <span className="font-medium text-gray-900">{device.product_name}{device.product_model ? ` (${device.product_model})` : ''}</span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* 编辑模式：迭代版本选择 */}
+          {device && productVersions.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                迭代版本
+              </label>
+              <select
+                value={formData.product_version_id || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, product_version_id: e.target.value ? parseInt(e.target.value) : undefined }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">请选择迭代版本（选填）</option>
+                {productVersions.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.version_number}{v.version_name ? ` - ${v.version_name}` : ''}{v.is_current ? ' (当前)' : ''} [{v.status}]
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -488,6 +545,27 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 </div>
               )}
 
+              {/* 6.1 迭代版本 - 选择产品型号后显示 */}
+              {productVersions.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    迭代版本
+                  </label>
+                  <select
+                    value={formData.product_version_id || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, product_version_id: e.target.value ? parseInt(e.target.value) : undefined }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">请选择迭代版本（选填）</option>
+                    {productVersions.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.version_number}{v.version_name ? ` - ${v.version_name}` : ''}{v.is_current ? ' (当前)' : ''} [{v.status}]
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* 7. 选配模块 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">选配模块</label>
@@ -498,17 +576,33 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 ) : (
                   <div className="border border-gray-200 rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
                     {moduleTypes.map((mt) => (
-                      <label key={mt.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded px-1">
+                      <label key={mt.id} className={`flex items-center gap-2 rounded px-1 ${
+                        mt.is_required ? 'bg-blue-50 cursor-default' : 'cursor-pointer hover:bg-gray-50'
+                      }`}>
                         <input type="checkbox" checked={selectedModuleTypeIds.includes(mt.id)}
-                          onChange={() => handleModuleTypeToggle(mt.id)} className="rounded border-gray-300 text-blue-600" />
-                        <span className="text-sm text-gray-700">{mt.name}</span>
+                          onChange={() => !mt.is_required && handleModuleTypeToggle(mt.id)}
+                          disabled={mt.is_required}
+                          className={`rounded border-gray-300 ${mt.is_required ? 'text-blue-600 opacity-70' : 'text-blue-600'}`} />
+                        <span className={`text-sm ${mt.is_required ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{mt.name}</span>
                         <span className="text-xs text-gray-400">({mt.code})</span>
+                        {mt.is_required ? (
+                          <span className="ml-auto text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">必选</span>
+                        ) : (
+                          <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">可选</span>
+                        )}
                       </label>
                     ))}
                   </div>
                 )}
-                {selectedModuleTypeIds.length > 0 && (
-                  <p className="text-xs text-blue-600 mt-1">已选 {selectedModuleTypeIds.length} 个模块，创建设备时自动添加</p>
+                {moduleTypes.length > 0 && (
+                  <div className="mt-1 space-y-0.5">
+                    {moduleTypes.filter(m => !m.is_required).length > 0 && (
+                      <p className="text-xs text-amber-600">ℹ 有 {moduleTypes.filter(m => !m.is_required).length} 个可选模块，请根据需要勾选</p>
+                    )}
+                    {selectedModuleTypeIds.length > 0 && (
+                      <p className="text-xs text-blue-600">已选 {selectedModuleTypeIds.length} 个模块，创建设备时自动添加</p>
+                    )}
+                  </div>
                 )}
               </div>
             </>

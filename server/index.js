@@ -37,6 +37,9 @@ const uploadRoutes = require('./routes/uploads');
 
 
 
+// 产品迭代版本路由
+const productVersionRoutes = require('./routes/product-versions');
+
 // Phase 4: 售后管理集成路由
 const afterSalesRoutes = require('./routes/after-sales');
 const deviceUpgradeRoutes = require('./routes/device-upgrades');
@@ -176,6 +179,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/product-modules', productModuleRoutes);
 app.use('/api/product-documents', productDocumentRoutes);
 app.use('/api/device-documents', deviceDocumentRoutes);
+app.use('/api/product-versions', productVersionRoutes);
 app.use('/api/uploads', uploadRoutes);
 
 // 客户管理路由

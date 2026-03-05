@@ -41,6 +41,8 @@ router.get('/', async (req, res) => {
         pl.name as product_line_name,
         p.name as product_name,
         p.model as product_model,
+        pv.version_number as product_version_number,
+        pv.version_name as product_version_name,
         c.name as customer_name,
         c.short_name as customer_short_name,
         COUNT(DISTINCT i.id) as issue_count,
@@ -48,11 +50,12 @@ router.get('/', async (req, res) => {
       FROM devices d
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       LEFT JOIN products p ON d.product_id = p.id
+      LEFT JOIN product_versions pv ON d.product_version_id = pv.id
       LEFT JOIN customers c ON d.customer_id = c.id
       LEFT JOIN modules m ON d.id = m.device_id
       LEFT JOIN issues i ON d.id = i.device_id
       ${whereClause}
-      GROUP BY d.id, pl.name, p.name, p.model, c.name, c.short_name
+      GROUP BY d.id, pl.name, p.name, p.model, pv.version_number, pv.version_name, c.name, c.short_name
       ORDER BY d.created_at DESC
       LIMIT ${parseInt(limitNum)} OFFSET ${parseInt(offset)}
     `;
@@ -99,17 +102,20 @@ router.get('/:id', async (req, res) => {
       pl.name as product_line_name,
       p.name as product_name,
       p.model as product_model,
+      pv.version_number as product_version_number,
+      pv.version_name as product_version_name,
       c.name as customer_name,
       c.short_name as customer_short_name,
       COUNT(DISTINCT i.id) as issue_count
       FROM devices d
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       LEFT JOIN products p ON d.product_id = p.id
+      LEFT JOIN product_versions pv ON d.product_version_id = pv.id
       LEFT JOIN customers c ON d.customer_id = c.id
       LEFT JOIN modules m ON d.id = m.device_id
       LEFT JOIN issues i ON d.id = i.device_id
       WHERE d.id = ?
-      GROUP BY d.id, pl.name, p.name, p.model, c.name, c.short_name
+      GROUP BY d.id, pl.name, p.name, p.model, pv.version_number, pv.version_name, c.name, c.short_name
         `;
 
     const deviceResult = await query(deviceQuery, [id]);
@@ -185,7 +191,7 @@ router.post('/', [
       });
     }
 
-    const { id, name, device_code, product_line_id, product_id, customer_id, status = '正常', remote_code, password } = req.body;
+    const { id, name, device_code, product_line_id, product_id, product_version_id, customer_id, status = '正常', remote_code, password } = req.body;
 
     // 如果提供了ID，使用用户提供的ID，否则自动生成
     let deviceId = id;
@@ -208,16 +214,16 @@ router.post('/', [
     }
 
     const insertQuery = `
-      INSERT INTO devices(id, name, device_code, product_line_id, product_id, customer_id, status, remote_code, password)
-      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO devices(id, name, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password)
+      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    await query(insertQuery, [deviceId, name ?? null, device_code || null, product_line_id, product_id || null, customer_id || null, status, remote_code || null, password || null]);
+    await query(insertQuery, [deviceId, name ?? null, device_code || null, product_line_id, product_id || null, product_version_id || null, customer_id || null, status, remote_code || null, password || null]);
 
     res.status(201).json({
       success: true,
       message: '设备创建成功',
-      data: { id: deviceId, name, device_code, product_line_id, product_id, customer_id, status, remote_code, password }
+      data: { id: deviceId, name, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password }
     });
   } catch (error) {
     console.error('创建设备失败:', error);
@@ -274,7 +280,7 @@ router.put('/:id', [
     }
 
     // 只允许更新存在的字段（白名单）
-    const allowedFields = ['name', 'device_code', 'product_line_id', 'product_id', 'customer_id', 'status', 'remote_code', 'password'];
+    const allowedFields = ['name', 'device_code', 'product_line_id', 'product_id', 'product_version_id', 'customer_id', 'status', 'remote_code', 'password'];
     const filteredUpdates = {};
     Object.keys(updates).forEach(key => {
       if (allowedFields.includes(key) && updates[key] !== undefined) {

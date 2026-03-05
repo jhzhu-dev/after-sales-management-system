@@ -319,6 +319,42 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+    // 产品迭代版本表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS product_versions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        version_number VARCHAR(100) NOT NULL,
+        version_name VARCHAR(255),
+        description TEXT,
+        specifications JSON,
+        status ENUM('开发中', '量产中', '已停产') DEFAULT '开发中',
+        release_date DATE,
+        is_current BOOLEAN DEFAULT FALSE,
+        sort_order INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_product_version (product_id, version_number)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 产品迭代版本文档表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS product_version_documents (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_version_id INT NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        file_type VARCHAR(50),
+        file_size INT,
+        category ENUM('规格书', '变更记录', '图纸', '其他') DEFAULT '其他',
+        uploaded_by VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_version_id) REFERENCES product_versions(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     // 产品模块配置历史表
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS product_module_history (
@@ -440,6 +476,19 @@ async function createTables() {
 
       // Phase 4: 扩展 issues 表及创建 device_upgrades 表
       console.log('🔄 正在执行 Phase 4 数据库迁移...');
+
+      // 添加 product_version_id 字段到 devices 表
+      const [devicePVIdCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'product_version_id'");
+      if (devicePVIdCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加 product_version_id 字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN product_version_id INT AFTER product_id");
+        try {
+          await pool.execute("ALTER TABLE devices ADD CONSTRAINT fk_device_product_version FOREIGN KEY (product_version_id) REFERENCES product_versions(id) ON DELETE SET NULL");
+        } catch (e) {
+          console.warn('⚠️ 添加 product_version_id 外键警告:', e.message);
+        }
+        console.log('✅ product_version_id 字段添加成功');
+      }
 
       // 检查 issues 表扩展字段
       const [issueCategoryCols] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'category'");

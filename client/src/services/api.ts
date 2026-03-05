@@ -18,7 +18,10 @@ import {
   ProductModule,
   ProductModuleHistory,
   ModuleType,
-  Customer
+  Customer,
+  ProductVersion,
+  ProductVersionFormData,
+  ProductVersionDocument
 } from '../types';
 
 // 创建axios实例
@@ -441,6 +444,58 @@ export const customerApi = {
 export const healthApi = {
   check: (): Promise<ApiResponse<any>> =>
     api.get('/health').then(res => res.data),
+};
+
+// 产品迭代版本相关API
+export const productVersionApi = {
+  // 获取版本列表
+  getVersions: (params?: { product_id?: number; status?: string }): Promise<PaginatedResponse<ProductVersion>> =>
+    api.get('/product-versions', { params }).then(res => res.data),
+
+  // 获取单个版本详情
+  getVersion: (id: number): Promise<ApiResponse<ProductVersion>> =>
+    api.get(`/product-versions/${id}`).then(res => res.data),
+
+  // 创建版本
+  createVersion: (data: ProductVersionFormData): Promise<ApiResponse<ProductVersion>> =>
+    api.post('/product-versions', data).then(res => res.data),
+
+  // 更新版本
+  updateVersion: (id: number, data: Partial<ProductVersionFormData>): Promise<ApiResponse<any>> =>
+    api.put(`/product-versions/${id}`, data).then(res => res.data),
+
+  // 删除版本
+  deleteVersion: (id: number): Promise<ApiResponse<void>> =>
+    api.delete(`/product-versions/${id}`).then(res => res.data),
+
+  // 设为当前版本
+  setCurrentVersion: (id: number): Promise<ApiResponse<any>> =>
+    api.put(`/product-versions/${id}/set-current`).then(res => res.data),
+
+  // 获取版本文档
+  getDocuments: (versionId: number): Promise<ApiResponse<ProductVersionDocument[]>> =>
+    api.get(`/product-versions/${versionId}/documents`).then(res => res.data),
+
+  // 上传版本文档
+  uploadDocuments: (versionId: number, formData: FormData): Promise<ApiResponse<any>> =>
+    api.post(`/product-versions/${versionId}/documents`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    }).then(res => res.data),
+
+  // 删除版本文档
+  deleteDocument: (docId: number): Promise<ApiResponse<void>> =>
+    api.delete(`/product-versions/documents/${docId}`).then(res => res.data),
+
+  // 预览版本文档（获取签名URL）
+  previewDocument: (docId: number): Promise<ApiResponse<{ url: string; name: string; file_type: string }>> =>
+    api.get(`/product-versions/documents/${docId}/preview`).then(res => res.data),
+
+  // 下载版本文档
+  downloadDocument: (docId: number): string => {
+    const token = localStorage.getItem('auth_token');
+    return `${api.defaults.baseURL}/product-versions/documents/${docId}/download?token=${token}`;
+  },
 };
 
 export default api;

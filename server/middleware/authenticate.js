@@ -6,7 +6,8 @@ const jwt = require('jsonwebtoken');
  */
 function authenticate(req, res, next) {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  // 支持 Authorization header 或 query 参数中的 token（用于浏览器直接打开文件预览/下载）
+  const token = (authHeader && authHeader.split(' ')[1]) || req.query.token;
 
   if (!token) {
     return res.status(401).json({ success: false, error: '未提供认证令牌，请先登录' });
