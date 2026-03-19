@@ -114,9 +114,10 @@ class OSSService {
    * 生成带签名的下载URL
    * @param {string} filePath - OSS文件路径 (格式: oss://bucket/path/to/file)
    * @param {number} expiresInSeconds - URL有效期（秒），默认1小时
+   * @param {string|null} fileName - 下载时使用的文件名（原始文件名），为空则不指定
    * @returns {Promise<string>} 签名URL
    */
-  async getSignedUrl(filePath, expiresInSeconds = 3600) {
+  async getSignedUrl(filePath, expiresInSeconds = 3600, fileName = null) {
     if (!this.enabled) {
       throw new Error('OSS服务未启用');
     }
@@ -129,12 +130,17 @@ class OSSService {
       }
 
       const [, bucket, objectName] = ossPathMatch;
-      
+
+      // 构建 Content-Disposition，携带原始文件名（RFC 5987 编码，正确支持中文）
+      const disposition = fileName
+        ? `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`
+        : 'attachment';
+
       // 生成签名URL
       const url = this.client.signatureUrl(objectName, {
         expires: expiresInSeconds,
         response: {
-          'content-disposition': 'attachment' // 强制下载而非预览
+          'content-disposition': disposition
         }
       });
 
@@ -297,6 +303,13 @@ class OSSService {
       case 'issue-log-attachments': {
         const deviceFolder = this.buildDeviceFolder(params.device);
         return `${base}/devices/${deviceFolder}/issues/${params.issueId}/logs/${params.fileName}`;
+      }
+
+      case 'checklist-attachments': {
+        const deviceFolder = this.buildDeviceFolder(params.device);
+        const moduleFolder = safe(params.moduleType || 'unknown-module');
+        const versionFolder = params.versionFolder || 'checklist';
+        return `${base}/devices/${deviceFolder}/module-versions/${moduleFolder}/${versionFolder}/${params.fileName}`;
       }
 
       default:

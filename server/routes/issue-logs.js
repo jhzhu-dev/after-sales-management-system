@@ -104,7 +104,7 @@ router.post('/upload-attachment', issueLogUpload.array('files', 10), async (req,
 
       let url = filePath;
       if (filePath.startsWith('oss://')) {
-        try { url = await ossService.getSignedUrl(filePath, 3600 * 24 * 7); }
+        try { url = await ossService.getSignedUrl(filePath, 3600 * 24 * 7, originalName); }
         catch (e) { url = filePath; }
       } else {
         url = `/uploads/issue-log-attachments/${path.basename(filePath)}`;

@@ -17,9 +17,9 @@ const storage = multer.diskStorage({
         cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
-        // 生成唯一文件名
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+        // 保留原始文件名，加时间戳前缀避免冲突（latin1→utf8 防中文乱码）
+        const safeName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+        cb(null, Date.now() + '_' + safeName);
     }
 });
 
@@ -105,6 +105,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         }
 
         const product = products[0];
+        const originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
         let filePath = req.file.path;
         let fileSize = req.file.size;
 
@@ -136,12 +137,13 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
         const result = await query(
             `INSERT INTO product_documents 
-       (product_id, doc_type, title, file_path, file_size, uploaded_by) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       (product_id, doc_type, title, original_name, file_path, file_size, uploaded_by) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 product_id,
                 doc_type,
                 title,
+                originalName,
                 filePath,
                 fileSize,
                 uploaded_by || null
@@ -155,6 +157,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                 product_id,
                 doc_type,
                 title,
+                original_name: originalName,
                 file_path: filePath,
                 file_size: fileSize,
                 uploaded_by
@@ -196,9 +199,10 @@ router.get('/:id/download', async (req, res) => {
 
         // 判断是否为OSS路径
         if (ossService.isOSSPath(document.file_path)) {
-            // 从OSS生成签名URL并重定向
+            // 从OSS生成签名URL并重定向，携带原始文件名
             try {
-                const signedUrl = await ossService.getSignedUrl(document.file_path, 3600); // 1小时有效期
+                const downloadName = document.original_name || document.title;
+                const signedUrl = await ossService.getSignedUrl(document.file_path, 3600, downloadName);
                 return res.redirect(signedUrl);
             } catch (ossError) {
                 console.error('生成OSS下载链接失败:', ossError);
@@ -218,7 +222,7 @@ router.get('/:id/download', async (req, res) => {
             });
         }
 
-        res.download(document.file_path, document.title);
+        res.download(document.file_path, document.original_name || document.title);
     } catch (error) {
         console.error('下载产品资料失败:', error);
         res.status(500).json({

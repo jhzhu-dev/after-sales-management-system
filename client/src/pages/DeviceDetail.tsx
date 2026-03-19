@@ -19,13 +19,14 @@ import {
   FolderIcon,
   DocumentArrowDownIcon
 } from '@heroicons/react/24/outline';
-import { Device, Module, Issue, ModuleFormData, DeviceFormData, VersionRelease, DeviceUpgrade } from '../types';
-import { deviceApi, moduleApi, issueApi, versionReleaseApi, moduleVersionApi, deviceUpgradeApi } from '../services/api';
+import { Device, Module, Issue, ModuleFormData, DeviceFormData, VersionRelease, DeviceUpgrade, SOPTemplate, ChecklistItem, SOPTemplateItem } from '../types';
+import { deviceApi, moduleApi, issueApi, versionReleaseApi, moduleVersionApi, deviceUpgradeApi, sopTemplateApi, uploadChecklistImage } from '../services/api';
 import api from '../services/api';
 import Layout from '../components/Layout';
 import ModuleForm from '../components/ModuleForm';
 import DeviceForm from '../components/DeviceForm';
 import UpgradeForm from '../components/UpgradeForm';
+import SOPChecklistSection from '../components/SOPChecklistSection';
 
 const DeviceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -51,6 +52,9 @@ const DeviceDetail: React.FC = () => {
   const [showModuleVersionHistory, setShowModuleVersionHistory] = useState(false);
   const [deviceUpgrades, setDeviceUpgrades] = useState<any[]>([]);
   const [showUpgradeForm, setShowUpgradeForm] = useState(false);
+  const [sopTemplate, setSopTemplate] = useState<SOPTemplate | null>(null);
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [versionSubmitting, setVersionSubmitting] = useState(false);
 
   // 设备出厂资料相关状态
   const [deviceDocuments, setDeviceDocuments] = useState<any[]>([]);
@@ -63,6 +67,7 @@ const DeviceDetail: React.FC = () => {
   const [docUploading, setDocUploading] = useState(false);
   const [docDragOver, setDocDragOver] = useState(false);
   const [docUploadProgress, setDocUploadProgress] = useState('');
+  const [bgUpload, setBgUpload] = useState<{ fileCount: number; progress: number; done: boolean; error: string | null } | null>(null);
   const [previewDoc, setPreviewDoc] = useState<{url: string; title: string; type: string} | null>(null);
   const [selectedDocIds, setSelectedDocIds] = useState<Set<number>>(new Set());
   const [docSelectMode, setDocSelectMode] = useState(false);
@@ -186,31 +191,48 @@ const DeviceDetail: React.FC = () => {
       alert('请选择或输入分类');
       return;
     }
-    setDocUploading(true);
-    setDocUploadProgress(`正在上传 0/${docUploadFiles.length}...`);
+    // 提前捕获上传参数，关闭弹窗后仍可使用
+    const filesToUpload = [...docUploadFiles];
+    const uploadedBy = docUploadBy.trim();
+    const fileCount = filesToUpload.length;
+
+    // 立即关闭弹窗，切换为后台上传模式
+    resetDocUploadForm();
+    setBgUpload({ fileCount, progress: 0, done: false, error: null });
+
     try {
       const formData = new FormData();
-      docUploadFiles.forEach(file => formData.append('files', file));
-      // 每个文件的标题默认为文件名(去掉扩展名)
-      docUploadFiles.forEach(file => formData.append('titles', file.name.replace(/\.[^/.]+$/, '')));
+      filesToUpload.forEach(file => formData.append('files', file));
+      filesToUpload.forEach(file => {
+        const relPath = (file as any).webkitRelativePath as string;
+        // 发送完整相对路径（含文件夹），后端据此构建 OSS 目录层级
+        formData.append('relative_paths', relPath || file.name);
+        // 标题使用相对路径去扩展名（如 "v1.2/firmware/image"），体现层级结构
+        formData.append('titles', (relPath || file.name).replace(/\.[^/.]+$/, ''));
+      });
       formData.append('device_id', id!);
       formData.append('category', category);
-      if (docUploadBy.trim()) formData.append('uploaded_by', docUploadBy.trim());
+      if (uploadedBy) formData.append('uploaded_by', uploadedBy);
 
-      const { data: result } = await api.post('/device-documents/upload', formData);
+      const { data: result } = await api.post('/device-documents/upload', formData, {
+        onUploadProgress: (e: any) => {
+          if (e.total) {
+            const pct = Math.round((e.loaded * 100) / e.total);
+            setBgUpload(prev => prev ? { ...prev, progress: pct } : prev);
+          }
+        },
+      });
+
       if (result.success) {
-        setDocUploadProgress('');
+        setBgUpload(prev => prev ? { ...prev, done: true, progress: 100 } : prev);
         await fetchDeviceDocuments();
-        resetDocUploadForm();
+        setTimeout(() => setBgUpload(null), 3500);
       } else {
-        alert(result.error || '上传失败');
+        setBgUpload(prev => prev ? { ...prev, error: result.error || '上传失败' } : prev);
       }
     } catch (error) {
       console.error('上传设备资料失败:', error);
-      alert('上传失败');
-    } finally {
-      setDocUploading(false);
-      setDocUploadProgress('');
+      setBgUpload(prev => prev ? { ...prev, error: '上传失败，请重试' } : prev);
     }
   };
 
@@ -421,7 +443,25 @@ const DeviceDetail: React.FC = () => {
   const handleUpdateModuleVersion = async (module: Module) => {
     setSelectedModuleForVersion(module);
     setSelectedReleaseForVersion(null);
+    setSopTemplate(null);
+    setChecklistItems([]);
     await fetchModuleReleases(module.type_id.toString());
+    try {
+      const tplRes = await sopTemplateApi.getByModuleType(module.type_id);
+      if (tplRes?.success && tplRes.data) {
+        const tpl: SOPTemplate = tplRes.data;
+        setSopTemplate(tpl);
+        setChecklistItems(
+          (tpl.items as SOPTemplateItem[]).map(item => ({
+            id: item.id,
+            text: item.text,
+            required: item.required,
+            status: 'pending',
+            attachments: [],
+          }))
+        );
+      }
+    } catch (_) {}
     setShowVersionUpdateForm(true);
   };
 
@@ -430,10 +470,42 @@ const DeviceDetail: React.FC = () => {
     version_number: string,
     release_id?: number,
     description: string,
-    updated_by: string
+    updated_by: string,
+    checklist?: ChecklistItem[]
   }) => {
     try {
-      const { version_number, release_id, description, updated_by } = versionData;
+      const { version_number, release_id, description, updated_by, checklist } = versionData;
+
+      // 如果有检查项，先把 blob 附件上传到服务器，用真实 URL 替换
+      setVersionSubmitting(true);
+      let finalChecklist = checklist;
+      if (checklist && checklist.length > 0) {
+        finalChecklist = await Promise.all(
+          checklist.map(async item => {
+            if (item.attachments.length === 0) return item;
+            const uploadedAttachments = await Promise.all(
+              item.attachments.map(async (att: any) => {
+                if (att._file) {
+                  try {
+                    const result = await uploadChecklistImage(att._file, {
+                      moduleId: selectedModuleForVersion?.id,
+                      moduleType: selectedModuleForVersion?.module_type,
+                      fromVersion: (selectedModuleForVersion as any)?.current_version ?? undefined,
+                      toVersion: version_number,
+                    });
+                    return { name: result.name, url: result.url, size: result.size };
+                  } catch (e) {
+                    // 上传失败则保留原始名称，去掉无效 blob url
+                    return { name: att.name, url: '', size: att.size };
+                  }
+                }
+                return att;
+              })
+            );
+            return { ...item, attachments: uploadedAttachments };
+          })
+        );
+      }
 
       if (selectedModuleForVersion) {
         // 判断是出厂版本还是更新版本
@@ -444,7 +516,8 @@ const DeviceDetail: React.FC = () => {
           release_id,
           version_type: isFactory ? 'factory' : 'update',
           description,
-          updated_by
+          updated_by,
+          checklist: finalChecklist && finalChecklist.length > 0 ? finalChecklist : undefined,
         });
         await fetchModules();
         await fetchDeviceUpgrades();
@@ -453,9 +526,13 @@ const DeviceDetail: React.FC = () => {
       setShowVersionUpdateForm(false);
       setSelectedModuleForVersion(null);
       setSelectedReleaseForVersion(null);
+      setSopTemplate(null);
+      setChecklistItems([]);
+      setVersionSubmitting(false);
     } catch (error: any) {
       console.error('更新版本失败:', error);
       const errorMsg = error.response?.data?.error || '更新版本失败';
+      setVersionSubmitting(false);
       alert(errorMsg);
     }
   };
@@ -532,6 +609,8 @@ const DeviceDetail: React.FC = () => {
         submitData.new_id = data.id;
       }
       delete submitData.id;
+      // product_line_id 在编辑模式是只读的，不需要发送（也不能发送空字符串到 INT NOT NULL 列）
+      delete submitData.product_line_id;
       const response: any = await deviceApi.updateDevice(id!, submitData);
       console.log('设备更新响应:', response);
       // 如果序列号变更了，跳转到新的URL
@@ -979,17 +1058,14 @@ const DeviceDetail: React.FC = () => {
                                   ) : (
                                     <DocumentIcon className="h-8 w-8 text-gray-400 flex-shrink-0" />
                                   )}
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                  <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-medium text-gray-900 truncate">
                                       {doc.title}
-                                      {canPreview && <span className="ml-1.5 text-xs text-green-500 font-normal">可预览</span>}
-                                    </p>
-                                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                                      <span>{doc.original_name}</span>
-                                      <span>{formatFileSize(doc.file_size)}</span>
-                                      <span>{new Date(doc.created_at).toLocaleDateString()}</span>
-                                      {doc.uploaded_by && <span>上传人: {doc.uploaded_by}</span>}
-                                    </div>
+                                    </span>
+                                    {canPreview && <span className="text-xs text-green-500 font-normal flex-shrink-0">可预览</span>}
+                                    <span className="text-xs text-gray-400 flex-shrink-0">{formatFileSize(doc.file_size)}</span>
+                                    <span className="text-xs text-gray-400 flex-shrink-0">{new Date(doc.created_at).toLocaleDateString()}</span>
+                                    {doc.uploaded_by && <span className="text-xs text-gray-400 flex-shrink-0">上传人: {doc.uploaded_by}</span>}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0 ml-4">
@@ -1208,7 +1284,7 @@ const DeviceDetail: React.FC = () => {
       {/* 版本更新弹窗 (重构) */}
       {showVersionUpdateForm && selectedModuleForVersion && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="px-4 py-3 3xl:px-6 3xl:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h3 className="text-lg font-bold text-gray-900">
                 {(selectedModuleForVersion as any).current_version ? '版本更新登记' : '设置出厂版本'} - {selectedModuleForVersion.module_type}
@@ -1218,13 +1294,15 @@ const DeviceDetail: React.FC = () => {
                   setShowVersionUpdateForm(false);
                   setSelectedModuleForVersion(null);
                   setSelectedReleaseForVersion(null);
+                  setSopTemplate(null);
+                  setChecklistItems([]);
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <XCircleIcon className="h-6 w-6" />
               </button>
             </div>
-            <div className="p-4 3xl:p-6 space-y-5">
+            <div className="p-4 3xl:p-6 space-y-5 overflow-y-auto flex-1">
               {/* 版本库必选区 */}
               <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
                 <label className="block text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
@@ -1281,12 +1359,22 @@ const DeviceDetail: React.FC = () => {
                 />
               </div>
 
+              {/* 版本更新检查项（仅迭代更新时显示，出厂版本不需要） */}
+              {checklistItems.length > 0 && !!(selectedModuleForVersion as any).current_version && (
+                <SOPChecklistSection
+                  items={checklistItems}
+                  onChange={setChecklistItems}
+                />
+              )}
+
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={() => {
                     setShowVersionUpdateForm(false);
                     setSelectedModuleForVersion(null);
                     setSelectedReleaseForVersion(null);
+                    setSopTemplate(null);
+                    setChecklistItems([]);
                   }}
                   className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 >
@@ -1315,17 +1403,31 @@ const DeviceDetail: React.FC = () => {
                       return;
                     }
 
+                    const pendingRequired = checklistItems.filter(
+                      i => i.required && i.status === 'pending'
+                    ).length;
+                    if (pendingRequired > 0) {
+                      alert(`请先确认 ${pendingRequired} 项必填检查项`);
+                      return;
+                    }
+
                     handleVersionUpdateSubmit({
                       version_number: selectedReleaseForVersion.version_number,
                       release_id: selectedReleaseForVersion.id,
                       description,
-                      updated_by
+                      updated_by,
+                      checklist: checklistItems.length > 0 ? checklistItems : undefined,
                     });
                   }}
-                  disabled={moduleReleases.length === 0}
+                  disabled={moduleReleases.length === 0 || versionSubmitting}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  确认并保存记录
+                  {versionSubmitting
+                    ? '上传中...'
+                    : checklistItems.filter(i => i.required && i.status === 'pending').length > 0
+                      ? `${checklistItems.filter(i => i.required && i.status === 'pending').length} 项待确认`
+                      : '确认并保存记录'
+                  }
                 </button>
               </div>
             </div>
@@ -1544,7 +1646,7 @@ const DeviceDetail: React.FC = () => {
                       <div key={idx} className="flex items-center justify-between bg-white rounded-md px-3 py-1.5 border border-gray-200">
                         <div className="flex items-center gap-2 min-w-0">
                           <DocumentIcon className="h-5 w-5 text-green-500 flex-shrink-0" />
-                          <span className="text-sm text-gray-900 truncate">{file.name}</span>
+                          <span className="text-sm text-gray-900 truncate">{(file as any).webkitRelativePath || file.name}</span>
                           <span className="text-xs text-gray-400 flex-shrink-0">{formatFileSize(file.size)}</span>
                         </div>
                         <button
@@ -1569,26 +1671,58 @@ const DeviceDetail: React.FC = () => {
                         }}
                       />
                     </label>
-                  </div>
-                ) : (
-                  <>
-                    <ArrowUpTrayIcon className="mx-auto h-10 w-10 text-gray-400" />
-                    <p className="mt-2 text-sm text-gray-600">拖拽文件到此处，或</p>
-                    <label className="mt-1 inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm font-medium text-green-600 hover:bg-gray-50 cursor-pointer">
-                      选择文件（可多选）
+                    <label className="inline-flex items-center px-3 py-1 bg-white border border-gray-300 rounded-md text-xs font-medium text-blue-600 hover:bg-gray-50 cursor-pointer mt-1">
+                      <FolderIcon className="h-3.5 w-3.5 mr-1" />
+                      添加文件夹
                       <input
                         type="file"
                         className="hidden"
-                        multiple
+                        {...({ webkitdirectory: '', multiple: true } as any)}
                         onChange={(e) => {
-                          if (e.target.files) {
-                            setDocUploadFiles(Array.from(e.target.files));
+                          if (e.target.files && e.target.files.length > 0) {
+                            setDocUploadFiles(prev => [...prev, ...Array.from(e.target.files!)]);
                           }
                           e.target.value = '';
                         }}
                       />
                     </label>
-                    <p className="mt-2 text-xs text-gray-400">支持批量选择，每个文件最大 50MB</p>
+                  </div>
+                ) : (
+                  <>
+                    <ArrowUpTrayIcon className="mx-auto h-10 w-10 text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-600">拖拽文件到此处，或</p>
+                    <div className="mt-1 flex items-center justify-center gap-2 flex-wrap">
+                      <label className="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm font-medium text-green-600 hover:bg-gray-50 cursor-pointer">
+                        选择文件（可多选）
+                        <input
+                          type="file"
+                          className="hidden"
+                          multiple
+                          onChange={(e) => {
+                            if (e.target.files) {
+                              setDocUploadFiles(Array.from(e.target.files));
+                            }
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                      <label className="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm font-medium text-blue-600 hover:bg-gray-50 cursor-pointer">
+                        <FolderIcon className="h-4 w-4 mr-1" />
+                        选择文件夹
+                        <input
+                          type="file"
+                          className="hidden"
+                          {...({ webkitdirectory: '', multiple: true } as any)}
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              setDocUploadFiles(Array.from(e.target.files));
+                            }
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-400">支持批量选择文件或整个文件夹，每个文件最大 50MB</p>
                   </>
                 )}
               </div>
@@ -1642,38 +1776,73 @@ const DeviceDetail: React.FC = () => {
             <div className="px-4 py-3 3xl:px-6 3xl:py-4 border-t border-gray-200 flex items-center justify-between">
               <span className="text-xs text-gray-500">
                 {docUploadFiles.length > 0 ? `已选择 ${docUploadFiles.length} 个文件` : ''}
-                {docUploadProgress && ` · ${docUploadProgress}`}
               </span>
               <div className="flex space-x-3">
                 <button
                   onClick={resetDocUploadForm}
-                  disabled={docUploading}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm disabled:opacity-50"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
                 >
                   取消
                 </button>
                 <button
                   onClick={handleDocUpload}
-                  disabled={docUploading || docUploadFiles.length === 0 || (!docUploadCategory && !docUploadNewCategory.trim())}
+                  disabled={docUploadFiles.length === 0 || (!docUploadCategory && !docUploadNewCategory.trim())}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
                 >
-                  {docUploading ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      上传中...
-                    </>
-                  ) : (
-                    <>
-                      <ArrowUpTrayIcon className="h-4 w-4" />
-                      上传 {docUploadFiles.length > 0 ? `(${docUploadFiles.length})` : ''}
-                    </>
-                  )}
+                  <ArrowUpTrayIcon className="h-4 w-4" />
+                  开始上传 {docUploadFiles.length > 0 ? `(${docUploadFiles.length})` : ''}
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 后台上传进度悬浮面板 */}
+      {bgUpload && (
+        <div className="fixed bottom-6 right-6 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 w-72 overflow-hidden">
+          <div
+            className={`h-1.5 transition-all duration-300 ${bgUpload.error ? 'bg-red-500' : bgUpload.done ? 'bg-green-500' : 'bg-blue-500'}`}
+            style={{ width: `${bgUpload.progress}%` }}
+          />
+          <div className="px-4 py-3 flex items-start gap-3">
+            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${bgUpload.error ? 'bg-red-100' : bgUpload.done ? 'bg-green-100' : 'bg-blue-50'}`}>
+              {bgUpload.error ? (
+                <XCircleIcon className="h-5 w-5 text-red-500" />
+              ) : bgUpload.done ? (
+                <CheckCircleIcon className="h-5 w-5 text-green-500" />
+              ) : (
+                <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900">
+                {bgUpload.error ? '上传失败' : bgUpload.done ? '上传完成' : '正在上传...'}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {bgUpload.error
+                  ? bgUpload.error
+                  : bgUpload.done
+                  ? `${bgUpload.fileCount} 个文件已成功上传`
+                  : `${bgUpload.fileCount} 个文件 · ${bgUpload.progress}%`}
+              </p>
+              {!bgUpload.error && !bgUpload.done && (
+                <div className="mt-2 bg-gray-100 rounded-full h-1.5">
+                  <div
+                    className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                    style={{ width: `${bgUpload.progress}%` }}
+                  />
+                </div>
+              )}
+            </div>
+            {(bgUpload.done || bgUpload.error) && (
+              <button onClick={() => setBgUpload(null)} className="flex-shrink-0 text-gray-400 hover:text-gray-600 mt-0.5">
+                <XCircleIcon className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
       )}

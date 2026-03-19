@@ -19,7 +19,7 @@ interface LayoutProps {
 const navigation = [
   { name: '仪表盘', href: '/', icon: HomeIcon },
   { name: '设备管理', href: '/devices', icon: DevicePhoneMobileIcon },
-  { name: '故障与升级', href: '/issues', icon: ChartBarIcon },
+  { name: '运维中心', href: '/issues', icon: ChartBarIcon },
   { name: '产品线管理', href: '/product-lines', icon: CubeIcon },
   { name: '版本库中心', href: '/releases', icon: WrenchScrewdriverIcon },
   { name: '系统设置', href: '/settings', icon: Cog6ToothIcon },

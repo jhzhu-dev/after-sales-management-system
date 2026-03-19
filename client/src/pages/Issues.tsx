@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { PlusIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon, ChatBubbleLeftRightIcon, ArrowPathIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon, ChatBubbleLeftRightIcon, ArrowPathIcon, MagnifyingGlassIcon, PrinterIcon, BookOpenIcon } from '@heroicons/react/24/outline';
 import { issueApi, customerApi, moduleTypeApi, productLineApi, moduleVersionApi } from '../services/api';
 import { Issue, FilterOptions, IssueFormData } from '../types';
 import Layout from '../components/Layout';
+import KnowledgeBase from '../components/KnowledgeBase';
 import DataTable from '../components/DataTable';
 import IssueForm from '../components/IssueForm';
 import ExportButton from '../components/ExportButton';
@@ -13,13 +14,13 @@ import { formatDate, getStatusColor, getSeverityColor } from '../utils';
 export default function Issues() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'issues' | 'upgrades'>('issues');
+  const [activeTab, setActiveTab] = useState<'issues' | 'upgrades' | 'knowledge'>('issues');
 
   // 从URL参数读取tab
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
-    if (tab === 'issues' || tab === 'upgrades') {
+    if (tab === 'issues' || tab === 'upgrades' || tab === 'knowledge') {
       setActiveTab(tab);
     }
   }, [location.search]);
@@ -61,6 +62,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
   });
   const [customers, setCustomers] = useState<any[]>([]);
   const [printAllIssues, setPrintAllIssues] = useState<Issue[] | null>(null);
+  const [expandedUpgradeId, setExpandedUpgradeId] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeTab === 'issues') {
@@ -669,6 +671,31 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         key: 'release_date',
         title: '发布日期',
         render: (val: string) => val ? new Date(val).toLocaleDateString() : '-'
+      },
+      {
+        key: '_detail',
+        title: '检查项',
+        render: (_: any, item: any) => {
+          const hasChecklist = item.checklist && (
+            typeof item.checklist === 'string'
+              ? item.checklist !== 'null' && item.checklist !== '[]'
+              : Array.isArray(item.checklist) && item.checklist.length > 0
+          );
+          if (!hasChecklist) return <span className="text-xs text-gray-300">无</span>;
+          const isExpanded = expandedUpgradeId === item.id;
+          return (
+            <button
+              onClick={e => { e.stopPropagation(); setExpandedUpgradeId(isExpanded ? null : item.id); }}
+              className={`text-xs px-2 py-1 rounded border transition-colors ${
+                isExpanded
+                  ? 'bg-blue-50 text-blue-700 border-blue-300'
+                  : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600'
+              }`}
+            >
+              {isExpanded ? '收起' : '查看详情'}
+            </button>
+          );
+        }
       }
     ];
 
@@ -732,12 +759,143 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <DataTable
-            columns={upgradeColumns as any}
-            data={upgrades}
-            loading={upgradeLoading}
-            rowKey="id"
-          />
+          {upgradeLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : upgrades.length === 0 ? (
+            <div className="text-center py-16 text-gray-400">暂无版本演进记录</div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50">
+                <tr>
+                  {['订单号','设备简称','客户','迭代版本','模块类型','版本号','变更说明','操作人','发布日期','检查项'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {upgrades.map((item: any) => {
+                  const checklist: any[] = (() => {
+                    if (!item.checklist) return [];
+                    if (Array.isArray(item.checklist)) return item.checklist;
+                    try { return JSON.parse(item.checklist) || []; } catch { return []; }
+                  })();
+                  const isExpanded = expandedUpgradeId === item.id;
+                  const statusLabel: Record<string, string> = { done: '已完成', na: '不涉及', pending: '待确认' };
+                  const statusCls: Record<string, string> = {
+                    done: 'bg-green-100 text-green-700',
+                    na: 'bg-yellow-50 text-yellow-600',
+                    pending: 'bg-gray-100 text-gray-500',
+                  };
+                  return (
+                    <React.Fragment key={item.id}>
+                      <tr className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900 text-sm">{item.device_name || '-'}</div>
+                          <div className="text-xs text-gray-400">{item.device_id}</div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-blue-600 font-medium">{item.device_nickname || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{item.customer_name || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {item.product_version_number
+                            ? `${item.product_version_number}${item.product_version_name ? ' - ' + item.product_version_name : ''}`
+                            : '-'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">{item.module_type}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {item.version_type === 'update' && item.old_version && (
+                              <>
+                                <span className="font-mono text-gray-400 text-xs">{item.old_version}</span>
+                                <span className="text-gray-300 text-xs">→</span>
+                              </>
+                            )}
+                            <span className="font-mono font-bold text-blue-600 text-sm">{item.version_number}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              item.version_type === 'factory' ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'
+                            }`}>{item.version_type === 'factory' ? '出厂' : '更新'}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 max-w-[180px]">
+                          <div className="truncate" title={item.description}>{item.description || '-'}</div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{item.updated_by || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
+                          {item.release_date ? new Date(item.release_date).toLocaleDateString('zh-CN') : '-'}
+                        </td>
+                        <td className="px-4 py-3">
+                          {checklist.length > 0 ? (
+                            <button
+                              onClick={() => setExpandedUpgradeId(isExpanded ? null : item.id)}
+                              className={`text-xs px-2.5 py-1 rounded border transition-colors whitespace-nowrap ${
+                                isExpanded
+                                  ? 'bg-blue-50 text-blue-700 border-blue-300'
+                                  : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600'
+                              }`}
+                            >
+                              {isExpanded ? '收起' : `查看 ${checklist.length} 项`}
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-300">无</span>
+                          )}
+                        </td>
+                      </tr>
+                      {/* 展开的检查项详情行 */}
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={10} className="bg-blue-50 px-6 py-4 border-b border-blue-100">
+                            <div className="text-xs font-semibold text-blue-700 mb-3 flex items-center gap-2">
+                              <span>版本更新检查项核对记录</span>
+                              <span className="font-normal text-blue-500">
+                                · 已完成 {checklist.filter((i: any) => i.status === 'done').length} / 不涉及 {checklist.filter((i: any) => i.status === 'na').length} / 待确认 {checklist.filter((i: any) => i.status === 'pending').length}
+                              </span>
+                            </div>
+                            <div className="space-y-3">
+                              {checklist.map((ci: any, idx: number) => (
+                                <div key={ci.id || idx} className="bg-white rounded-lg border border-blue-100 px-4 py-3">
+                                  <div className="flex items-start gap-3">
+                                    <span className="text-xs text-gray-400 mt-0.5 w-5 shrink-0">{idx + 1}.</span>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-sm text-gray-800">{ci.text}</span>
+                                        {ci.required && <span className="text-[10px] text-red-400">*必填</span>}
+                                      </div>
+                                      {/* 图片附件 */}
+                                      {ci.attachments && ci.attachments.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                          {ci.attachments.map((att: any, aIdx: number) => (
+                                            att.url ? (
+                                              <a key={aIdx} href={att.url} target="_blank" rel="noreferrer" title={att.name}>
+                                                <img
+                                                  src={att.url}
+                                                  alt={att.name}
+                                                  className="w-20 h-20 object-cover rounded border border-gray-200 hover:border-blue-400 transition-colors cursor-pointer"
+                                                />
+                                              </a>
+                                            ) : null
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <span className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-medium ${statusCls[ci.status] || 'bg-gray-100 text-gray-500'}`}>
+                                      {statusLabel[ci.status] || ci.status}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     );
@@ -750,7 +908,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         <div className="hidden print:block print-header">
           <div className="print-flex-row" style={{justifyContent:'space-between'}}>
             <div>
-              <h1 style={{fontSize:'13pt',fontWeight:'800',margin:0}}>故障与升级 — {activeTab === 'issues' ? '故障管理' : '版本演进'}</h1>
+              <h1 style={{fontSize:'13pt',fontWeight:'800',margin:0}}>运维中心 — {activeTab === 'issues' ? '故障管理' : '版本演进'}</h1>
               <p style={{fontSize:'8pt',color:'#6b7280',marginTop:'2pt'}}>打印时间：{new Date().toLocaleString('zh-CN')}</p>
             </div>
             <div style={{fontSize:'8pt',color:'#6b7280',textAlign:'right'}}>
@@ -764,14 +922,15 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         <div className="bg-white p-4 3xl:p-6 rounded-2xl shadow-sm border border-gray-100 no-print">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl 3xl:text-2xl font-black text-gray-900 tracking-tight">故障与升级</h1>
-              <p className="text-gray-500 text-sm mt-1 font-medium">统一管理全生命周期的故障报修与升级演进</p>
+              <h1 className="text-xl 3xl:text-2xl font-black text-gray-900 tracking-tight">运维中心</h1>
+              <p className="text-gray-500 text-sm mt-1 font-medium">统一管理全生命周期的运维问题与升级演进</p>
             </div>
             <div className="flex items-center gap-3">
             <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
               {[
-                { id: 'issues' as const, label: '故障管理', icon: ChatBubbleLeftRightIcon },
-                { id: 'upgrades' as const, label: '版本演进', icon: ArrowPathIcon }
+                { id: 'issues' as const, label: '问题记录', icon: ChatBubbleLeftRightIcon },
+                { id: 'upgrades' as const, label: '版本演进', icon: ArrowPathIcon },
+                { id: 'knowledge' as const, label: '知识库', icon: BookOpenIcon }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -793,6 +952,9 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
 
         {/* 版本演进内容 */}
         {activeTab === 'upgrades' && <div className="no-print">{renderUpgrades()}</div>}
+
+        {/* 运维知识库 */}
+        {activeTab === 'knowledge' && <div className="no-print"><KnowledgeBase productLines={productLines} /></div>}
 
         {/* 故障管理内容 */}
         {activeTab === 'issues' && (<>

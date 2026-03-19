@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   PlusIcon,
   PencilIcon,
@@ -6,12 +6,13 @@ import {
   CogIcon,
   ClipboardDocumentCheckIcon,
   XMarkIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  TagIcon,
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import { formatDate } from '../utils';
-import { moduleTypeApi, customerApi } from '../services/api';
-import { ModuleType, Customer } from '../types';
+import { moduleTypeApi, customerApi, sopTemplateApi } from '../services/api';
+import { ModuleType, Customer, SOPTemplate, SOPTemplateItem } from '../types';
 
 // 表单数据接口
 interface ModuleTypeFormData {
@@ -22,7 +23,7 @@ interface ModuleTypeFormData {
 }
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'module-types' | 'customers'>('module-types');
+  const [activeTab, setActiveTab] = useState<'module-types' | 'customers' | 'sop-templates'>('module-types');
   const [moduleTypes, setModuleTypes] = useState<ModuleType[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -37,7 +38,12 @@ export default function Settings() {
     is_active: true
   });
 
-  // 客户管理相关状态
+  // SOP 模板相关状态
+  const [sopTemplatesMap, setSopTemplatesMap] = useState<Record<number, SOPTemplate>>({});
+  const [editingSopTypeId, setEditingSopTypeId] = useState<number | null>(null);
+  const [editingItems, setEditingItems] = useState<SOPTemplateItem[]>([]);
+  const [sopSubmitting, setSopSubmitting] = useState(false);
+
   const [customersList, setCustomersList] = useState<Customer[]>([]);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -50,6 +56,10 @@ export default function Settings() {
     }
     if (activeTab === 'customers') {
       fetchCustomersList();
+    }
+    if (activeTab === 'sop-templates') {
+      fetchModuleTypes();
+      fetchSopTemplates();
     }
   }, [activeTab]);
 
@@ -224,6 +234,78 @@ export default function Settings() {
     }
   };
 
+  // ===== SOP 模板逻辑 =====
+  const fetchSopTemplates = async () => {
+    try {
+      const res = await sopTemplateApi.getAll();
+      if (res?.success) {
+        const map: Record<number, SOPTemplate> = {};
+        (res.data as SOPTemplate[]).forEach(t => { map[t.module_type_id] = t; });
+        setSopTemplatesMap(map);
+      }
+    } catch (error) {
+      console.error('获取SOP模板失败:', error);
+    }
+  };
+
+  const handleEditSop = (moduleType: ModuleType) => {
+    setEditingSopTypeId(moduleType.id);
+    const existing = sopTemplatesMap[moduleType.id];
+    setEditingItems(existing ? [...existing.items] : []);
+  };
+
+  const handleAddSopItem = () => {
+    setEditingItems(prev => [
+      ...prev,
+      { id: Date.now().toString(), text: '', required: false },
+    ]);
+  };
+
+  const handleSopItemChange = (id: string, field: 'text' | 'required', value: any) => {
+    setEditingItems(prev =>
+      prev.map(item => (item.id === id ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const handleRemoveSopItem = (id: string) => {
+    setEditingItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleSaveSop = async (moduleTypeId: number) => {
+    const emptyItems = editingItems.filter(i => !i.text.trim());
+    if (emptyItems.length > 0) {
+      alert('请填写所有检查项的内容，或删除空白项');
+      return;
+    }
+    setSopSubmitting(true);
+    try {
+      await sopTemplateApi.upsert({ module_type_id: moduleTypeId, items: editingItems });
+      await fetchSopTemplates();
+      setEditingSopTypeId(null);
+      setEditingItems([]);
+    } catch (error: any) {
+      alert(error.response?.data?.error || '保存失败');
+    } finally {
+      setSopSubmitting(false);
+    }
+  };
+
+  const handleDeleteSopTemplate = async (moduleTypeId: number) => {
+    const tpl = sopTemplatesMap[moduleTypeId];
+    if (!tpl) return;
+    if (!window.confirm('确定要删除该模块类型的SOP模板吗？')) return;
+    try {
+      await sopTemplateApi.delete(tpl.id);
+      await fetchSopTemplates();
+      if (editingSopTypeId === moduleTypeId) {
+        setEditingSopTypeId(null);
+        setEditingItems([]);
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.error || '删除失败');
+    }
+  };
+
   const filteredCustomersList = customersList.filter(c =>
     c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
     c.short_name.toLowerCase().includes(customerSearch.toLowerCase())
@@ -241,6 +323,7 @@ export default function Settings() {
           <nav className="-mb-px flex space-x-8">
             <button onClick={() => setActiveTab('module-types')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'module-types' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>模块类型管理</button>
             <button onClick={() => setActiveTab('customers')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'customers' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>客户管理</button>
+            <button onClick={() => setActiveTab('sop-templates')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'sop-templates' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>版本更新检查项模板</button>
           </nav>
         </div>
 
@@ -409,6 +492,157 @@ export default function Settings() {
                     </div>
                   </form>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'sop-templates' && (
+          <div>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">版本更新检查项模板管理</h2>
+              <p className="text-sm text-gray-500 mt-1">为每种模块类型配置版本更新时需核对的SOP检查清单，标记"必填"的项必须确认才能提交</p>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : moduleTypes.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <ClipboardDocumentCheckIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">暂无模块类型，请先添加模块类型</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {moduleTypes.map(mt => {
+                  const tpl = sopTemplatesMap[mt.id];
+                  const isEditing = editingSopTypeId === mt.id;
+                  return (
+                    <div key={mt.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      {/* 模块类型行 */}
+                      <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-gray-800">{mt.name}</span>
+                          <span className="text-xs text-gray-400 font-mono">{mt.code}</span>
+                          {tpl ? (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                              {tpl.items.length} 项
+                            </span>
+                          ) : (
+                            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {tpl && !isEditing && (
+                            <button
+                              onClick={() => handleDeleteSopTemplate(mt.id)}
+                              className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
+                            >
+                              删除模板
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (isEditing) {
+                                setEditingSopTypeId(null);
+                                setEditingItems([]);
+                              } else {
+                                handleEditSop(mt);
+                              }
+                            }}
+                            className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700"
+                          >
+                            {isEditing ? '收起' : (tpl ? '编辑检查项' : '配置检查项')}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 编辑面板 */}
+                      {isEditing && (
+                        <div className="p-4 border-t border-gray-200 bg-white">
+                          {editingItems.length === 0 ? (
+                            <p className="text-sm text-gray-400 mb-3">暂无检查项，点击下方按钮添加</p>
+                          ) : (
+                            <div className="space-y-2 mb-3">
+                              {editingItems.map((item, idx) => (
+                                <div key={item.id} className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-400 w-5 shrink-0">{idx + 1}.</span>
+                                  <input
+                                    type="text"
+                                    value={item.text}
+                                    onChange={e => handleSopItemChange(item.id, 'text', e.target.value)}
+                                    placeholder="检查项内容..."
+                                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                  />
+                                  <label className="flex items-center gap-1 text-xs text-gray-600 shrink-0 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={item.required}
+                                      onChange={e => handleSopItemChange(item.id, 'required', e.target.checked)}
+                                      className="rounded border-gray-300 text-blue-600"
+                                    />
+                                    必填
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveSopItem(item.id)}
+                                    className="text-red-400 hover:text-red-600 shrink-0"
+                                  >
+                                    <TrashIcon className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between mt-3">
+                            <button
+                              type="button"
+                              onClick={handleAddSopItem}
+                              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 border border-blue-200 rounded px-3 py-1.5 hover:bg-blue-50"
+                            >
+                              <PlusIcon className="h-4 w-4" />
+                              添加检查项
+                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => { setEditingSopTypeId(null); setEditingItems([]); }}
+                                className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                              >
+                                取消
+                              </button>
+                              <button
+                                type="button"
+                                disabled={sopSubmitting}
+                                onClick={() => handleSaveSop(mt.id)}
+                                className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                              >
+                                {sopSubmitting ? '保存中...' : '保存模板'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 只读预览（未在编辑态时） */}
+                      {!isEditing && tpl && tpl.items.length > 0 && (
+                        <div className="px-4 py-2 border-t border-gray-100">
+                          <div className="flex flex-wrap gap-2">
+                            {tpl.items.map((item, idx) => (
+                              <span key={item.id} className={`text-xs px-2 py-1 rounded ${
+                                item.required ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {idx + 1}. {item.text}{item.required ? ' *' : ''}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

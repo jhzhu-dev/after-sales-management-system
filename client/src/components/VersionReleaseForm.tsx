@@ -183,7 +183,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.title ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="例如: 优化视觉算法，提升识别率"
+              placeholder="例如: 优化视觉服务器，提升识别率"
             />
             {errors.title && (
               <p className="mt-1 text-sm text-red-500">{errors.title}</p>
@@ -289,7 +289,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
 - 支持多点定位
 
 【优化改进】
-- 优化算法性能，提升30%速度
+- 优化服务器性能，提升30%速度
 - 改进UI交互体验
 
 【Bug修复】

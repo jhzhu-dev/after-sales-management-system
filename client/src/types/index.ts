@@ -425,3 +425,58 @@ export interface ProductVersionDocument {
   uploaded_by?: string;
   created_at: string;
 }
+
+// 运维知识库词条
+export interface KbArticle {
+  id: number;
+  title: string;
+  symptom: string;
+  cause?: string | null;
+  solution: string;
+  category: string;
+  product_line_id?: number | null;
+  product_line_name?: string | null;
+  tags?: string[] | null;
+  is_pinned: boolean;
+  view_count: number;
+  helpful_count: number;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ==================== SOP 检查清单 ====================
+
+export interface SOPTemplateItem {
+  id: string;
+  text: string;
+  required: boolean;
+}
+
+export interface SOPTemplate {
+  id: number;
+  module_type_id: number;
+  module_type_name?: string;
+  module_type_code?: string;
+  items: SOPTemplateItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+/** 提交版本更新时，每一项检查清单的完成状态快照 */
+export type ChecklistItemStatus = 'pending' | 'done' | 'na';
+
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  required: boolean;
+  status: ChecklistItemStatus;
+  /** 图片附件列表（status = done 时上传） */
+  attachments: ChecklistAttachment[];
+}
+
+export interface ChecklistAttachment {
+  name: string;
+  url: string;
+  size: number;
+}

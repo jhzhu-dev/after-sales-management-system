@@ -172,8 +172,21 @@ async function createTables() {
         release_date DATE,
         description TEXT,
         updated_by VARCHAR(255),
+        checklist JSON NULL COMMENT '更新时SOP检查清单快照',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // SOP模板表 - 按模块类型配置更新检查清单
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS module_sop_templates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        module_type_id INT NOT NULL UNIQUE,
+        items JSON NOT NULL COMMENT '[{id,text,required}]',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (module_type_id) REFERENCES module_types(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
@@ -266,6 +279,7 @@ async function createTables() {
         product_id INT NOT NULL,
         doc_type ENUM('规格书', '使用说明', '用户手册', '其他') NOT NULL,
         title VARCHAR(255) NOT NULL,
+        original_name VARCHAR(255),
         file_path VARCHAR(500) NOT NULL,
         file_size INT,
         uploaded_by VARCHAR(100),
@@ -375,6 +389,27 @@ async function createTables() {
         INDEX idx_product_module_current (product_id, module_type_id, is_current),
         INDEX idx_current (is_current, effective_date),
         UNIQUE KEY unique_version (product_id, module_type_id, version_number)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 运维知识库词条表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS kb_articles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        symptom TEXT NOT NULL,
+        cause TEXT,
+        solution TEXT NOT NULL,
+        category ENUM('硬件故障', '软件问题', '操作咨询', '安装调试', '其他') DEFAULT '其他',
+        product_line_id INT,
+        tags JSON,
+        is_pinned BOOLEAN DEFAULT FALSE,
+        view_count INT DEFAULT 0,
+        helpful_count INT DEFAULT 0,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_line_id) REFERENCES product_lines(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
@@ -537,6 +572,48 @@ async function createTables() {
 
     } catch (err) {
       console.warn('⚠️ 数据库迁移警告:', err.message);
+    }
+
+    // 模块类型名称迁移：将"算法"字眼替换为"服务器"，并去除多余的"模型"后缀
+    try {
+      // Step 1: 算法 → 服务器
+      const [algRows] = await pool.execute("SELECT COUNT(*) as cnt FROM module_types WHERE name LIKE '%算法%'");
+      if (algRows[0].cnt > 0) {
+        console.log('🔄 正在将模块类型名称中的"算法"替换为"服务器"...');
+        await pool.execute("UPDATE module_types SET name = REPLACE(name, '算法', '服务器'), description = IF(description IS NOT NULL, REPLACE(description, '算法', '服务器'), description) WHERE name LIKE '%算法%'");
+        console.log('✅ 模块类型名称"算法"→"服务器"替换完成');
+      }
+      // Step 2: 服务器模型 → 服务器（去除多余的"模型"后缀）
+      const [svrModelRows] = await pool.execute("SELECT COUNT(*) as cnt FROM module_types WHERE name LIKE '%服务器模型%'");
+      if (svrModelRows[0].cnt > 0) {
+        console.log('🔄 正在将模块类型名称中的"服务器模型"简化为"服务器"...');
+        await pool.execute("UPDATE module_types SET name = REPLACE(name, '服务器模型', '服务器'), description = IF(description IS NOT NULL, REPLACE(description, '服务器模型', '服务器'), description) WHERE name LIKE '%服务器模型%'");
+        console.log('✅ 模块类型名称"服务器模型"→"服务器"简化完成');
+      }
+    } catch (err) {
+      console.warn('⚠️ 模块类型名称迁移警告:', err.message);
+    }
+
+    // Phase 5: SOP 检查清单字段迁移
+    try {
+      const [mvCols] = await pool.execute("SHOW COLUMNS FROM module_versions LIKE 'checklist'");
+      if (mvCols.length === 0) {
+        await pool.execute("ALTER TABLE module_versions ADD COLUMN checklist JSON NULL COMMENT '更新时SOP检查清单快照'");
+        console.log('✅ module_versions.checklist 列已添加');
+      }
+    } catch (err) {
+      console.warn('⚠️ module_versions checklist 迁移警告:', err.message);
+    }
+
+    // Phase 6: 迁移 kb_articles.category 为 VARCHAR（支持自由分类）
+    try {
+      const [catCols] = await pool.execute("SHOW COLUMNS FROM kb_articles LIKE 'category'");
+      if (catCols.length > 0 && catCols[0].Type.toLowerCase().includes('enum')) {
+        await pool.execute("ALTER TABLE kb_articles MODIFY COLUMN category VARCHAR(100) DEFAULT ''");
+        console.log('✅ kb_articles.category 已从 ENUM 改为 VARCHAR(100)');
+      }
+    } catch (err) {
+      console.warn('⚠️ Phase 6 迁移警告:', err.message);
     }
 
     console.log('✅ 数据库表结构创建/更新成功');

@@ -130,6 +130,13 @@ async function ossUploadWithRetry(ossPath, localPath, maxRetries = 3) {
     }
 }
 
+// 清洗相对路径，防止路径穿越，保留合法文件夹层级
+function sanitizeRelativePath(relPath) {
+    const normalized = (relPath || '').replace(/\\/g, '/');
+    const parts = normalized.split('/').filter(p => p && p !== '.' && p !== '..');
+    return parts.map(p => p.replace(/[<>:"|?*]/g, '').trim()).filter(Boolean).join('/');
+}
+
 // 批量上传设备出厂资料 (支持多文件)
 router.post('/upload', upload.array('files', 20), async (req, res) => {
     const uploadedFiles = req.files || [];
@@ -139,6 +146,11 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
         let titles = req.body.titles || req.body.title;
         if (!Array.isArray(titles)) {
             titles = titles ? [titles] : [];
+        }
+        // relative_paths 携带文件夹层级信息（如 "v1.2/firmware/image.bin"）
+        let relativePaths = req.body.relative_paths || req.body.relative_path;
+        if (!Array.isArray(relativePaths)) {
+            relativePaths = relativePaths ? [relativePaths] : [];
         }
 
         if (uploadedFiles.length === 0) {
@@ -169,17 +181,21 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
 
         for (let i = 0; i < uploadedFiles.length; i++) {
             const file = uploadedFiles[i];
-            const title = (titles[i] || file.originalname.replace(/\.[^/.]+$/, '')).trim();
+            const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+            // 计算 OSS 存储路径：优先使用前端传来的相对路径（含文件夹层级），回退到原始文件名
+            const rawRelPath = relativePaths[i] || originalName;
+            const relativePath = sanitizeRelativePath(rawRelPath) || originalName;
+            const title = (titles[i] || relativePath.replace(/\.[^/.]+$/, '')).trim();
             let filePath = file.path;
             let fileSize = file.size;
 
-            // OSS上传: devices/{设备标识}/device-docs/{分类}/{原始文件名}
+            // OSS上传: devices/{设备标识}/device-docs/{分类}/{相对路径（含文件夹层级）}
             if (ossService.enabled) {
                 try {
                     const ossKey = ossService.buildPathByType('device-docs', {
                         device,
                         category,
-                        fileName: file.originalname
+                        fileName: relativePath
                     });
                     await ossUploadWithRetry(ossKey, file.path);
                     filePath = `oss://${ossService.bucket}/${ossKey}`;
@@ -194,7 +210,7 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
                 `INSERT INTO device_documents 
                  (device_id, category, title, original_name, file_path, file_size, uploaded_by) 
                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [device_id, category, title, file.originalname, filePath, fileSize, uploaded_by || null]
+                [device_id, category, title, originalName, filePath, fileSize, uploaded_by || null]
             );
 
             results.push({
@@ -202,7 +218,7 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
                 device_id,
                 category,
                 title,
-                original_name: file.originalname,
+                original_name: originalName,
                 file_path: filePath,
                 file_size: fileSize
             });
@@ -298,7 +314,8 @@ router.get('/:id/download', async (req, res) => {
         // 判断是否为OSS路径
         if (ossService.isOSSPath(document.file_path)) {
             try {
-                const signedUrl = await ossService.getSignedUrl(document.file_path, 3600);
+                const downloadName = document.original_name || document.title;
+                const signedUrl = await ossService.getSignedUrl(document.file_path, 3600, downloadName);
                 return res.redirect(signedUrl);
             } catch (ossError) {
                 console.error('生成OSS下载链接失败:', ossError);

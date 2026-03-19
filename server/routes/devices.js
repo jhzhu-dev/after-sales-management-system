@@ -232,11 +232,11 @@ router.post('/', [
         const pRows = await query('SELECT short_name FROM products WHERE id = ?', [product_id]);
         if (pRows.length > 0) productShort = pRows[0].short_name || '';
       }
-      // 从生产序列号中提取所有数字，取最后2位
+      // 从生产序列号中提取所有数字，取最后4位
       let idSuffix = '';
       if (deviceId) {
         const digits = deviceId.replace(/\D/g, '');
-        idSuffix = digits.length >= 2 ? digits.slice(-2) : digits;
+        idSuffix = digits.length >= 4 ? digits.slice(-4) : digits;
       }
       if (customerName && productShort && idSuffix) {
         nickname = `${customerName}${productShort}${idSuffix}`;
@@ -342,7 +342,25 @@ router.put('/:id', [
       WHERE id = ?
       `;
 
-    await query(updateQuery, updateValues);
+    if (newId && newId !== id) {
+      // 序列号变更：子表（modules/device_documents/device_upgrades/issues）均无 ON UPDATE CASCADE，
+      // 需临时关闭 FK 检查，先更新主键，再级联更新所有子表的 device_id
+      await transaction(async (connection) => {
+        try {
+          await connection.execute('SET FOREIGN_KEY_CHECKS=0');
+          await connection.execute(updateQuery, updateValues);
+          // 级联更新子表
+          await connection.execute('UPDATE modules SET device_id = ? WHERE device_id = ?', [newId, id]);
+          await connection.execute('UPDATE device_documents SET device_id = ? WHERE device_id = ?', [newId, id]);
+          await connection.execute('UPDATE device_upgrades SET device_id = ? WHERE device_id = ?', [newId, id]);
+          await connection.execute('UPDATE issues SET device_id = ? WHERE device_id = ?', [newId, id]);
+        } finally {
+          await connection.execute('SET FOREIGN_KEY_CHECKS=1');
+        }
+      });
+    } else {
+      await query(updateQuery, updateValues);
+    }
 
     res.json({
       success: true,

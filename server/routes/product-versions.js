@@ -348,7 +348,8 @@ router.post('/:id/documents', upload.array('files', 10), async (req, res) => {
         for (const file of req.files) {
             let filePath = file.path;
             const fileSize = file.size;
-            const fileType = path.extname(file.originalname).replace('.', '');
+            const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+            const fileType = path.extname(originalName).replace('.', '');
 
             // OSS 上传
             if (ossService.enabled) {
@@ -357,7 +358,6 @@ router.post('/:id/documents', upload.array('files', 10), async (req, res) => {
                     const versionFolder = version.version_name
                         ? `${version.version_number}-${version.version_name}`
                         : version.version_number;
-                    const originalName = file.originalname;
                     const normalizedProductLine = ossService.normalizeProductLineName(version.product_line_name || version.product_line_code);
                     const normalizedModel = ossService.normalizeProductModel(version.product_model);
                     const normalizedProductName = ossService.normalizeProductModel(version.product_name); // reuse same normalization
@@ -377,9 +377,9 @@ router.post('/:id/documents', upload.array('files', 10), async (req, res) => {
             const result = await query(
                 `INSERT INTO product_version_documents (product_version_id, name, file_path, file_type, file_size, category, uploaded_by)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [id, file.originalname, filePath, fileType, fileSize, category || '其他', uploaded_by || null]
+                [id, originalName, filePath, fileType, fileSize, category || '其他', uploaded_by || null]
             );
-            results.push({ id: result.insertId, name: file.originalname, file_path: filePath, file_size: fileSize });
+            results.push({ id: result.insertId, name: originalName, file_path: filePath, file_size: fileSize });
         }
 
         res.status(201).json({
@@ -455,7 +455,7 @@ router.get('/documents/:docId/download', async (req, res) => {
 
         if (ossService.isOSSPath(document.file_path)) {
             try {
-                const signedUrl = await ossService.getSignedUrl(document.file_path, 3600);
+                const signedUrl = await ossService.getSignedUrl(document.file_path, 3600, document.name);
                 return res.redirect(signedUrl);
             } catch (ossError) {
                 console.error('获取OSS签名URL失败:', ossError);

@@ -206,6 +206,11 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
 
+    // 当三个设备标识字段之一有变动时，清除组合错误提示
+    if (['device_code', 'id', 'remote_code'].includes(field as string) && errors.identity) {
+      setErrors(prev => ({ ...prev, identity: '' }));
+    }
+
     // 当产品型号改变时，获取该产品的模块列表和迭代版本
     if (field === 'product_id') {
       fetchModuleTypesByProduct(value as number | null | undefined);
@@ -264,9 +269,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
     const newErrors: Record<string, string> = {};
 
     if (!device) {
-      // 新增模式：部分字段必填
-      if (!formData.device_code?.trim()) newErrors.device_code = '设备编码不能为空';
-      if (!formData.id?.trim()) newErrors.id = '生产序列号不能为空';
+      // 新增模式：设备编码、生产序列号、远程码三选一必填
+      if (!formData.device_code?.trim() && !formData.id?.trim() && !formData.remote_code?.trim()) {
+        newErrors.identity = '设备编码、生产序列号、远程码，至少填写其中一项';
+      }
       if (!formData.customer_id) newErrors.customer_id = '请选择客户';
       if (!formData.product_line_id || formData.product_line_id === '' || formData.product_line_id === 0) {
         newErrors.product_line_id = '请选择产品线';
@@ -287,14 +293,18 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
     let processedData: DeviceFormData;
 
     if (device) {
-      // 编辑模式：只提交可编辑字段
+      // 编辑模式：提交所有可编辑字段（product_line_id 为只读，不随本次提交）
       processedData = {
+        name: formData.name?.trim() || device.name,
+        device_code: formData.device_code?.trim() || null,
+        customer_id: formData.customer_id || null,
         status: formData.status,
         remote_code: formData.remote_code?.trim() || null,
         password: formData.password?.trim() || null,
         product_version_id: formData.product_version_id || null,
-        name: device.name,
-        product_line_id: device.product_line_id || '',
+        product_line_id: device.product_line_id as number,
+        // 传递 id 供父组件判断是否修改了生产序列号
+        id: formData.id?.trim() || device.id,
       };
     } else {
       // 新增模式：提交所有字段
@@ -339,42 +349,98 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* 编辑模式：显示只读信息 */}
+          {/* 编辑模式：可编辑字段 */}
           {device && (
-            <div className="bg-gray-50 rounded-lg p-4 space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">订单号</span>
-                <span className="font-medium text-gray-900">{device.name}</span>
+            <>
+              {/* 订单号 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">订单号</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="请输入订单号"
+                />
               </div>
-              {device.device_code && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">设备编码</span>
-                  <span className="font-medium text-gray-900">{device.device_code}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-gray-500">生产序列号</span>
-                <span className="font-medium text-gray-900">{device.id}</span>
+
+              {/* 设备编码 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">设备编码</label>
+                <input
+                  type="text"
+                  value={formData.device_code || ''}
+                  onChange={(e) => handleChange('device_code', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="请输入设备编码"
+                />
               </div>
-              {device.customer_name && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">客户</span>
-                  <span className="font-medium text-gray-900">{device.customer_name}</span>
+
+              {/* 生产序列号 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">生产序列号</label>
+                <input
+                  type="text"
+                  value={formData.id || ''}
+                  onChange={(e) => handleChange('id', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="请输入生产序列号"
+                />
+              </div>
+
+              {/* 客户 */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-1">客户</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={customerSearch}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value);
+                      setShowCustomerDropdown(true);
+                      if (!e.target.value) setFormData(prev => ({ ...prev, customer_id: undefined }));
+                    }}
+                    onFocus={() => setShowCustomerDropdown(true)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="搜索客户名称或简称"
+                  />
+                  {formData.customer_id && (
+                    <button type="button" onClick={handleClearCustomer} className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600">
+                      <XMarkIcon className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
-              )}
-              {device.product_line_name && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">产品线</span>
-                  <span className="font-medium text-gray-900">{device.product_line_name}</span>
-                </div>
-              )}
-              {device.product_name && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">产品型号</span>
-                  <span className="font-medium text-gray-900">{device.product_name}{device.product_model ? ` (${device.product_model})` : ''}</span>
-                </div>
-              )}
-            </div>
+                {showCustomerDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {filteredCustomers.map(c => (
+                      <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)}
+                        className={`w-full text-left px-3 py-2 hover:bg-blue-50 text-sm ${formData.customer_id === c.id ? 'bg-blue-50 text-blue-700' : ''}`}>
+                        <span className="font-medium">{c.name}</span>
+                        <span className="text-gray-400 ml-2">({c.short_name})</span>
+                      </button>
+                    ))}
+                    {filteredCustomers.length === 0 && <div className="px-3 py-2 text-sm text-gray-500">无匹配客户</div>}
+                  </div>
+                )}
+                {showCustomerDropdown && <div className="fixed inset-0 z-0" onClick={() => setShowCustomerDropdown(false)} />}
+              </div>
+
+              {/* 产品线 / 产品型号 只读展示 */}
+              <div className="bg-gray-50 rounded-lg px-4 py-3 space-y-2 text-sm">
+                {device.product_line_name && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">产品线</span>
+                    <span className="font-medium text-gray-900">{device.product_line_name}</span>
+                  </div>
+                )}
+                {device.product_name && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">产品型号</span>
+                    <span className="font-medium text-gray-900">{device.product_name}{device.product_model ? ` (${device.product_model})` : ''}</span>
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           {/* 编辑模式：迭代版本选择 */}
@@ -414,37 +480,50 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
             </div>
           )}
 
-          {/* 新增模式：以下字段全部必填 */}
+          {/* 新增模式：以下字段填写规则 */}
           {!device && (
             <>
-              {/* 2. 设备编码 */}
+              {/* 2-4. 设备编码 / 生产序列号 / 远程码（三选一必填） */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  设备编码 <span className="text-red-500">*</span>
+                  设备编码
                 </label>
                 <input
                   type="text"
                   value={formData.device_code || ''}
                   onChange={(e) => handleChange('device_code', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.device_code ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="请输入设备编码"
                 />
-                {errors.device_code && <p className="text-red-500 text-sm mt-1">{errors.device_code}</p>}
               </div>
 
               {/* 3. 生产序列号 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  生产序列号 <span className="text-red-500">*</span>
+                  生产序列号
                 </label>
                 <input
                   type="text"
                   value={formData.id || ''}
                   onChange={(e) => handleChange('id', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.id ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="请输入生产序列号"
                 />
-                {errors.id && <p className="text-red-500 text-sm mt-1">{errors.id}</p>}
+              </div>
+
+              {/* 4. 远程码（新增模式也可填写） */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  远程码
+                </label>
+                <input
+                  type="text"
+                  value={formData.remote_code || ''}
+                  onChange={(e) => handleChange('remote_code', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
+                  placeholder="请输入远程码"
+                />
+                {errors.identity && <p className="text-red-500 text-sm mt-1">{errors.identity}</p>}
               </div>
 
               {/* 4. 客户 */}

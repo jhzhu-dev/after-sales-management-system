@@ -2,6 +2,97 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { query } = require('../database');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const ossService = require('../services/oss-service');
+
+// ─── 检查项附件上传配置 ────────────────────────────────────────────────────────
+const checklistUploadDir = path.join(__dirname, '../../uploads/checklist-attachments');
+if (!fs.existsSync(checklistUploadDir)) fs.mkdirSync(checklistUploadDir, { recursive: true });
+
+const checklistStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, checklistUploadDir),
+  filename: (req, file, cb) => {
+    let safeName;
+    try { safeName = Buffer.from(file.originalname, 'latin1').toString('utf8'); }
+    catch (e) { safeName = file.originalname; }
+    cb(null, `${Date.now()}_${safeName}`);
+  }
+});
+const checklistUpload = multer({
+  storage: checklistStorage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('只允许上传图片文件'));
+  }
+});
+
+// POST /api/versions/upload-checklist-image — 上传检查项附件图片（优先OSS，降级本地）
+router.post('/upload-checklist-image', checklistUpload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false, error: '没有上传文件' });
+  let originalName;
+  try { originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8'); }
+  catch (e) { originalName = req.file.originalname; }
+
+  const { module_id, from_version, to_version, module_type } = req.body;
+
+  // 构建版本文件夹名，格式：旧版本_update_新版本；字符做简单清理避免路径问题
+  const sanitize = v => (v || '').toString().replace(/[/\\?#%]/g, '-').trim();
+  const versionFolder = from_version && to_version
+    ? `${sanitize(from_version)}_update_${sanitize(to_version)}`
+    : 'checklist';
+
+  let url = `/uploads/checklist-attachments/${req.file.filename}`;
+
+  if (ossService.enabled) {
+    try {
+      // 查询模块关联的设备信息用于构建OSS路径
+      let device = { id: 'unknown', name: 'unknown', customer_short_name: 'unknown', product_name: 'unknown' };
+      if (module_id) {
+        const rows = await query(
+          `SELECT d.id, d.name,
+                  c.short_name as customer_short_name, c.name as customer_name,
+                  p.name as product_name
+           FROM modules m
+           LEFT JOIN devices d ON m.device_id = d.id
+           LEFT JOIN customers c ON d.customer_id = c.id
+           LEFT JOIN products p ON d.product_id = p.id
+           WHERE m.id = ?`,
+          [module_id]
+        );
+        if (rows[0]) device = rows[0];
+      }
+
+      const ossKey = ossService.buildPathByType('checklist-attachments', {
+        device,
+        moduleType: module_type || 'unknown-module',
+        versionFolder,
+        fileName: req.file.filename,
+      });
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await ossService.client.put(ossKey, req.file.path);
+          break;
+        } catch (err) {
+          if (attempt < 3) await new Promise(r => setTimeout(r, 2000));
+          else throw err;
+        }
+      }
+
+      url = `oss://${ossService.bucket}/${ossKey}`;
+      fs.unlinkSync(req.file.path);
+      console.log(`✅ 检查项附件已上传到OSS: ${url}`);
+    } catch (ossErr) {
+      console.error('OSS上传失败，降级到本地存储:', ossErr.message);
+      // 保留本地文件，url 保持本地路径
+    }
+  }
+
+  res.json({ success: true, data: { url, name: originalName, size: req.file.size } });
+});
 
 // 获取所有版本记录
 router.get('/', async (req, res) => {
@@ -148,7 +239,7 @@ router.post('/', [
       });
     }
 
-    let { module_id, version_number, release_id, version_type, release_date, description, updated_by } = req.body;
+    let { module_id, version_number, release_id, version_type, release_date, description, updated_by, checklist } = req.body;
 
     // 强制说明字符长度检查
     if (description && description.trim().length < 5) {
@@ -194,11 +285,12 @@ router.post('/', [
     const versionId = idGenerator.generate();
 
     const insertQuery = `
-      INSERT INTO module_versions (id, module_id, version_number, version_type, release_date, description, updated_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO module_versions (id, module_id, version_number, version_type, release_date, description, updated_by, checklist)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    await query(insertQuery, [versionId, module_id, version_number, version_type, release_date || new Date().toISOString().split('T')[0], description, updated_by]);
+    const checklistJson = checklist ? JSON.stringify(checklist) : null;
+    await query(insertQuery, [versionId, module_id, version_number, version_type, release_date || new Date().toISOString().split('T')[0], description, updated_by, checklistJson]);
 
     res.status(201).json({
       success: true,

@@ -495,4 +495,48 @@ export const productVersionApi = {
   },
 };
 
+// 运维知识库API
+export const kbArticleApi = {
+  getArticles: (params?: { search?: string; category?: string; product_line_id?: number }): Promise<any> =>
+    api.get('/kb-articles', { params }).then(res => res.data),
+  getArticle: (id: number): Promise<any> =>
+    api.get(`/kb-articles/${id}`).then(res => res.data),
+  createArticle: (data: any): Promise<any> =>
+    api.post('/kb-articles', data).then(res => res.data),
+  updateArticle: (id: number, data: any): Promise<any> =>
+    api.put(`/kb-articles/${id}`, data).then(res => res.data),
+  deleteArticle: (id: number): Promise<any> =>
+    api.delete(`/kb-articles/${id}`).then(res => res.data),
+  markHelpful: (id: number): Promise<any> =>
+    api.post(`/kb-articles/${id}/helpful`).then(res => res.data),
+};
+
+// SOP 检查清单模板 API
+export const sopTemplateApi = {
+  getAll: (): Promise<any> =>
+    api.get('/module-sop-templates').then(res => res.data),
+  getByModuleType: (typeId: number): Promise<any> =>
+    api.get(`/module-sop-templates/by-module-type/${typeId}`).then(res => res.data),
+  upsert: (data: { module_type_id: number; items: any[] }): Promise<any> =>
+    api.post('/module-sop-templates', data).then(res => res.data),
+  delete: (id: number): Promise<any> =>
+    api.delete(`/module-sop-templates/${id}`).then(res => res.data),
+};
+
+// 检查项附件图片上传
+export const uploadChecklistImage = (
+  file: File,
+  options?: { moduleId?: number; moduleType?: string; fromVersion?: string; toVersion?: string }
+): Promise<{ url: string; name: string; size: number }> => {
+  const form = new FormData();
+  form.append('file', file);
+  if (options?.moduleId) form.append('module_id', String(options.moduleId));
+  if (options?.moduleType) form.append('module_type', options.moduleType);
+  if (options?.fromVersion) form.append('from_version', options.fromVersion);
+  if (options?.toVersion) form.append('to_version', options.toVersion);
+  return api.post('/versions/upload-checklist-image', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(res => res.data.data);
+};
+
 export default api;

@@ -44,6 +44,8 @@ const productVersionRoutes = require('./routes/product-versions');
 const afterSalesRoutes = require('./routes/after-sales');
 const deviceUpgradeRoutes = require('./routes/device-upgrades');
 const customerRoutes = require('./routes/customers');
+const kbArticleRoutes = require('./routes/kb-articles');
+const sopTemplateRoutes = require('./routes/module-sop-templates');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -188,6 +190,12 @@ app.use('/api/customers', customerRoutes);
 // Phase 4: 售后管理集成路由
 app.use('/api/after-sales', afterSalesRoutes);
 app.use('/api/device-upgrades', deviceUpgradeRoutes);
+
+// 运维知识库路由
+app.use('/api/kb-articles', kbArticleRoutes);
+
+// SOP模板路由
+app.use('/api/module-sop-templates', sopTemplateRoutes);
 
 // 所有非API路由都返回前端应用
 app.get('*', (req, res) => {

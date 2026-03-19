@@ -61,7 +61,7 @@ router.get('/attachments/:attachmentId/download', async (req, res) => {
         }
 
         if (ossService.isOSSPath(attachment.file_path)) {
-            const signedUrl = await ossService.getSignedUrl(attachment.file_path);
+            const signedUrl = await ossService.getSignedUrl(attachment.file_path, 3600, attachment.original_name);
             return res.json({ success: true, data: { url: signedUrl, original_name: attachment.original_name } });
         } else {
             const localPath = path.join(__dirname, '..', attachment.file_path);
