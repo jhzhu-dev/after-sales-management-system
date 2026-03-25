@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { query } = require('../database');
 const ossService = require('../services/oss-service');
+const archiver = require('archiver');
 
 // 配置文件上传
 const storage = multer.diskStorage({
@@ -137,8 +138,8 @@ function sanitizeRelativePath(relPath) {
     return parts.map(p => p.replace(/[<>:"|?*]/g, '').trim()).filter(Boolean).join('/');
 }
 
-// 批量上传设备出厂资料 (支持多文件)
-router.post('/upload', upload.array('files', 20), async (req, res) => {
+// 批量上传设备出厂资料 (支持多文件，最多 500 个)
+router.post('/upload', upload.array('files', 500), async (req, res) => {
     const uploadedFiles = req.files || [];
     try {
         const { device_id, category, uploaded_by } = req.body;
@@ -178,14 +179,19 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
         }
 
         const results = [];
+        const errors = [];
 
         for (let i = 0; i < uploadedFiles.length; i++) {
             const file = uploadedFiles[i];
+            try {
             const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
             // 计算 OSS 存储路径：优先使用前端传来的相对路径（含文件夹层级），回退到原始文件名
             const rawRelPath = relativePaths[i] || originalName;
             const relativePath = sanitizeRelativePath(rawRelPath) || originalName;
-            const title = (titles[i] || relativePath.replace(/\.[^/.]+$/, '')).trim();
+            // 截断到安全长度，避免超出 VARCHAR(255)
+            const rawTitle = (titles[i] || relativePath.replace(/\.([^./]+)$/, '')).trim();
+            const title = rawTitle.length > 240 ? rawTitle.slice(0, 240) : rawTitle;
+            const safeOriginalName = originalName.length > 240 ? originalName.slice(0, 240) : originalName;
             let filePath = file.path;
             let fileSize = file.size;
 
@@ -210,7 +216,7 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
                 `INSERT INTO device_documents 
                  (device_id, category, title, original_name, file_path, file_size, uploaded_by) 
                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [device_id, category, title, originalName, filePath, fileSize, uploaded_by || null]
+                [device_id, category, title, safeOriginalName, filePath, fileSize, uploaded_by || null]
             );
 
             results.push({
@@ -218,16 +224,33 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
                 device_id,
                 category,
                 title,
-                original_name: originalName,
+                original_name: safeOriginalName,
                 file_path: filePath,
                 file_size: fileSize
+            });
+            } catch (fileError) {
+                console.error(`文件 ${i} 处理失败:`, fileError.message);
+                errors.push({ index: i, name: file.originalname, error: fileError.message });
+                // 清理磁盘临时文件（如果还存在）
+                try { if (fs.existsSync(file.path)) fs.unlinkSync(file.path); } catch (_) {}
+            }
+        }
+
+        if (results.length === 0 && errors.length > 0) {
+            return res.status(500).json({
+                success: false,
+                error: `所有 ${errors.length} 个文件上传失败`,
+                errors
             });
         }
 
         res.status(201).json({
             success: true,
             data: results,
-            message: `成功上传 ${results.length} 个文件`
+            message: errors.length > 0
+                ? `成功上传 ${results.length} 个文件，${errors.length} 个文件跳过`
+                : `成功上传 ${results.length} 个文件`,
+            errors: errors.length > 0 ? errors : undefined
         });
     } catch (error) {
         console.error('上传设备资料失败:', error);
@@ -239,6 +262,113 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
             error: '上传设备资料失败',
             message: error.message
         });
+    }
+});
+
+// 批量打包下载（ZIP，按ID列表）
+router.post('/batch-download', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ success: false, error: '请提供要下载的文档ID列表' });
+        }
+        const placeholders = ids.map(() => '?').join(',');
+        const documents = await query(
+            `SELECT * FROM device_documents WHERE id IN (${placeholders}) ORDER BY category, title`,
+            ids
+        );
+        if (documents.length === 0) {
+            return res.status(404).json({ success: false, error: '未找到要下载的文档' });
+        }
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent('批量下载.zip')}`);
+        const archive = archiver('zip', { zlib: { level: 5 } });
+        archive.on('error', err => {
+            console.error('批量打包ZIP失败:', err);
+            if (!res.headersSent) res.status(500).end();
+        });
+        archive.pipe(res);
+        // 按分类放入子目录
+        const usedNames = new Map();
+        for (const doc of documents) {
+            const dir = doc.category ? doc.category.replace(/[<>:"/\\|?*]/g, '_') + '/' : '';
+            let baseName = doc.original_name || doc.title || `file_${doc.id}`;
+            const nameKey = dir + baseName;
+            const count = (usedNames.get(nameKey) || 0) + 1;
+            usedNames.set(nameKey, count);
+            if (count > 1) {
+                const dotIdx = baseName.lastIndexOf('.');
+                baseName = dotIdx >= 0
+                    ? baseName.slice(0, dotIdx) + `(${count})` + baseName.slice(dotIdx)
+                    : baseName + `(${count})`;
+            }
+            const entryName = dir + baseName;
+            if (ossService.isOSSPath(doc.file_path)) {
+                try {
+                    const ossPathMatch = doc.file_path.match(/^\/\/[^\/]+\/(.+)$|^oss:\/\/[^\/]+\/(.+)$/);
+                    const objectKey = ossPathMatch ? (ossPathMatch[1] || ossPathMatch[2]) : null;
+                    if (objectKey) {
+                        const result = await ossService.client.get(objectKey);
+                        archive.append(result.content, { name: entryName });
+                    }
+                } catch (e) {
+                    console.error('OSS获取文件失败:', doc.file_path, e.message);
+                }
+            } else if (fs.existsSync(doc.file_path)) {
+                archive.file(doc.file_path, { name: entryName });
+            }
+        }
+        await archive.finalize();
+    } catch (error) {
+        console.error('批量下载失败:', error);
+        if (!res.headersSent) res.status(500).json({ success: false, error: '批量下载失败' });
+    }
+});
+
+// 按分类打包下载（ZIP）
+router.get('/download-category', async (req, res) => {
+    try {
+        const { device_id, category } = req.query;
+        if (!device_id || !category) {
+            return res.status(400).json({ success: false, error: 'device_id 和 category 为必填项' });
+        }
+        const documents = await query(
+            'SELECT * FROM device_documents WHERE device_id = ? AND category = ? ORDER BY title',
+            [device_id, category]
+        );
+        if (documents.length === 0) {
+            return res.status(404).json({ success: false, error: '该分类下无文件' });
+        }
+        const safeCat = category.replace(/[<>:"/\\|?*]/g, '_');
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(safeCat + '.zip')}`);
+        const archive = archiver('zip', { zlib: { level: 5 } });
+        archive.on('error', err => {
+            console.error('打包ZIP失败:', err);
+            if (!res.headersSent) res.status(500).end();
+        });
+        archive.pipe(res);
+        for (const doc of documents) {
+            const entryName = doc.original_name || doc.title || `file_${doc.id}`;
+            if (ossService.isOSSPath(doc.file_path)) {
+                try {
+                    const ossPathMatch = doc.file_path.match(/^\/\/[^\/]+\/(.+)$|^oss:\/\/[^\/]+\/(.+)$/);
+                    const objectKey = ossPathMatch ? (ossPathMatch[1] || ossPathMatch[2]) : null;
+                    if (objectKey) {
+                        const result = await ossService.client.get(objectKey);
+                        archive.append(result.content, { name: entryName });
+                    }
+                } catch (e) {
+                    console.error('OSS获取文件失败:', doc.file_path, e.message);
+                }
+            } else if (fs.existsSync(doc.file_path)) {
+                archive.file(doc.file_path, { name: entryName });
+            }
+        }
+        await archive.finalize();
+    } catch (error) {
+        console.error('按分类下载失败:', error);
+        if (!res.headersSent) res.status(500).json({ success: false, error: '下载失败' });
     }
 });
 
@@ -363,24 +493,22 @@ router.post('/batch-delete', async (req, res) => {
 
         await query(`DELETE FROM device_documents WHERE id IN (${placeholders})`, ids);
 
-        for (const document of documents) {
-            if (ossService.isOSSPath(document.file_path)) {
+        // 立即响应，OSS清理在后台异步执行，避免大批量删除超时
+        res.json({ success: true, message: `成功删除 ${documents.length} 个文件` });
+
+        setImmediate(async () => {
+            for (const document of documents) {
                 try {
-                    await ossService.deleteFile(document.file_path);
-                    console.log(`✅ 已从OSS删除文件: ${document.file_path}`);
-                } catch (ossError) {
-                    console.error('从OSS删除文件失败:', ossError);
-                }
-            } else {
-                if (fs.existsSync(document.file_path)) {
-                    fs.unlinkSync(document.file_path);
+                    if (ossService.isOSSPath(document.file_path)) {
+                        await ossService.deleteFile(document.file_path);
+                        console.log(`✅ 已从OSS删除文件: ${document.file_path}`);
+                    } else if (fs.existsSync(document.file_path)) {
+                        fs.unlinkSync(document.file_path);
+                    }
+                } catch (err) {
+                    console.error('后台清理文件失败:', document.file_path, err.message);
                 }
             }
-        }
-
-        res.json({
-            success: true,
-            message: `成功删除 ${documents.length} 个文件`
         });
     } catch (error) {
         console.error('批量删除设备资料失败:', error);

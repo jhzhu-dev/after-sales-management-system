@@ -17,7 +17,10 @@ import {
   DocumentIcon,
   ArrowUpTrayIcon,
   FolderIcon,
-  DocumentArrowDownIcon
+  DocumentArrowDownIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ChevronLeftIcon
 } from '@heroicons/react/24/outline';
 import { Device, Module, Issue, ModuleFormData, DeviceFormData, VersionRelease, DeviceUpgrade, SOPTemplate, ChecklistItem, SOPTemplateItem } from '../types';
 import { deviceApi, moduleApi, issueApi, versionReleaseApi, moduleVersionApi, deviceUpgradeApi, sopTemplateApi, uploadChecklistImage } from '../services/api';
@@ -67,10 +70,15 @@ const DeviceDetail: React.FC = () => {
   const [docUploading, setDocUploading] = useState(false);
   const [docDragOver, setDocDragOver] = useState(false);
   const [docUploadProgress, setDocUploadProgress] = useState('');
-  const [bgUpload, setBgUpload] = useState<{ fileCount: number; progress: number; done: boolean; error: string | null } | null>(null);
-  const [previewDoc, setPreviewDoc] = useState<{url: string; title: string; type: string} | null>(null);
+  const [bgUpload, setBgUpload] = useState<{ fileCount: number; progress: number; done: boolean; error: string | null; batchText?: string } | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<{
+    url: string; title: string; type: string;
+    docId: number; originalName: string;
+    catDocs: any[]; catIndex: number; loading: boolean;
+  } | null>(null);
   const [selectedDocIds, setSelectedDocIds] = useState<Set<number>>(new Set());
   const [docSelectMode, setDocSelectMode] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   // 获取设备详情
   const fetchDevice = async () => {
@@ -183,7 +191,7 @@ const DeviceDetail: React.FC = () => {
     }
   };
 
-  // 批量上传设备资料
+  // 批量上传设备资料（分批发送，每批 20 个文件，支持最多 500 个）
   const handleDocUpload = async () => {
     if (docUploadFiles.length === 0) return;
     const category = docUploadNewCategory.trim() || docUploadCategory;
@@ -191,45 +199,66 @@ const DeviceDetail: React.FC = () => {
       alert('请选择或输入分类');
       return;
     }
-    // 提前捕获上传参数，关闭弹窗后仍可使用
     const filesToUpload = [...docUploadFiles];
     const uploadedBy = docUploadBy.trim();
     const fileCount = filesToUpload.length;
+    const BATCH_SIZE = 20;
 
-    // 立即关闭弹窗，切换为后台上传模式
+    // 将文件切分为若干批
+    const batches: File[][] = [];
+    for (let i = 0; i < filesToUpload.length; i += BATCH_SIZE) {
+      batches.push(filesToUpload.slice(i, i + BATCH_SIZE));
+    }
+
     resetDocUploadForm();
-    setBgUpload({ fileCount, progress: 0, done: false, error: null });
+    setBgUpload({ fileCount, progress: 0, done: false, error: null, batchText: batches.length > 1 ? `第 1/${batches.length} 批` : undefined });
 
     try {
-      const formData = new FormData();
-      filesToUpload.forEach(file => formData.append('files', file));
-      filesToUpload.forEach(file => {
-        const relPath = (file as any).webkitRelativePath as string;
-        // 发送完整相对路径（含文件夹），后端据此构建 OSS 目录层级
-        formData.append('relative_paths', relPath || file.name);
-        // 标题使用相对路径去扩展名（如 "v1.2/firmware/image"），体现层级结构
-        formData.append('titles', (relPath || file.name).replace(/\.[^/.]+$/, ''));
-      });
-      formData.append('device_id', id!);
-      formData.append('category', category);
-      if (uploadedBy) formData.append('uploaded_by', uploadedBy);
+      for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+        const batch = batches[batchIdx];
+        const formData = new FormData();
+        batch.forEach(file => formData.append('files', file));
+        batch.forEach(file => {
+          const relPath = (file as any).webkitRelativePath as string;
+          // relative_paths 保留完整路径（含根文件夹），用于 OSS 目录层级
+          formData.append('relative_paths', relPath || file.name);
+          // title 去掉根文件夹前缀（分类名已包含根文件夹），如 root/sub/file.jpg → sub/file
+          const pathParts = relPath ? relPath.split('/') : [];
+          const titlePath = pathParts.length > 1 ? pathParts.slice(1).join('/') : (relPath || file.name);
+          formData.append('titles', titlePath.replace(/\.([^./]+)$/, '').trim() || file.name.replace(/\.([^./]+)$/, '') || file.name);
+        });
+        formData.append('device_id', id!);
+        formData.append('category', category);
+        if (uploadedBy) formData.append('uploaded_by', uploadedBy);
 
-      const { data: result } = await api.post('/device-documents/upload', formData, {
-        onUploadProgress: (e: any) => {
-          if (e.total) {
-            const pct = Math.round((e.loaded * 100) / e.total);
-            setBgUpload(prev => prev ? { ...prev, progress: pct } : prev);
-          }
-        },
-      });
+        const { data: result } = await api.post('/device-documents/upload', formData, {
+          onUploadProgress: (e: any) => {
+            if (e.total) {
+              const batchPct = e.loaded / e.total;
+              const overallPct = Math.round(((batchIdx + batchPct) / batches.length) * 100);
+              setBgUpload(prev => prev ? { ...prev, progress: overallPct } : prev);
+            }
+          },
+        });
 
-      if (result.success) {
-        setBgUpload(prev => prev ? { ...prev, done: true, progress: 100 } : prev);
-        await fetchDeviceDocuments();
-        setTimeout(() => setBgUpload(null), 3500);
-      } else {
-        setBgUpload(prev => prev ? { ...prev, error: result.error || '上传失败' } : prev);
+        if (!result.success) {
+          setBgUpload(prev => prev ? { ...prev, error: result.error || '上传失败' } : prev);
+          return;
+        }
+
+        // 批次完成后更新进度和批次文字（准备下一批）
+        if (batchIdx < batches.length - 1) {
+          setBgUpload(prev => prev ? {
+            ...prev,
+            progress: Math.round(((batchIdx + 1) / batches.length) * 100),
+            batchText: `第 ${batchIdx + 2}/${batches.length} 批`,
+          } : prev);
+        }
       }
+
+      setBgUpload(prev => prev ? { ...prev, done: true, progress: 100, batchText: undefined } : prev);
+      await fetchDeviceDocuments();
+      setTimeout(() => setBgUpload(null), 3500);
     } catch (error) {
       console.error('上传设备资料失败:', error);
       setBgUpload(prev => prev ? { ...prev, error: '上传失败，请重试' } : prev);
@@ -296,40 +325,93 @@ const DeviceDetail: React.FC = () => {
     }
   };
 
-  // 批量下载
-  const handleBatchDownloadDocs = () => {
+  // 批量下载（打包ZIP）
+  const handleBatchDownloadDocs = async () => {
     if (selectedDocIds.size === 0) return;
-    const token = localStorage.getItem('auth_token');
-    selectedDocIds.forEach(docId => {
-      setTimeout(() => {
-        window.open(`/api/device-documents/${docId}/download?token=${token}`, '_blank');
-      }, 0);
-    });
-  };
-
-  // 预览文档
-  const handlePreviewDocument = async (docId: number, originalName: string) => {
     try {
-      const ext = (originalName || '').split('.').pop()?.toLowerCase() || '';
-      const previewableImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
-      const previewablePdf = ext === 'pdf';
-      if (!previewableImage && !previewablePdf) {
-        // 不可预览的文件类型，直接下载
-        handleDownloadDocument(docId);
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/device-documents/batch-download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ids: Array.from(selectedDocIds) }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        alert(err.error || '批量下载失败');
         return;
       }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '批量下载.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('批量下载失败:', error);
+      alert('批量下载失败');
+    }
+  };
+
+  const handleDownloadCategory = (cat: string) => {
+    const token = localStorage.getItem('auth_token');
+    const url = `/api/device-documents/download-category?device_id=${id}&category=${encodeURIComponent(cat)}&token=${token}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${cat}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  // 预览文档（支持分类内导航）
+  const handlePreviewDocument = async (docId: number, originalName: string, catDocs: any[] = [], catIndex: number = 0) => {
+    const ext = (originalName || '').split('.').pop()?.toLowerCase() || '';
+    const isPreviewableImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
+    const isPreviewablePdf = ext === 'pdf';
+    if (!isPreviewableImage && !isPreviewablePdf) {
+      setPreviewDoc({ url: '', title: originalName, type: 'other', docId, originalName, catDocs, catIndex, loading: false });
+      return;
+    }
+    setPreviewDoc(prev => {
+      const base = { url: '', title: originalName, type: isPreviewableImage ? 'image' : 'pdf', docId, originalName, catDocs, catIndex, loading: true };
+      return prev ? { ...prev, ...base } : base;
+    });
+    try {
       const { data: result } = await api.get(`/device-documents/${docId}/preview`);
       if (result.success) {
-        const fileType = previewableImage ? 'image' : 'pdf';
-        setPreviewDoc({ url: result.data.url, title: result.data.title || originalName, type: fileType });
+        setPreviewDoc({ url: result.data.url, title: result.data.title || originalName, type: isPreviewableImage ? 'image' : 'pdf', docId, originalName, catDocs, catIndex, loading: false });
       } else {
-        handleDownloadDocument(docId);
+        setPreviewDoc(prev => prev ? { ...prev, loading: false, type: 'other' } : null);
       }
     } catch (error) {
       console.error('预览失败:', error);
-      handleDownloadDocument(docId);
+      setPreviewDoc(prev => prev ? { ...prev, loading: false, type: 'other' } : null);
     }
   };
+
+  // 键盘导航（←/→/Esc）
+  useEffect(() => {
+    if (!previewDoc) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setPreviewDoc(null); return; }
+      if (previewDoc.catDocs.length <= 1) return;
+      let newIdx = previewDoc.catIndex;
+      if (e.key === 'ArrowLeft') newIdx = (previewDoc.catIndex - 1 + previewDoc.catDocs.length) % previewDoc.catDocs.length;
+      else if (e.key === 'ArrowRight') newIdx = (previewDoc.catIndex + 1) % previewDoc.catDocs.length;
+      if (newIdx !== previewDoc.catIndex) {
+        const d = previewDoc.catDocs[newIdx];
+        handlePreviewDocument(d.id, d.original_name, previewDoc.catDocs, newIdx);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [previewDoc]);
 
   // 重置上传表单
   const resetDocUploadForm = () => {
@@ -954,7 +1036,7 @@ const DeviceDetail: React.FC = () => {
                   <div className="flex items-center gap-2 no-print">
                     {deviceDocuments.length > 0 && (
                       <button
-                        onClick={() => { setDocSelectMode(!docSelectMode); setSelectedDocIds(new Set()); }}
+                        onClick={() => { const entering = !docSelectMode; setDocSelectMode(entering); setSelectedDocIds(new Set()); if (entering) setExpandedCategories(new Set(deviceDocCategories)); }}
                         className={`flex items-center gap-1 px-3 py-2 rounded-md transition-colors text-sm ${
                           docSelectMode ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
@@ -1020,13 +1102,66 @@ const DeviceDetail: React.FC = () => {
                     {deviceDocCategories.map(cat => {
                       const docs = deviceDocuments.filter(d => d.category === cat);
                       if (docs.length === 0) return null;
+                      const isExpanded = expandedCategories.has(cat);
+                      const catSelectedCount = docs.filter(d => selectedDocIds.has(d.id)).length;
+                      const catAllSelected = catSelectedCount === docs.length && docs.length > 0;
+                      const catSomeSelected = catSelectedCount > 0 && catSelectedCount < docs.length;
                       return (
-                        <div key={cat} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                            <FolderIcon className="h-5 w-5 mr-2 text-green-500" />
-                            {cat} ({docs.length})
-                          </h4>
-                          <div className="space-y-2">
+                        <div key={cat} className={`bg-gray-50 rounded-xl border overflow-hidden ${catAllSelected ? 'border-blue-400' : catSomeSelected ? 'border-blue-200' : 'border-gray-200'}`}>
+                          <div className="flex items-center">
+                            {docSelectMode && (
+                              <label className="flex items-center pl-3 cursor-pointer flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  ref={(el) => { if (el) el.indeterminate = catSomeSelected; }}
+                                  checked={catAllSelected}
+                                  onChange={() => {
+                                    setSelectedDocIds(prev => {
+                                      const next = new Set(prev);
+                                      if (catAllSelected || catSomeSelected) {
+                                        docs.forEach(d => next.delete(d.id));
+                                      } else {
+                                        docs.forEach(d => next.add(d.id));
+                                      }
+                                      return next;
+                                    });
+                                  }}
+                                  className="w-4 h-4 text-blue-600 rounded"
+                                />
+                              </label>
+                            )}
+                            <button
+                              onClick={() => setExpandedCategories(prev => {
+                                const next = new Set(prev);
+                                if (next.has(cat)) next.delete(cat); else next.add(cat);
+                                return next;
+                              })}
+                              className="flex-1 flex items-center justify-between px-4 py-3 hover:bg-gray-100 transition-colors text-left"
+                            >
+                              <span className="font-semibold text-gray-900 flex items-center">
+                                <FolderIcon className="h-5 w-5 mr-2 text-green-500" />
+                                {cat} ({docs.length})
+                                {docSelectMode && catSelectedCount > 0 && (
+                                  <span className="ml-2 text-xs font-normal text-blue-600">已选 {catSelectedCount}</span>
+                                )}
+                              </span>
+                              {isExpanded
+                                ? <ChevronDownIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                : <ChevronRightIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              }
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDownloadCategory(cat); }}
+                              className="flex items-center gap-1 px-3 py-3 text-blue-600 hover:bg-blue-50 transition-colors text-xs font-medium flex-shrink-0 border-l border-gray-200"
+                              title={`下载 ${cat} 下所有文件`}
+                            >
+                              <DocumentArrowDownIcon className="h-4 w-4" />
+                              下载全部
+                            </button>
+                          </div>
+                          {isExpanded && (
+                          <div className="px-4 pb-4">
+                          <div className="space-y-2 pt-2">
                             {docs.map(doc => {
                               const ext = (doc.original_name || '').split('.').pop()?.toLowerCase() || '';
                               const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
@@ -1043,8 +1178,8 @@ const DeviceDetail: React.FC = () => {
                                   />
                                 )}
                                 <div
-                                  className={`flex items-center gap-3 min-w-0 flex-1 ${canPreview && !docSelectMode ? 'cursor-pointer' : docSelectMode ? 'cursor-pointer' : ''}`}
-                                  onClick={() => docSelectMode ? toggleDocSelect(doc.id) : (canPreview && handlePreviewDocument(doc.id, doc.original_name))}
+                                  className={`flex items-center gap-3 min-w-0 flex-1 ${!docSelectMode ? 'cursor-pointer' : 'cursor-pointer'}`}
+                                  onClick={() => docSelectMode ? toggleDocSelect(doc.id) : handlePreviewDocument(doc.id, doc.original_name, docs, docs.findIndex(d => d.id === doc.id))}
                                 >
                                   {isImage ? (
                                     <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -1069,15 +1204,13 @@ const DeviceDetail: React.FC = () => {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0 ml-4">
-                                  {canPreview && (
-                                    <button
-                                      onClick={() => handlePreviewDocument(doc.id, doc.original_name)}
+                                  <button
+                                      onClick={() => handlePreviewDocument(doc.id, doc.original_name, docs, docs.findIndex(d => d.id === doc.id))}
                                       className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                                      title="预览"
+                                      title="阅览"
                                     >
                                       <EyeIcon className="h-5 w-5" />
                                     </button>
-                                  )}
                                   <button
                                     onClick={() => handleDownloadDocument(doc.id)}
                                     className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
@@ -1097,6 +1230,8 @@ const DeviceDetail: React.FC = () => {
                               );
                             })}
                           </div>
+                          </div>
+                          )}
                         </div>
                       );
                     })}
@@ -1680,7 +1815,14 @@ const DeviceDetail: React.FC = () => {
                         {...({ webkitdirectory: '', multiple: true } as any)}
                         onChange={(e) => {
                           if (e.target.files && e.target.files.length > 0) {
-                            setDocUploadFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                            const SYSTEM_FILES = /^(\.DS_Store|Thumbs\.db|desktop\.ini|__MACOSX.*)$/i;
+                            const allFiles = Array.from(e.target.files as FileList);
+                            const folderName = (allFiles[0] as any)?.webkitRelativePath?.split('/')[0];
+                            const files = allFiles.filter(f => !SYSTEM_FILES.test(f.name));
+                            setDocUploadFiles(prev => [...prev, ...(files.length > 0 ? files : allFiles)]);
+                            if (folderName && !docUploadCategory && !docUploadNewCategory) {
+                              setDocUploadNewCategory(folderName);
+                            }
                           }
                           e.target.value = '';
                         }}
@@ -1715,7 +1857,15 @@ const DeviceDetail: React.FC = () => {
                           {...({ webkitdirectory: '', multiple: true } as any)}
                           onChange={(e) => {
                             if (e.target.files && e.target.files.length > 0) {
-                              setDocUploadFiles(Array.from(e.target.files));
+                              const SYSTEM_FILES = /^(\.DS_Store|Thumbs\.db|desktop\.ini|__MACOSX.*)$/i;
+                              const allFiles = Array.from(e.target.files as FileList);
+                              const folderName = (allFiles[0] as any)?.webkitRelativePath?.split('/')[0];
+                              const files = allFiles.filter(f => !SYSTEM_FILES.test(f.name));
+                              setDocUploadFiles(files.length > 0 ? files : allFiles);
+                              if (folderName) {
+                                setDocUploadNewCategory(folderName);
+                                setDocUploadCategory('');
+                              }
                             }
                             e.target.value = '';
                           }}
@@ -1827,7 +1977,7 @@ const DeviceDetail: React.FC = () => {
                   ? bgUpload.error
                   : bgUpload.done
                   ? `${bgUpload.fileCount} 个文件已成功上传`
-                  : `${bgUpload.fileCount} 个文件 · ${bgUpload.progress}%`}
+                  : `${bgUpload.fileCount} 个文件${bgUpload.batchText ? ' · ' + bgUpload.batchText : ''} · ${bgUpload.progress}%`}
               </p>
               {!bgUpload.error && !bgUpload.done && (
                 <div className="mt-2 bg-gray-100 rounded-full h-1.5">
@@ -1847,28 +1997,141 @@ const DeviceDetail: React.FC = () => {
         </div>
       )}
 
-      {/* 文件预览弹窗 */}
+      {/* 文件阅览器 */}
       {previewDoc && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50" onClick={() => setPreviewDoc(null)}>
-          <div className="relative max-w-5xl w-full mx-4 max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black bg-opacity-85 flex items-center justify-center z-50" onClick={() => setPreviewDoc(null)}>
+          <div
+            className="relative w-full mx-4 flex flex-col bg-gray-900 rounded-xl overflow-hidden shadow-2xl"
+            style={{ maxWidth: '1100px', maxHeight: '92vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* 顶部工具栏 */}
-            <div className="flex items-center justify-between bg-gray-900 px-4 py-2 rounded-t-lg">
-              <span className="text-white text-sm truncate">{previewDoc.title}</span>
+            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 flex-shrink-0">
+              <DocumentIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <span className="text-white text-sm font-medium truncate flex-1">{previewDoc.title}</span>
+              {previewDoc.catDocs.length > 1 && (
+                <span className="text-gray-400 text-xs flex-shrink-0 bg-gray-700 px-2 py-0.5 rounded">
+                  {previewDoc.catIndex + 1} / {previewDoc.catDocs.length}
+                </span>
+              )}
+              <button
+                onClick={() => handleDownloadDocument(previewDoc.docId)}
+                className="flex items-center gap-1 text-gray-300 hover:text-white text-xs transition-colors flex-shrink-0 bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded"
+                title="下载文件"
+              >
+                <DocumentArrowDownIcon className="h-4 w-4" />
+                下载
+              </button>
               <button
                 onClick={() => setPreviewDoc(null)}
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-gray-400 hover:text-white transition-colors flex-shrink-0"
+                title="关闭 (Esc)"
               >
-                <XCircleIcon className="h-6 w-6" />
+                <XCircleIcon className="h-5 w-5" />
               </button>
             </div>
-            {/* 预览内容 */}
-            <div className="bg-white rounded-b-lg overflow-auto flex-1 flex items-center justify-center" style={{ maxHeight: 'calc(90vh - 48px)' }}>
-              {previewDoc.type === 'image' ? (
-                <img src={previewDoc.url} alt={previewDoc.title} className="max-w-full max-h-full object-contain" />
-              ) : (
-                <iframe src={previewDoc.url} title={previewDoc.title} className="w-full h-full min-h-[80vh]" />
+
+            {/* 主内容区 + 左右导航 */}
+            <div className="flex items-stretch flex-1 min-h-0" style={{ minHeight: '55vh' }}>
+              {/* 上一个 */}
+              {previewDoc.catDocs.length > 1 && (
+                <button
+                  onClick={() => {
+                    const newIdx = (previewDoc.catIndex - 1 + previewDoc.catDocs.length) % previewDoc.catDocs.length;
+                    const d = previewDoc.catDocs[newIdx];
+                    handlePreviewDocument(d.id, d.original_name, previewDoc.catDocs, newIdx);
+                  }}
+                  className="flex-shrink-0 w-12 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  title="上一个 (←)"
+                >
+                  <ChevronLeftIcon className="h-8 w-8" />
+                </button>
+              )}
+
+              {/* 文件内容 */}
+              <div className="flex-1 min-w-0 flex items-center justify-center overflow-auto bg-gray-800">
+                {previewDoc.loading ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-gray-400 text-sm">加载中...</span>
+                  </div>
+                ) : previewDoc.type === 'image' ? (
+                  <img
+                    src={previewDoc.url}
+                    alt={previewDoc.title}
+                    className="max-w-full max-h-full object-contain p-2"
+                    style={{ maxHeight: 'calc(92vh - 160px)' }}
+                  />
+                ) : previewDoc.type === 'pdf' ? (
+                  <iframe
+                    src={previewDoc.url}
+                    title={previewDoc.title}
+                    className="w-full border-0"
+                    style={{ height: 'calc(92vh - 160px)' }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-4 py-16">
+                    <DocumentIcon className="h-16 w-16 text-gray-500" />
+                    <p className="text-gray-400 text-sm">{previewDoc.originalName}</p>
+                    <p className="text-gray-500 text-xs">该文件类型不支持预览</p>
+                    <button
+                      onClick={() => handleDownloadDocument(previewDoc.docId)}
+                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm mt-2"
+                    >
+                      <DocumentArrowDownIcon className="h-4 w-4" />
+                      下载文件
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 下一个 */}
+              {previewDoc.catDocs.length > 1 && (
+                <button
+                  onClick={() => {
+                    const newIdx = (previewDoc.catIndex + 1) % previewDoc.catDocs.length;
+                    const d = previewDoc.catDocs[newIdx];
+                    handlePreviewDocument(d.id, d.original_name, previewDoc.catDocs, newIdx);
+                  }}
+                  className="flex-shrink-0 w-12 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  title="下一个 (→)"
+                >
+                  <ChevronRightIcon className="h-8 w-8" />
+                </button>
               )}
             </div>
+
+            {/* 缩略图条 */}
+            {previewDoc.catDocs.length > 1 && (
+              <div className="flex-shrink-0 border-t border-gray-700 px-3 py-2 overflow-x-auto">
+                <div className="flex gap-1.5">
+                  {previewDoc.catDocs.map((d, i) => {
+                    const tExt = (d.original_name || '').split('.').pop()?.toLowerCase() || '';
+                    const tIsImg = ['jpg','jpeg','png','gif','bmp','webp','svg'].includes(tExt);
+                    const tIsPdf = tExt === 'pdf';
+                    return (
+                      <button
+                        key={d.id}
+                        onClick={() => handlePreviewDocument(d.id, d.original_name, previewDoc.catDocs, i)}
+                        className={`flex-shrink-0 w-14 h-14 rounded overflow-hidden border-2 transition-colors ${
+                          i === previewDoc.catIndex ? 'border-blue-400' : 'border-gray-600 hover:border-gray-400'
+                        }`}
+                        title={d.title || d.original_name}
+                      >
+                        {tIsImg ? (
+                          <img src={`/api/device-documents/${d.id}/download`} loading="lazy" className="w-full h-full object-cover" alt={d.title} />
+                        ) : (
+                          <div className={`w-full h-full flex flex-col items-center justify-center gap-0.5 ${ tIsPdf ? 'bg-red-900' : 'bg-gray-700' }`}>
+                            <DocumentIcon className="h-5 w-5 text-gray-300" />
+                            {tIsPdf && <span className="text-xs text-red-300 font-bold leading-none">PDF</span>}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
