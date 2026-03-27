@@ -27,14 +27,14 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 50 * 1024 * 1024 // 50MB
+        fileSize: 200 * 1024 * 1024 // 200MB
     }
 });
 
 // 获取设备的所有出厂资料
 router.get('/', async (req, res) => {
     try {
-        const { device_id, category } = req.query;
+        const { device_id, bundle_id, category } = req.query;
 
         let sql = 'SELECT * FROM device_documents WHERE 1=1';
         const params = [];
@@ -42,6 +42,11 @@ router.get('/', async (req, res) => {
         if (device_id) {
             sql += ' AND device_id = ?';
             params.push(device_id);
+        }
+
+        if (bundle_id) {
+            sql += ' AND bundle_id = ?';
+            params.push(bundle_id);
         }
 
         if (category) {
@@ -70,14 +75,24 @@ router.get('/', async (req, res) => {
 // 获取设备资料的分类列表
 router.get('/categories', async (req, res) => {
     try {
-        const { device_id } = req.query;
+        const { device_id, bundle_id } = req.query;
 
         let sql = 'SELECT DISTINCT category FROM device_documents';
         const params = [];
+        const conditions = [];
 
         if (device_id) {
-            sql += ' WHERE device_id = ?';
+            conditions.push('device_id = ?');
             params.push(device_id);
+        }
+
+        if (bundle_id) {
+            conditions.push('bundle_id = ?');
+            params.push(bundle_id);
+        }
+
+        if (conditions.length > 0) {
+            sql += ' WHERE ' + conditions.join(' AND ');
         }
 
         sql += ' ORDER BY category';
@@ -138,11 +153,64 @@ function sanitizeRelativePath(relPath) {
     return parts.map(p => p.replace(/[<>:"|?*]/g, '').trim()).filter(Boolean).join('/');
 }
 
+// 并发执行异步任务（最大并发数 = concurrency）
+async function runConcurrent(items, concurrency, fn) {
+    const results = new Array(items.length);
+    let i = 0;
+    async function worker() {
+        while (i < items.length) {
+            const idx = i++;
+            results[idx] = await fn(items[idx], idx);
+        }
+    }
+    const workers = [];
+    for (let w = 0; w < Math.min(concurrency, items.length); w++) {
+        workers.push(worker());
+    }
+    await Promise.all(workers);
+    return results;
+}
+
+// 上传前检查文件是否已存在（按 OSS 路径对比），用于前端去重跳过
+router.post('/check-exists', async (req, res) => {
+    try {
+        const { device_id, category, files } = req.body;
+        if (!device_id || !category || !Array.isArray(files) || files.length === 0) {
+            return res.status(400).json({ success: false, error: '参数不完整' });
+        }
+        if (!ossService.enabled) {
+            // OSS 未启用，无法按路径去重，全部允许上传
+            return res.json({ success: true, exists: files.map(() => false) });
+        }
+        const device = await getDeviceInfo(device_id);
+        if (!device) {
+            return res.status(400).json({ success: false, error: '指定的设备不存在' });
+        }
+        // 计算每个文件对应的 OSS file_path
+        const ossFilePaths = files.map(f => {
+            const relativePath = sanitizeRelativePath(f.relativePath) || f.originalName;
+            const ossKey = ossService.buildPathByType('device-docs', { device, category, fileName: relativePath });
+            return `oss://${ossService.bucket}/${ossKey}`;
+        });
+        // 一次查询获取所有已存在的路径
+        const placeholders = ossFilePaths.map(() => '?').join(',');
+        const existing = await query(
+            `SELECT file_path FROM device_documents WHERE device_id = ? AND file_path IN (${placeholders})`,
+            [device_id, ...ossFilePaths]
+        );
+        const existingSet = new Set(existing.map(r => r.file_path));
+        res.json({ success: true, exists: ossFilePaths.map(p => existingSet.has(p)) });
+    } catch (error) {
+        console.error('检查文件存在失败:', error);
+        res.status(500).json({ success: false, error: '检查失败', message: error.message });
+    }
+});
+
 // 批量上传设备出厂资料 (支持多文件，最多 500 个)
-router.post('/upload', upload.array('files', 500), async (req, res) => {
+router.post('/upload', upload.array('files', 2000), async (req, res) => {
     const uploadedFiles = req.files || [];
     try {
-        const { device_id, category, uploaded_by } = req.body;
+        const { device_id, bundle_id, category, uploaded_by } = req.body;
         // titles 可以是单个字符串或数组
         let titles = req.body.titles || req.body.title;
         if (!Array.isArray(titles)) {
@@ -161,80 +229,86 @@ router.post('/upload', upload.array('files', 500), async (req, res) => {
             });
         }
 
-        if (!device_id || !category) {
+        if (!category || (!device_id && !bundle_id)) {
             uploadedFiles.forEach(f => fs.unlinkSync(f.path));
             return res.status(400).json({
                 success: false,
-                error: '设备ID和分类为必填项'
+                error: '分类和设备ID或多合一设备ID为必填项'
             });
         }
 
-        const device = await getDeviceInfo(device_id);
-        if (!device) {
-            uploadedFiles.forEach(f => fs.unlinkSync(f.path));
-            return res.status(400).json({
-                success: false,
-                error: '指定的设备不存在'
-            });
+        let device = null;
+        if (device_id) {
+            device = await getDeviceInfo(device_id);
+            if (!device) {
+                uploadedFiles.forEach(f => fs.unlinkSync(f.path));
+                return res.status(400).json({
+                    success: false,
+                    error: '指定的设备不存在'
+                });
+            }
         }
 
         const results = [];
         const errors = [];
 
-        for (let i = 0; i < uploadedFiles.length; i++) {
-            const file = uploadedFiles[i];
+        // 8 并发处理文件（OSS 上传 + DB 写入）
+        const processedItems = await runConcurrent(uploadedFiles, 8, async (file, i) => {
             try {
-            const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
-            // 计算 OSS 存储路径：优先使用前端传来的相对路径（含文件夹层级），回退到原始文件名
-            const rawRelPath = relativePaths[i] || originalName;
-            const relativePath = sanitizeRelativePath(rawRelPath) || originalName;
-            // 截断到安全长度，避免超出 VARCHAR(255)
-            const rawTitle = (titles[i] || relativePath.replace(/\.([^./]+)$/, '')).trim();
-            const title = rawTitle.length > 240 ? rawTitle.slice(0, 240) : rawTitle;
-            const safeOriginalName = originalName.length > 240 ? originalName.slice(0, 240) : originalName;
-            let filePath = file.path;
-            let fileSize = file.size;
+                const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+                const rawRelPath = relativePaths[i] || originalName;
+                const relativePath = sanitizeRelativePath(rawRelPath) || originalName;
+                const rawTitle = (titles[i] || relativePath.replace(/\.([^./]+)$/, '')).trim();
+                const title = rawTitle.length > 240 ? rawTitle.slice(0, 240) : rawTitle;
+                const safeOriginalName = originalName.length > 240 ? originalName.slice(0, 240) : originalName;
+                let filePath = file.path;
+                let fileSize = file.size;
 
-            // OSS上传: devices/{设备标识}/device-docs/{分类}/{相对路径（含文件夹层级）}
-            if (ossService.enabled) {
-                try {
-                    const ossKey = ossService.buildPathByType('device-docs', {
-                        device,
-                        category,
-                        fileName: relativePath
-                    });
-                    await ossUploadWithRetry(ossKey, file.path);
-                    filePath = `oss://${ossService.bucket}/${ossKey}`;
-                    fs.unlinkSync(file.path);
-                    console.log(`✅ 设备出厂资料已上传到OSS: ${filePath}`);
-                } catch (ossError) {
-                    console.error('OSS上传失败(已重试)，保存到本地:', ossError.message);
+                if (ossService.enabled) {
+                    try {
+                        const ossKey = ossService.buildPathByType('device-docs', {
+                            device,
+                            category,
+                            fileName: relativePath
+                        });
+                        await ossUploadWithRetry(ossKey, file.path);
+                        filePath = `oss://${ossService.bucket}/${ossKey}`;
+                        fs.unlinkSync(file.path);
+                        console.log(`✅ 设备出厂资料已上传到OSS: ${filePath}`);
+                    } catch (ossError) {
+                        console.error('OSS上传失败(已重试)，保存到本地:', ossError.message);
+                    }
                 }
-            }
 
-            const result = await query(
-                `INSERT INTO device_documents 
-                 (device_id, category, title, original_name, file_path, file_size, uploaded_by) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [device_id, category, title, safeOriginalName, filePath, fileSize, uploaded_by || null]
-            );
-
-            results.push({
-                id: result.insertId,
-                device_id,
-                category,
-                title,
-                original_name: safeOriginalName,
-                file_path: filePath,
-                file_size: fileSize
-            });
+                const result = await query(
+                    `INSERT INTO device_documents 
+                     (device_id, bundle_id, category, title, original_name, file_path, file_size, uploaded_by) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [device_id || null, bundle_id || null, category, title, safeOriginalName, filePath, fileSize, uploaded_by || null]
+                );
+                return {
+                    ok: true,
+                    data: {
+                        id: result.insertId,
+                        device_id: device_id || null,
+                        bundle_id: bundle_id || null,
+                        category,
+                        title,
+                        original_name: safeOriginalName,
+                        file_path: filePath,
+                        file_size: fileSize
+                    }
+                };
             } catch (fileError) {
                 console.error(`文件 ${i} 处理失败:`, fileError.message);
-                errors.push({ index: i, name: file.originalname, error: fileError.message });
-                // 清理磁盘临时文件（如果还存在）
                 try { if (fs.existsSync(file.path)) fs.unlinkSync(file.path); } catch (_) {}
+                return { ok: false, error: { index: i, name: file.originalname, error: fileError.message } };
             }
-        }
+        });
+        processedItems.forEach(item => {
+            if (item.ok) results.push(item.data);
+            else errors.push(item.error);
+        });
 
         if (results.length === 0 && errors.length > 0) {
             return res.status(500).json({

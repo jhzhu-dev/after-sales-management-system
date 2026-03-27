@@ -21,7 +21,9 @@ import {
   Customer,
   ProductVersion,
   ProductVersionFormData,
-  ProductVersionDocument
+  ProductVersionDocument,
+  DeviceBundle,
+  DeviceBundleFormData
 } from '../types';
 
 // 创建axios实例
@@ -537,6 +539,30 @@ export const uploadChecklistImage = (
   return api.post('/versions/upload-checklist-image', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }).then(res => res.data.data);
+};
+
+// 多合一设备 API
+export const bundleApi = {
+  getBundles: (params?: { page?: number; limit?: number; search?: string; customer_id?: number }): Promise<PaginatedResponse<DeviceBundle>> =>
+    api.get('/device-bundles', { params }).then(res => res.data),
+
+  getBundle: (id: number): Promise<ApiResponse<DeviceBundle>> =>
+    api.get(`/device-bundles/${id}`).then(res => res.data),
+
+  createBundle: (data: DeviceBundleFormData): Promise<ApiResponse<DeviceBundle>> =>
+    api.post('/device-bundles', data).then(res => res.data),
+
+  updateBundle: (id: number, data: Partial<DeviceBundleFormData>): Promise<ApiResponse<any>> =>
+    api.put(`/device-bundles/${id}`, data).then(res => res.data),
+
+  deleteBundle: (id: number): Promise<ApiResponse<void>> =>
+    api.delete(`/device-bundles/${id}`).then(res => res.data),
+
+  addDevice: (bundleId: number, deviceId: string): Promise<ApiResponse<any>> =>
+    api.post(`/device-bundles/${bundleId}/devices`, { device_id: deviceId }).then(res => res.data),
+
+  removeDevice: (bundleId: number, deviceId: string): Promise<ApiResponse<any>> =>
+    api.delete(`/device-bundles/${bundleId}/devices/${deviceId}`).then(res => res.data),
 };
 
 export default api;

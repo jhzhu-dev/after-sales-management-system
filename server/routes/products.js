@@ -150,13 +150,14 @@ router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { product_line_id, name, model, description, specifications, is_active, short_name } = req.body;
-        const existing = await query('SELECT id FROM products WHERE id = ?', [id]);
+        const existing = await query('SELECT id, short_name FROM products WHERE id = ?', [id]);
         if (existing.length === 0) {
             return res.status(404).json({
                 success: false,
                 error: '产品不存在'
             });
         }
+        const oldShortName = existing[0].short_name;
 
         const updates = [];
         const params = [];
@@ -211,6 +212,18 @@ router.put('/:id', async (req, res) => {
             `UPDATE products SET ${updates.join(', ')} WHERE id = ?`,
             params
         );
+
+        // 产品简称变更时，用 REPLACE() 精准替换 nickname 中的旧产品简称，不重算数字后缀
+        if (short_name !== undefined && (short_name || '') !== (oldShortName || '')) {
+          try {
+            await query(
+              `UPDATE devices SET nickname = REPLACE(nickname, ?, ?) WHERE product_id = ? AND nickname IS NOT NULL`,
+              [oldShortName || '', short_name || '', id]
+            );
+          } catch (e) {
+            console.warn('级联更新设备nickname失败:', e.message);
+          }
+        }
 
         res.json({
             success: true,

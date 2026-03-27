@@ -15,6 +15,7 @@ const ReleaseLibrary = React.lazy(() => import('./pages/ReleaseLibrary'));
 const ProductLines = React.lazy(() => import('./pages/ProductLines'));
 const ProductDetail = React.lazy(() => import('./pages/ProductDetail'));
 const Products = React.lazy(() => import('./pages/Products'));
+const BundleDetail = React.lazy(() => import('./pages/BundleDetail'));
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
               <Route path="/devices" element={<PrivateRoute><Devices /></PrivateRoute>} />
               <Route path="/devices/new" element={<PrivateRoute><Devices /></PrivateRoute>} />
               <Route path="/devices/:id" element={<PrivateRoute><DeviceDetail /></PrivateRoute>} />
+              <Route path="/bundles/:id" element={<PrivateRoute><BundleDetail /></PrivateRoute>} />
               <Route path="/issues" element={<PrivateRoute><Issues /></PrivateRoute>} />
               <Route path="/issues/:id" element={<PrivateRoute><IssueDetail /></PrivateRoute>} />
               <Route path="/releases" element={<PrivateRoute><ReleaseLibrary /></PrivateRoute>} />

@@ -31,6 +31,10 @@ export interface Device {
   password?: string;
   issue_count?: number;
   open_issues?: number;
+  bundle_id?: number | null;
+  bundle_id_val?: number | null;
+  bundle_code?: string | null;
+  bundle_name?: string | null;
 }
 
 // 模块类型 (仅用于设备详情页面)
@@ -178,7 +182,7 @@ export interface DashboardStats {
 // 表单类型
 export interface DeviceFormData {
   id?: string;
-  name: string;
+  name: string | null;
   device_code?: string | null;
   product_line_id: string | number;
   product_id?: number | null;
@@ -479,4 +483,51 @@ export interface ChecklistAttachment {
   name: string;
   url: string;
   size: number;
+}
+
+// ==================== 多合一设备 ====================
+
+export interface DeviceBundle {
+  id: number;
+  bundle_code: string;
+  name?: string | null;
+  customer_id: number;
+  customer_name?: string;
+  customer_short_name?: string;
+  description?: string | null;
+  device_count?: number;
+  document_count?: number;
+  remote_code?: string | null;
+  open_issues?: number;
+  password?: string | null;
+  devices?: Device[];
+  stats?: {
+    total_modules: number;
+    total_issues: number;
+    open_issues: number;
+    bundle_documents: number;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NewBundleDevice {
+  id: string;
+  device_code?: string;
+  product_line_id: number;
+  product_id?: number;
+  product_version_id?: number;
+  status?: string;
+  module_type_ids?: number[];
+}
+
+export interface DeviceBundleFormData {
+  bundle_code?: string;
+  name?: string;
+  customer_id: number;
+  description?: string;
+  device_ids?: string[];
+  new_devices?: NewBundleDevice[];
+  remote_code?: string;
+  password?: string;
 }

@@ -93,10 +93,11 @@ router.put('/:id', [
     const { name, short_name } = req.body;
 
     // 检查客户是否存在
-    const existing = await query('SELECT id FROM customers WHERE id = ?', [id]);
+    const existing = await query('SELECT id, name FROM customers WHERE id = ?', [id]);
     if (existing.length === 0) {
       return res.status(404).json({ success: false, error: '客户不存在' });
     }
+    const oldName = existing[0].name;
 
     // 检查简写是否被其他客户占用
     if (short_name) {
@@ -117,6 +118,18 @@ router.put('/:id', [
 
     updateValues.push(id);
     await query(`UPDATE customers SET ${updateFields.join(', ')} WHERE id = ?`, updateValues);
+
+    // 客户名称变更时，用 REPLACE() 精准替换 nickname 中的旧客户名，不重算数字后缀
+    if (name !== undefined && name !== oldName) {
+      try {
+        await query(
+          `UPDATE devices SET nickname = REPLACE(nickname, ?, ?) WHERE customer_id = ? AND nickname IS NOT NULL`,
+          [oldName, name, id]
+        );
+      } catch (e) {
+        console.warn('级联更新设备nickname失败:', e.message);
+      }
+    }
 
     res.json({ success: true, message: '客户更新成功' });
   } catch (error) {

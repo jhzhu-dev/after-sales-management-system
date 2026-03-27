@@ -206,7 +206,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
 
-    // 当三个设备标识字段之一有变动时，清除组合错误提示
+    // 当三个设备标识字段之一有变动时，清除多合一设备错误提示
     if (['device_code', 'id', 'remote_code'].includes(field as string) && errors.identity) {
       setErrors(prev => ({ ...prev, identity: '' }));
     }
@@ -295,7 +295,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
     if (device) {
       // 编辑模式：提交所有可编辑字段（product_line_id 为只读，不随本次提交）
       processedData = {
-        name: formData.name?.trim() || device.name,
+        name: formData.name?.trim() || null,
         device_code: formData.device_code?.trim() || null,
         customer_id: formData.customer_id || null,
         status: formData.status,
@@ -357,7 +357,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 <label className="block text-sm font-medium text-gray-700 mb-1">订单号</label>
                 <input
                   type="text"
-                  value={formData.name}
+                  value={formData.name ?? ''}
                   onChange={(e) => handleChange('name', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="请输入订单号"
@@ -472,7 +472,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
               </label>
               <input
                 type="text"
-                value={formData.name}
+                value={formData.name ?? ''}
                 onChange={(e) => handleChange('name', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="请输入订单号（选填）"

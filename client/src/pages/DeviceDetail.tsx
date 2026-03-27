@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeftIcon,
   PencilIcon,
@@ -70,7 +70,7 @@ const DeviceDetail: React.FC = () => {
   const [docUploading, setDocUploading] = useState(false);
   const [docDragOver, setDocDragOver] = useState(false);
   const [docUploadProgress, setDocUploadProgress] = useState('');
-  const [bgUpload, setBgUpload] = useState<{ fileCount: number; progress: number; done: boolean; error: string | null; batchText?: string } | null>(null);
+  const [bgUpload, setBgUpload] = useState<{ fileCount: number; progress: number; done: boolean; error: string | null; statusText?: string; skippedCount?: number; failedFiles?: string[] } | null>(null);
   const [previewDoc, setPreviewDoc] = useState<{
     url: string; title: string; type: string;
     docId: number; originalName: string;
@@ -191,7 +191,7 @@ const DeviceDetail: React.FC = () => {
     }
   };
 
-  // 批量上传设备资料（分批发送，每批 20 个文件，支持最多 500 个）
+  // 批量上传设备资料（去重检查 → 3批并行50文件，服务器内8并发OSS）
   const handleDocUpload = async () => {
     if (docUploadFiles.length === 0) return;
     const category = docUploadNewCategory.trim() || docUploadCategory;
@@ -201,67 +201,105 @@ const DeviceDetail: React.FC = () => {
     }
     const filesToUpload = [...docUploadFiles];
     const uploadedBy = docUploadBy.trim();
-    const fileCount = filesToUpload.length;
-    const BATCH_SIZE = 20;
-
-    // 将文件切分为若干批
-    const batches: File[][] = [];
-    for (let i = 0; i < filesToUpload.length; i += BATCH_SIZE) {
-      batches.push(filesToUpload.slice(i, i + BATCH_SIZE));
-    }
 
     resetDocUploadForm();
-    setBgUpload({ fileCount, progress: 0, done: false, error: null, batchText: batches.length > 1 ? `第 1/${batches.length} 批` : undefined });
+    setBgUpload({ fileCount: filesToUpload.length, progress: 0, done: false, error: null, statusText: '正在检查已存在文件...' });
 
     try {
-      for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
-        const batch = batches[batchIdx];
-        const formData = new FormData();
-        batch.forEach(file => formData.append('files', file));
-        batch.forEach(file => {
-          const relPath = (file as any).webkitRelativePath as string;
-          // relative_paths 保留完整路径（含根文件夹），用于 OSS 目录层级
-          formData.append('relative_paths', relPath || file.name);
-          // title 去掉根文件夹前缀（分类名已包含根文件夹），如 root/sub/file.jpg → sub/file
-          const pathParts = relPath ? relPath.split('/') : [];
-          const titlePath = pathParts.length > 1 ? pathParts.slice(1).join('/') : (relPath || file.name);
-          formData.append('titles', titlePath.replace(/\.([^./]+)$/, '').trim() || file.name.replace(/\.([^./]+)$/, '') || file.name);
-        });
-        formData.append('device_id', id!);
-        formData.append('category', category);
-        if (uploadedBy) formData.append('uploaded_by', uploadedBy);
-
-        const { data: result } = await api.post('/device-documents/upload', formData, {
-          onUploadProgress: (e: any) => {
-            if (e.total) {
-              const batchPct = e.loaded / e.total;
-              const overallPct = Math.round(((batchIdx + batchPct) / batches.length) * 100);
-              setBgUpload(prev => prev ? { ...prev, progress: overallPct } : prev);
-            }
-          },
-        });
-
-        if (!result.success) {
-          setBgUpload(prev => prev ? { ...prev, error: result.error || '上传失败' } : prev);
-          return;
+      // ── Phase A: 去重检查 ──────────────────────────────────────
+      const existsFlags: boolean[] = new Array(filesToUpload.length).fill(false);
+      try {
+        const CHECK_BATCH = 500;
+        for (let ci = 0; ci < filesToUpload.length; ci += CHECK_BATCH) {
+          const batch = filesToUpload.slice(ci, ci + CHECK_BATCH);
+          const { data: checkResult } = await api.post('/device-documents/check-exists', {
+            device_id: id,
+            category,
+            files: batch.map(f => ({
+              relativePath: (f as any).webkitRelativePath || f.name,
+              originalName: f.name,
+            })),
+          });
+          if (checkResult.success && Array.isArray(checkResult.exists)) {
+            checkResult.exists.forEach((e: boolean, j: number) => { existsFlags[ci + j] = e; });
+          }
         }
-
-        // 批次完成后更新进度和批次文字（准备下一批）
-        if (batchIdx < batches.length - 1) {
-          setBgUpload(prev => prev ? {
-            ...prev,
-            progress: Math.round(((batchIdx + 1) / batches.length) * 100),
-            batchText: `第 ${batchIdx + 2}/${batches.length} 批`,
-          } : prev);
-        }
+      } catch (checkErr) {
+        console.warn('去重检查失败，将继续上传全部文件:', checkErr);
       }
 
-      setBgUpload(prev => prev ? { ...prev, done: true, progress: 100, batchText: undefined } : prev);
+      const toUpload = filesToUpload.filter((_, i) => !existsFlags[i]);
+      const skippedCount = filesToUpload.length - toUpload.length;
+
+      if (toUpload.length === 0) {
+        setBgUpload(prev => prev ? { ...prev, done: true, progress: 100, skippedCount, statusText: undefined } : prev);
+        await fetchDeviceDocuments();
+        setTimeout(() => setBgUpload(null), 3500);
+        return;
+      }
+
+      setBgUpload(prev => prev ? { ...prev, skippedCount, statusText: '正在上传...' } : prev);
+
+      // ── Phase B: 3批并行上传，每批最多50文件 ──────────────────
+      const BATCH_SIZE = 50;
+      const PARALLEL_BATCHES = 3;
+      const batches: File[][] = [];
+      for (let bi = 0; bi < toUpload.length; bi += BATCH_SIZE) {
+        batches.push(toUpload.slice(bi, bi + BATCH_SIZE));
+      }
+
+      let completedBatches = 0;
+      const failedFiles: string[] = [];
+
+      for (let w = 0; w < batches.length; w += PARALLEL_BATCHES) {
+        const windowBatches = batches.slice(w, w + PARALLEL_BATCHES);
+        const windowResults = await Promise.all(windowBatches.map(async batch => {
+          const formData = new FormData();
+          batch.forEach(file => formData.append('files', file));
+          batch.forEach(file => {
+            const relPath = (file as any).webkitRelativePath as string;
+            formData.append('relative_paths', relPath || file.name);
+            const pathParts = relPath ? relPath.split('/') : [];
+            const titlePath = pathParts.length > 1 ? pathParts.slice(1).join('/') : (relPath || file.name);
+            formData.append('titles', titlePath.replace(/\.([^./]+)$/, '').trim() || file.name.replace(/\.([^./]+)$/, '') || file.name);
+          });
+          formData.append('device_id', id!);
+          formData.append('category', category);
+          if (uploadedBy) formData.append('uploaded_by', uploadedBy);
+          try {
+            const { data: result } = await api.post('/device-documents/upload', formData, { timeout: 0 });
+            return result;
+          } catch (err) {
+            return { success: false, errors: batch.map(f => ({ name: f.name })) };
+          }
+        }));
+
+        completedBatches += windowBatches.length;
+        windowResults.forEach(result => {
+          if (result?.errors?.length) {
+            result.errors.forEach((e: any) => {
+              if (failedFiles.length < 50) failedFiles.push(e.name || '未知文件');
+            });
+          }
+        });
+        const progress = Math.round((completedBatches / batches.length) * 100);
+        setBgUpload(prev => prev ? { ...prev, progress } : prev);
+      }
+
+      // ── Phase C: 完成 ─────────────────────────────────────────
+      const hasFailed = failedFiles.length > 0;
+      setBgUpload(prev => prev ? {
+        ...prev,
+        done: true,
+        progress: 100,
+        statusText: undefined,
+        failedFiles: hasFailed ? failedFiles : undefined,
+      } : prev);
       await fetchDeviceDocuments();
-      setTimeout(() => setBgUpload(null), 3500);
+      setTimeout(() => setBgUpload(null), hasFailed ? 8000 : 3500);
     } catch (error) {
       console.error('上传设备资料失败:', error);
-      setBgUpload(prev => prev ? { ...prev, error: '上传失败，请重试' } : prev);
+      setBgUpload(prev => prev ? { ...prev, error: '上传失败，请检查网络后重试' } : prev);
     }
   };
 
@@ -275,9 +313,9 @@ const DeviceDetail: React.FC = () => {
       } else {
         alert(result.error || '删除失败');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('删除设备资料失败:', error);
-      alert('删除失败');
+      alert(error?.response?.data?.error || '删除失败');
     }
   };
 
@@ -319,9 +357,9 @@ const DeviceDetail: React.FC = () => {
       } else {
         alert(result.error || '批量删除失败');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('批量删除失败:', error);
-      alert('批量删除失败');
+      alert(error?.response?.data?.error || '批量删除失败');
     }
   };
 
@@ -446,13 +484,6 @@ const DeviceDetail: React.FC = () => {
     };
     loadData();
   }, [id]);
-
-  useEffect(() => {
-    if (id) {
-      fetchIssues();
-    }
-  }, [id]);
-
 
   // 模块CRUD处理函数
   const handleEditModule = (module: Module) => {
@@ -883,6 +914,17 @@ const DeviceDetail: React.FC = () => {
                 </span>
               </div>
             </div>
+            {device.bundle_id && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">多合一设备</label>
+                <p className="text-lg print:text-base">
+                  <Link to={`/bundles/${device.bundle_id_val || device.bundle_id}`} className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-purple-100 text-purple-800 hover:bg-purple-200">
+                    {device.bundle_code || `多合一#${device.bundle_id}`}
+                    {device.bundle_name && <span className="ml-1 text-purple-600">({device.bundle_name})</span>}
+                  </Link>
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1872,7 +1914,7 @@ const DeviceDetail: React.FC = () => {
                         />
                       </label>
                     </div>
-                    <p className="mt-2 text-xs text-gray-400">支持批量选择文件或整个文件夹，每个文件最大 50MB</p>
+                    <p className="mt-2 text-xs text-gray-400">支持批量选择文件或整个文件夹，每个文件最大 200MB</p>
                   </>
                 )}
               </div>
@@ -1950,17 +1992,19 @@ const DeviceDetail: React.FC = () => {
 
       {/* 后台上传进度悬浮面板 */}
       {bgUpload && (
-        <div className="fixed bottom-6 right-6 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 w-72 overflow-hidden">
+        <div className={`fixed bottom-6 right-6 z-50 bg-white rounded-2xl shadow-2xl border w-80 overflow-hidden ${bgUpload.failedFiles?.length ? 'border-yellow-300' : 'border-gray-200'}`}>
           <div
-            className={`h-1.5 transition-all duration-300 ${bgUpload.error ? 'bg-red-500' : bgUpload.done ? 'bg-green-500' : 'bg-blue-500'}`}
+            className={`h-1.5 transition-all duration-300 ${bgUpload.error ? 'bg-red-500' : bgUpload.done ? (bgUpload.failedFiles?.length ? 'bg-yellow-400' : 'bg-green-500') : 'bg-blue-500'}`}
             style={{ width: `${bgUpload.progress}%` }}
           />
           <div className="px-4 py-3 flex items-start gap-3">
-            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${bgUpload.error ? 'bg-red-100' : bgUpload.done ? 'bg-green-100' : 'bg-blue-50'}`}>
+            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${bgUpload.error ? 'bg-red-100' : bgUpload.done ? (bgUpload.failedFiles?.length ? 'bg-yellow-100' : 'bg-green-100') : 'bg-blue-50'}`}>
               {bgUpload.error ? (
                 <XCircleIcon className="h-5 w-5 text-red-500" />
               ) : bgUpload.done ? (
-                <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                bgUpload.failedFiles?.length
+                  ? <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
+                  : <CheckCircleIcon className="h-5 w-5 text-green-500" />
               ) : (
                 <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -1970,16 +2014,29 @@ const DeviceDetail: React.FC = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-900">
-                {bgUpload.error ? '上传失败' : bgUpload.done ? '上传完成' : '正在上传...'}
+                {bgUpload.error
+                  ? '上传失败'
+                  : bgUpload.done
+                  ? (bgUpload.failedFiles?.length ? '部分文件上传失败' : '上传完成')
+                  : (bgUpload.statusText || '正在上传...')}
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
                 {bgUpload.error
                   ? bgUpload.error
                   : bgUpload.done
-                  ? `${bgUpload.fileCount} 个文件已成功上传`
-                  : `${bgUpload.fileCount} 个文件${bgUpload.batchText ? ' · ' + bgUpload.batchText : ''} · ${bgUpload.progress}%`}
+                  ? `${bgUpload.fileCount} 个文件${bgUpload.skippedCount ? `，跳过 ${bgUpload.skippedCount} 个已存在` : ''}`
+                  : `共 ${bgUpload.fileCount} 个${bgUpload.skippedCount ? `，跳过 ${bgUpload.skippedCount} 个` : ''} · ${bgUpload.progress}%`}
               </p>
-              {!bgUpload.error && !bgUpload.done && (
+              {bgUpload.failedFiles?.length ? (
+                <div className="mt-1.5 text-xs text-yellow-700 bg-yellow-50 rounded p-1.5">
+                  {bgUpload.failedFiles.slice(0, 5).map((name, idx) => (
+                    <div key={idx} className="truncate">{name}</div>
+                  ))}
+                  {bgUpload.failedFiles.length > 5 && (
+                    <div className="text-yellow-600">...等 {bgUpload.failedFiles.length - 5} 个文件上传失败</div>
+                  )}
+                </div>
+              ) : !bgUpload.error && !bgUpload.done && (
                 <div className="mt-2 bg-gray-100 rounded-full h-1.5">
                   <div
                     className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"

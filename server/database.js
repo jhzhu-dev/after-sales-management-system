@@ -616,6 +616,59 @@ async function createTables() {
       console.warn('⚠️ Phase 6 迁移警告:', err.message);
     }
 
+    // ==================== Phase 7: 多合一设备组合 ====================
+    // 设备组合表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS device_bundles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        bundle_code VARCHAR(255) NOT NULL,
+        name VARCHAR(255),
+        customer_id INT NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_bundle_code (bundle_code),
+        FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log('✅ device_bundles 表就绪');
+
+    // 为 devices 表添加 bundle_id 字段
+    try {
+      const [bundleIdCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'bundle_id'");
+      if (bundleIdCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加 bundle_id 字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN bundle_id INT NULL");
+        try {
+          await pool.execute("ALTER TABLE devices ADD CONSTRAINT fk_device_bundle FOREIGN KEY (bundle_id) REFERENCES device_bundles(id) ON DELETE SET NULL");
+        } catch (e) {
+          console.warn('⚠️ 添加 bundle_id 外键警告:', e.message);
+        }
+        console.log('✅ devices.bundle_id 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ devices.bundle_id 迁移警告:', err.message);
+    }
+
+    // 为 device_documents 表添加 bundle_id 字段，并将 device_id 改为可 NULL
+    try {
+      const [docBundleIdCols] = await pool.execute("SHOW COLUMNS FROM device_documents LIKE 'bundle_id'");
+      if (docBundleIdCols.length === 0) {
+        console.log('🔄 正在为 device_documents 表添加 bundle_id 字段...');
+        // 先将 device_id 改为可 NULL（组合级文档 device_id 为空）
+        await pool.execute("ALTER TABLE device_documents MODIFY COLUMN device_id VARCHAR(50) NULL");
+        await pool.execute("ALTER TABLE device_documents ADD COLUMN bundle_id INT NULL");
+        try {
+          await pool.execute("ALTER TABLE device_documents ADD CONSTRAINT fk_doc_bundle FOREIGN KEY (bundle_id) REFERENCES device_bundles(id) ON DELETE CASCADE");
+        } catch (e) {
+          console.warn('⚠️ 添加 device_documents.bundle_id 外键警告:', e.message);
+        }
+        console.log('✅ device_documents.bundle_id 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ device_documents.bundle_id 迁移警告:', err.message);
+    }
+
     console.log('✅ 数据库表结构创建/更新成功');
   } catch (error) {
     console.error('❌ 创建表结构失败:', error.message);

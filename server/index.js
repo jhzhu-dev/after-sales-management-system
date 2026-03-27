@@ -9,7 +9,6 @@ if (process.platform === 'win32') {
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const path = require('path');
 const https = require('https');
 const fs = require('fs');
@@ -46,6 +45,9 @@ const deviceUpgradeRoutes = require('./routes/device-upgrades');
 const customerRoutes = require('./routes/customers');
 const kbArticleRoutes = require('./routes/kb-articles');
 const sopTemplateRoutes = require('./routes/module-sop-templates');
+
+// Phase 7: 多合一设备组合路由
+const deviceBundleRoutes = require('./routes/device-bundles');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -118,22 +120,6 @@ app.use(helmet({
 // 信任代理设置（用于开发环境）
 app.set('trust proxy', 1);
 
-// 限流中间件 - 放宽限制以避免429错误
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15分钟
-  max: 1000, // 限制每个IP 15分钟内最多1000个请求（大幅放宽）
-  message: JSON.stringify({ success: false, error: '请求过于频繁，请稍后再试' }), // 返回JSON格式
-  standardHeaders: true, // 返回速率限制信息在 `RateLimit-*` headers
-  legacyHeaders: false, // 禁用 `X-RateLimit-*` headers
-  trustProxy: true, // 信任代理
-  skip: (req) => {
-    // 跳过静态资源的限流
-    return req.path.startsWith('/static/') ||
-      req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/);
-  }
-});
-app.use(limiter);
-
 // CORS配置
 app.use(cors({
   origin: true,
@@ -196,6 +182,9 @@ app.use('/api/kb-articles', kbArticleRoutes);
 
 // SOP模板路由
 app.use('/api/module-sop-templates', sopTemplateRoutes);
+
+// 多合一设备组合路由
+app.use('/api/device-bundles', deviceBundleRoutes);
 
 // 所有非API路由都返回前端应用
 app.get('*', (req, res) => {
@@ -278,9 +267,9 @@ async function startServer() {
       console.log('');
     });
 
-    httpServer.keepAliveTimeout = 5000;
-    httpServer.headersTimeout = 6000;
-    httpServer.maxConnections = 100;
+    httpServer.keepAliveTimeout = 65000;
+    httpServer.headersTimeout = 66000;
+    httpServer.maxConnections = 500;
 
     // 如果SSL证书可用，启动HTTPS服务器
     if (sslEnabled && sslOptions) {
@@ -307,9 +296,9 @@ async function startServer() {
         }
       });
 
-      httpsServer.keepAliveTimeout = 5000;
-      httpsServer.headersTimeout = 6000;
-      httpsServer.maxConnections = 100;
+      httpsServer.keepAliveTimeout = 65000;
+      httpsServer.headersTimeout = 66000;
+      httpsServer.maxConnections = 500;
     }
 
   } catch (error) {

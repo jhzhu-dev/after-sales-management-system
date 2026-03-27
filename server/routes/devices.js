@@ -6,7 +6,7 @@ const router = express.Router();
 // 获取所有设备
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 10, type, status, search } = req.query;
+    const { page = 1, limit = 10, type, status, search, bundle_id, unbundled } = req.query;
 
 
     // 参数验证
@@ -32,6 +32,15 @@ router.get('/', async (req, res) => {
       params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
+    if (bundle_id) {
+      whereConditions.push('d.bundle_id = ?');
+      params.push(bundle_id);
+    }
+
+    if (unbundled === 'true') {
+      whereConditions.push('d.bundle_id IS NULL');
+    }
+
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
     // 获取设备列表
@@ -45,6 +54,9 @@ router.get('/', async (req, res) => {
         pv.version_name as product_version_name,
         c.name as customer_name,
         c.short_name as customer_short_name,
+        db.id as bundle_id_val,
+        db.bundle_code,
+        db.name as bundle_name,
         COUNT(DISTINCT i.id) as issue_count,
         COUNT(DISTINCT CASE WHEN i.status = 'open' THEN i.id END) as open_issues
       FROM devices d
@@ -52,10 +64,11 @@ router.get('/', async (req, res) => {
       LEFT JOIN products p ON d.product_id = p.id
       LEFT JOIN product_versions pv ON d.product_version_id = pv.id
       LEFT JOIN customers c ON d.customer_id = c.id
+      LEFT JOIN device_bundles db ON d.bundle_id = db.id
       LEFT JOIN modules m ON d.id = m.device_id
       LEFT JOIN issues i ON d.id = i.device_id
       ${whereClause}
-      GROUP BY d.id, pl.name, p.name, p.model, pv.version_number, pv.version_name, c.name, c.short_name
+      GROUP BY d.id, pl.name, p.name, p.model, pv.version_number, pv.version_name, c.name, c.short_name, db.id, db.bundle_code, db.name
       ORDER BY d.created_at DESC
       LIMIT ${parseInt(limitNum)} OFFSET ${parseInt(offset)}
     `;
@@ -107,16 +120,20 @@ router.get('/:id', async (req, res) => {
       pv.version_name as product_version_name,
       c.name as customer_name,
       c.short_name as customer_short_name,
+      db.id as bundle_id_val,
+      db.bundle_code,
+      db.name as bundle_name,
       COUNT(DISTINCT i.id) as issue_count
       FROM devices d
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       LEFT JOIN products p ON d.product_id = p.id
       LEFT JOIN product_versions pv ON d.product_version_id = pv.id
       LEFT JOIN customers c ON d.customer_id = c.id
+      LEFT JOIN device_bundles db ON d.bundle_id = db.id
       LEFT JOIN modules m ON d.id = m.device_id
       LEFT JOIN issues i ON d.id = i.device_id
       WHERE d.id = ?
-      GROUP BY d.id, pl.name, p.name, p.model, pv.version_number, pv.version_name, c.name, c.short_name
+      GROUP BY d.id, pl.name, p.name, p.model, pv.version_number, pv.version_name, c.name, c.short_name, db.id, db.bundle_code, db.name
         `;
 
     const deviceResult = await query(deviceQuery, [id]);
@@ -260,7 +277,7 @@ router.post('/', [
 
 // 更新设备
 router.put('/:id', [
-  body('name').optional().notEmpty().withMessage('设备名称不能为空'),
+  body('name').optional({ nullable: true, checkFalsy: true }),  // 订单号允许为空/null
   body('product_line_id').optional().isInt().withMessage('产品线ID必须是整数'),
   body('customer_id').optional({ nullable: true }).isInt().withMessage('客户ID必须是整数'),
   body('status').optional({ nullable: true }).isIn(['正常', '异常', '维护中']).withMessage('状态必须是：正常、异常或维护中'),
@@ -281,7 +298,7 @@ router.put('/:id', [
     const updates = req.body;
 
     // 检查设备是否存在
-    const existingDevice = await query('SELECT id FROM devices WHERE id = ?', [id]);
+    const existingDevice = await query('SELECT id, customer_id, product_id FROM devices WHERE id = ?', [id]);
     if (existingDevice.length === 0) {
       return res.status(404).json({ success: false, error: '设备不存在' });
     }
@@ -324,10 +341,33 @@ router.put('/:id', [
       updateValues.push(filteredUpdates[key]);
     });
 
-    // 如果要修改序列号，加入id字段
+    // 如果要修改序列号，加入id字段，并重新计算nickname
     if (newId && newId !== id) {
       updateFields.push('id = ?');
       updateValues.push(newId);
+      // 重新计算 nickname（客户名 + 产品简称 + 新序列号末4位数字）
+      try {
+        const customerId = updates.customer_id || existingDevice[0].customer_id;
+        const productId = updates.product_id || existingDevice[0].product_id;
+        let customerName = '';
+        let productShort = '';
+        if (customerId) {
+          const cRows = await query('SELECT name FROM customers WHERE id = ?', [customerId]);
+          if (cRows.length > 0) customerName = cRows[0].name || '';
+        }
+        if (productId) {
+          const pRows = await query('SELECT short_name FROM products WHERE id = ?', [productId]);
+          if (pRows.length > 0) productShort = pRows[0].short_name || '';
+        }
+        const digits = newId.replace(/\D/g, '');
+        const idSuffix = digits.length >= 4 ? digits.slice(-4) : digits;
+        if (customerName && productShort && idSuffix) {
+          updateFields.push('nickname = ?');
+          updateValues.push(`${customerName}${productShort}${idSuffix}`);
+        }
+      } catch (e) {
+        console.warn('重新生成设备俗称失败:', e.message);
+      }
     }
 
     if (updateFields.length === 0) {
@@ -362,10 +402,29 @@ router.put('/:id', [
       await query(updateQuery, updateValues);
     }
 
+    // 客户变更时，用 REPLACE() 替换 nickname 中的旧客户名
+    const finalId = (newId && newId !== id) ? newId : id;
+    const newCustomerId = updates.customer_id;
+    const oldCustomerId = existingDevice[0].customer_id;
+    if (newCustomerId !== undefined && newCustomerId !== null && newCustomerId !== oldCustomerId) {
+      try {
+        const oldCustRows = await query('SELECT name FROM customers WHERE id = ?', [oldCustomerId]);
+        const newCustRows = await query('SELECT name FROM customers WHERE id = ?', [newCustomerId]);
+        if (oldCustRows.length > 0 && newCustRows.length > 0) {
+          await query(
+            'UPDATE devices SET nickname = REPLACE(nickname, ?, ?) WHERE id = ? AND nickname IS NOT NULL',
+            [oldCustRows[0].name, newCustRows[0].name, finalId]
+          );
+        }
+      } catch (e) {
+        console.warn('更新nickname客户名失败:', e.message);
+      }
+    }
+
     res.json({
       success: true,
       message: '设备更新成功',
-      data: { new_id: newId && newId !== id ? newId : id }
+      data: { new_id: finalId }
     });
   } catch (error) {
     console.error('更新设备失败:', error);
