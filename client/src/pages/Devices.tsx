@@ -128,8 +128,8 @@ export default function Devices() {
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter(device =>
-        device.name.toLowerCase().includes(searchLower) ||
-        device.id.toLowerCase().includes(searchLower) ||
+        (device.name && device.name.toLowerCase().includes(searchLower)) ||
+        (device.id && device.id.toLowerCase().includes(searchLower)) ||
         (device.product_name && device.product_name.toLowerCase().includes(searchLower)) ||
         (device.customer_name && device.customer_name.toLowerCase().includes(searchLower)) ||
         (device.customer_short_name && device.customer_short_name.toLowerCase().includes(searchLower)) ||
@@ -370,8 +370,8 @@ export default function Devices() {
     if (filters.search) {
       const s = filters.search.toLowerCase();
       filtered = filtered.filter(d =>
-        d.name.toLowerCase().includes(s) ||
-        d.id.toLowerCase().includes(s) ||
+        (d.name && d.name.toLowerCase().includes(s)) ||
+        (d.id && d.id.toLowerCase().includes(s)) ||
         (d.customer_name && d.customer_name.toLowerCase().includes(s)) ||
         (d.customer_short_name && d.customer_short_name.toLowerCase().includes(s)) ||
         (d.remote_code && d.remote_code.toLowerCase().includes(s)) ||
