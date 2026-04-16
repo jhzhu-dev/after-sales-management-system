@@ -254,8 +254,8 @@ router.post('/', [
         }
 
         await connection.execute(
-          `INSERT INTO devices (id, name, nickname, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password, bundle_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO devices (id, name, nickname, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password, bundle_id, notes)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             deviceId,
             finalCode,  // 订单号 = 多合一设备订单号
@@ -268,7 +268,8 @@ router.post('/', [
             deviceStatus,
             remote_code || null,
             password || null,
-            bundleId
+            bundleId,
+            nd.notes || null
           ]
         );
 

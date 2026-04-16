@@ -35,6 +35,7 @@ export interface Device {
   bundle_id_val?: number | null;
   bundle_code?: string | null;
   bundle_name?: string | null;
+  notes?: string | null;
 }
 
 // 模块类型 (仅用于设备详情页面)
@@ -191,6 +192,7 @@ export interface DeviceFormData {
   status: '正常' | '异常' | '维护中';
   remote_code?: string | null;
   password?: string | null;
+  notes?: string | null;
   selectedModuleTypeIds?: number[];
 }
 
@@ -519,6 +521,7 @@ export interface NewBundleDevice {
   product_version_id?: number;
   status?: string;
   module_type_ids?: number[];
+  notes?: string;
 }
 
 export interface DeviceBundleFormData {

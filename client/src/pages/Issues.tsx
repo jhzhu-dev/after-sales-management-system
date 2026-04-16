@@ -64,6 +64,11 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
   const [printAllIssues, setPrintAllIssues] = useState<Issue[] | null>(null);
   const [expandedUpgradeId, setExpandedUpgradeId] = useState<string | null>(null);
 
+  const isBrowserSafeAttachmentUrl = (url?: string) => {
+    if (!url) return false;
+    return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/uploads/');
+  };
+
   useEffect(() => {
     if (activeTab === 'issues') {
       console.log('useEffect触发，当前筛选条件:', filters);
@@ -867,7 +872,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                                       {ci.attachments && ci.attachments.length > 0 && (
                                         <div className="flex flex-wrap gap-2 mt-2">
                                           {ci.attachments.map((att: any, aIdx: number) => (
-                                            att.url ? (
+                                            isBrowserSafeAttachmentUrl(att.url) ? (
                                               <a key={aIdx} href={att.url} target="_blank" rel="noreferrer" title={att.name}>
                                                 <img
                                                   src={att.url}
@@ -875,7 +880,15 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                                                   className="w-20 h-20 object-cover rounded border border-gray-200 hover:border-blue-400 transition-colors cursor-pointer"
                                                 />
                                               </a>
-                                            ) : null
+                                            ) : (
+                                              <div
+                                                key={aIdx}
+                                                className="w-20 h-20 rounded border border-dashed border-gray-200 bg-gray-50 px-2 py-1 text-[11px] text-gray-400 flex items-center justify-center text-center"
+                                                title={att.name || '附件地址不可用'}
+                                              >
+                                                {att.name || '附件不可预览'}
+                                              </div>
+                                            )
                                           ))}
                                         </div>
                                       )}

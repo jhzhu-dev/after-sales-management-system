@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   ArrowLeftIcon,
   PencilIcon,
@@ -34,6 +34,7 @@ import SOPChecklistSection from '../components/SOPChecklistSection';
 const DeviceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [device, setDevice] = useState<Device | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
@@ -806,11 +807,19 @@ const DeviceDetail: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => navigate('/devices')}
+              onClick={() => {
+                const fromBundle = searchParams.get('from') === 'bundle';
+                const bundleId = searchParams.get('bundleId');
+                if (fromBundle && bundleId) {
+                  navigate(`/bundles/${bundleId}`);
+                } else {
+                  navigate('/devices');
+                }
+              }}
               className="flex items-center text-gray-600 hover:text-gray-900 transition-colors no-print"
             >
               <ArrowLeftIcon className="h-5 w-5 mr-2" />
-              返回设备列表
+              {searchParams.get('from') === 'bundle' ? '返回多合一设备' : '返回设备列表'}
             </button>
             <div>
               <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">{device.name}</h1>
@@ -925,6 +934,10 @@ const DeviceDetail: React.FC = () => {
                 </p>
               </div>
             )}
+            <div className="md:col-span-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+              <p className="text-base text-gray-700 whitespace-pre-wrap print:text-base">{device.notes || '-'}</p>
+            </div>
           </div>
         </div>
 

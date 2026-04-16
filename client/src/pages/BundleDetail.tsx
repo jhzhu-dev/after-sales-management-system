@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeftIcon,
   PencilIcon,
@@ -13,6 +13,7 @@ import {
   DocumentArrowDownIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  ChevronLeftIcon,
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
@@ -46,6 +47,11 @@ const BundleDetail: React.FC = () => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [docDragOver, setDocDragOver] = useState(false);
   const [bgUpload, setBgUpload] = useState<{ fileCount: number; progress: number; done: boolean; error: string | null; statusText?: string; failedFiles?: string[] } | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<{
+    url: string; title: string; type: string;
+    docId: number; originalName: string;
+    catDocs: any[]; catIndex: number; loading: boolean;
+  } | null>(null);
 
   const formatFileSize = (bytes: number) => {
     if (!bytes) return '-';
@@ -207,26 +213,56 @@ const BundleDetail: React.FC = () => {
     }
   };
 
-  const handlePreviewDoc = async (doc: any) => {
+  const handlePreviewDoc = async (doc: any, catDocs: any[] = [], catIndex: number = 0) => {
+    const ext = (doc.original_name || '').split('.').pop()?.toLowerCase() || '';
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
+    const isPdf = ext === 'pdf';
+    if (!isImage && !isPdf) {
+      setPreviewDoc({ url: '', title: doc.original_name, type: 'other', docId: doc.id, originalName: doc.original_name, catDocs, catIndex, loading: false });
+      return;
+    }
+    setPreviewDoc(prev => {
+      const base = { url: '', title: doc.original_name, type: isImage ? 'image' : 'pdf', docId: doc.id, originalName: doc.original_name, catDocs, catIndex, loading: true };
+      return prev ? { ...prev, ...base } : base;
+    });
     try {
       const { data: result } = await api.get(`/device-documents/${doc.id}/preview`);
-      if (result.success && result.url) {
-        window.open(result.url, '_blank');
+      if (result.success) {
+        let url = result.data.url;
+        if (url.startsWith('/api/') || url.startsWith('/uploads/')) {
+          const token = localStorage.getItem('auth_token');
+          url = `${url}${url.includes('?') ? '&' : '?'}token=${token}`;
+        }
+        setPreviewDoc({ url, title: result.data.title || doc.original_name, type: isImage ? 'image' : 'pdf', docId: doc.id, originalName: doc.original_name, catDocs, catIndex, loading: false });
+      } else {
+        setPreviewDoc(prev => prev ? { ...prev, loading: false, type: 'other' } : null);
       }
     } catch (error) {
       console.error('预览失败:', error);
+      setPreviewDoc(prev => prev ? { ...prev, loading: false, type: 'other' } : null);
     }
   };
 
-  const handleDownloadDoc = async (doc: any) => {
-    try {
-      const { data: result } = await api.get(`/device-documents/${doc.id}/download`);
-      if (result.success && result.url) {
-        window.open(result.url, '_blank');
+  // 键盘导航（←/→/Esc）
+  useEffect(() => {
+    if (!previewDoc) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setPreviewDoc(null); return; }
+      if (previewDoc.catDocs.length <= 1) return;
+      let newIdx = previewDoc.catIndex;
+      if (e.key === 'ArrowLeft') newIdx = (previewDoc.catIndex - 1 + previewDoc.catDocs.length) % previewDoc.catDocs.length;
+      else if (e.key === 'ArrowRight') newIdx = (previewDoc.catIndex + 1) % previewDoc.catDocs.length;
+      if (newIdx !== previewDoc.catIndex) {
+        handlePreviewDoc(previewDoc.catDocs[newIdx], previewDoc.catDocs, newIdx);
       }
-    } catch (error) {
-      console.error('下载失败:', error);
-    }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [previewDoc]);
+
+  const handleDownloadDoc = (doc: any) => {
+    const token = localStorage.getItem('auth_token');
+    window.open(`/api/device-documents/${doc.id}/download?token=${token}`, '_blank');
   };
 
   const toggleCategory = (cat: string) => {
@@ -450,7 +486,7 @@ const BundleDetail: React.FC = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {bundle.devices && bundle.devices.length > 0 ? bundle.devices.map((device: any) => (
-                        <tr key={device.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/devices/${device.id}`)}>
+                        <tr key={device.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/devices/${device.id}?from=bundle&bundleId=${id}`)}>  
                           <td className="px-4 py-3">
                             <span className="text-blue-600 font-mono font-medium">
                               {device.id}
@@ -534,7 +570,7 @@ const BundleDetail: React.FC = () => {
                         </button>
                         {expandedCategories.has(cat) && (
                           <div className="divide-y">
-                            {(docs as any[]).map((doc: any) => (
+                            {(docs as any[]).map((doc: any, docIdx: number) => (
                               <div key={doc.id} className="flex items-center justify-between px-4 py-2 hover:bg-gray-50">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <DocumentIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -543,7 +579,7 @@ const BundleDetail: React.FC = () => {
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   <button
-                                    onClick={() => handlePreviewDoc(doc)}
+                                    onClick={() => handlePreviewDoc(doc, docs as any[], docIdx)}
                                     className="p-1 text-blue-600 hover:text-blue-800"
                                     title="预览"
                                   >
@@ -842,6 +878,141 @@ const BundleDetail: React.FC = () => {
           onClose={() => setShowBundleForm(false)}
           onSubmit={handleBundleFormSubmit}
         />
+      )}
+
+      {/* 文件阅览器 */}
+      {previewDoc && (
+        <div className="fixed inset-0 bg-black bg-opacity-85 flex items-center justify-center z-50" onClick={() => setPreviewDoc(null)}>
+          <div
+            className="relative w-full mx-4 flex flex-col bg-gray-900 rounded-xl overflow-hidden shadow-2xl"
+            style={{ maxWidth: '1100px', maxHeight: '92vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 顶部工具栏 */}
+            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 flex-shrink-0">
+              <DocumentIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <span className="text-white text-sm font-medium truncate flex-1">{previewDoc.title}</span>
+              {previewDoc.catDocs.length > 1 && (
+                <span className="text-gray-400 text-xs flex-shrink-0 bg-gray-700 px-2 py-0.5 rounded">
+                  {previewDoc.catIndex + 1} / {previewDoc.catDocs.length}
+                </span>
+              )}
+              <button
+                onClick={() => handleDownloadDoc({ id: previewDoc.docId, original_name: previewDoc.originalName })}
+                className="flex items-center gap-1 text-gray-300 hover:text-white text-xs transition-colors flex-shrink-0 bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded"
+                title="下载文件"
+              >
+                <DocumentArrowDownIcon className="h-4 w-4" />
+                下载
+              </button>
+              <button
+                onClick={() => setPreviewDoc(null)}
+                className="text-gray-400 hover:text-white transition-colors flex-shrink-0"
+                title="关闭 (Esc)"
+              >
+                <XCircleIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* 主内容区 + 左右导航 */}
+            <div className="flex items-stretch flex-1 min-h-0" style={{ minHeight: '55vh' }}>
+              {previewDoc.catDocs.length > 1 && (
+                <button
+                  onClick={() => {
+                    const newIdx = (previewDoc.catIndex - 1 + previewDoc.catDocs.length) % previewDoc.catDocs.length;
+                    handlePreviewDoc(previewDoc.catDocs[newIdx], previewDoc.catDocs, newIdx);
+                  }}
+                  className="flex-shrink-0 w-12 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  title="上一个 (←)"
+                >
+                  <ChevronLeftIcon className="h-8 w-8" />
+                </button>
+              )}
+
+              <div className="flex-1 min-w-0 flex items-center justify-center overflow-auto bg-gray-800">
+                {previewDoc.loading ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-gray-400 text-sm">加载中...</span>
+                  </div>
+                ) : previewDoc.type === 'image' ? (
+                  <img
+                    src={previewDoc.url}
+                    alt={previewDoc.title}
+                    className="max-w-full max-h-full object-contain p-2"
+                    style={{ maxHeight: 'calc(92vh - 160px)' }}
+                  />
+                ) : previewDoc.type === 'pdf' ? (
+                  <iframe
+                    src={previewDoc.url}
+                    title={previewDoc.title}
+                    className="w-full border-0"
+                    style={{ height: 'calc(92vh - 160px)' }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-4 py-16">
+                    <DocumentIcon className="h-16 w-16 text-gray-500" />
+                    <p className="text-gray-400 text-sm">{previewDoc.originalName}</p>
+                    <p className="text-gray-500 text-xs">该文件类型不支持预览</p>
+                    <button
+                      onClick={() => handleDownloadDoc({ id: previewDoc.docId, original_name: previewDoc.originalName })}
+                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm mt-2"
+                    >
+                      <DocumentArrowDownIcon className="h-4 w-4" />
+                      下载文件
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {previewDoc.catDocs.length > 1 && (
+                <button
+                  onClick={() => {
+                    const newIdx = (previewDoc.catIndex + 1) % previewDoc.catDocs.length;
+                    handlePreviewDoc(previewDoc.catDocs[newIdx], previewDoc.catDocs, newIdx);
+                  }}
+                  className="flex-shrink-0 w-12 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  title="下一个 (→)"
+                >
+                  <ChevronRightIcon className="h-8 w-8" />
+                </button>
+              )}
+            </div>
+
+            {/* 缩略图条 */}
+            {previewDoc.catDocs.length > 1 && (
+              <div className="flex-shrink-0 border-t border-gray-700 px-3 py-2 overflow-x-auto">
+                <div className="flex gap-1.5">
+                  {previewDoc.catDocs.map((d: any, i: number) => {
+                    const tExt = (d.original_name || '').split('.').pop()?.toLowerCase() || '';
+                    const tIsImg = ['jpg','jpeg','png','gif','bmp','webp','svg'].includes(tExt);
+                    const tIsPdf = tExt === 'pdf';
+                    const token = localStorage.getItem('auth_token');
+                    return (
+                      <button
+                        key={d.id}
+                        onClick={() => handlePreviewDoc(d, previewDoc.catDocs, i)}
+                        className={`flex-shrink-0 w-14 h-14 rounded overflow-hidden border-2 transition-colors ${
+                          i === previewDoc.catIndex ? 'border-blue-400' : 'border-gray-600 hover:border-gray-400'
+                        }`}
+                        title={d.original_name}
+                      >
+                        {tIsImg ? (
+                          <img src={`/api/device-documents/${d.id}/download?token=${token}`} loading="lazy" className="w-full h-full object-cover" alt={d.original_name} />
+                        ) : (
+                          <div className={`w-full h-full flex flex-col items-center justify-center gap-0.5 ${tIsPdf ? 'bg-red-900' : 'bg-gray-700'}`}>
+                            <DocumentIcon className="h-5 w-5 text-gray-300" />
+                            {tIsPdf && <span className="text-xs text-red-300 font-bold leading-none">PDF</span>}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </Layout>
   );

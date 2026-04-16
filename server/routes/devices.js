@@ -46,7 +46,10 @@ router.get('/', async (req, res) => {
     // 获取设备列表
     const devicesQuery = `
       SELECT 
-        d.*,
+        d.id, d.name, d.nickname, d.device_code, d.product_line_id,
+        d.product_id, d.product_version_id, d.customer_id, d.location,
+        d.status, d.remote_code, d.password, d.notes, d.bundle_id,
+        d.created_at, d.updated_at,
         pl.name as product_line_name,
         p.name as product_name,
         p.model as product_model,
@@ -112,8 +115,11 @@ router.get('/:id', async (req, res) => {
     // 获取设备基本信息
     const deviceQuery = `
     SELECT
-    d.*,
-      pl.name as product_line_name,
+    d.id, d.name, d.nickname, d.device_code, d.product_line_id,
+    d.product_id, d.product_version_id, d.customer_id, d.location,
+    d.status, d.remote_code, d.password, d.notes, d.bundle_id,
+    d.created_at, d.updated_at,
+    pl.name as product_line_name,
       p.name as product_name,
       p.model as product_model,
       pv.version_number as product_version_number,
@@ -209,7 +215,7 @@ router.post('/', [
       });
     }
 
-    const { id, name, device_code, product_line_id, product_id, product_version_id, customer_id, status = '正常', remote_code, password } = req.body;
+    const { id, name, device_code, product_line_id, product_id, product_version_id, customer_id, status = '正常', remote_code, password, notes } = req.body;
 
     // 如果提供了ID，使用用户提供的ID，否则自动生成
     let deviceId = id;
@@ -232,8 +238,8 @@ router.post('/', [
     }
 
     const insertQuery = `
-      INSERT INTO devices(id, name, nickname, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password)
-      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO devices(id, name, nickname, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password, notes)
+      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     // 自动生成设备俗称：{客户中文名称}{产品简称}{生产序列号末2位数字}号
@@ -262,7 +268,7 @@ router.post('/', [
       console.warn('生成设备俗称失败:', e.message);
     }
 
-    await query(insertQuery, [deviceId, name ?? null, nickname, device_code || null, product_line_id, product_id || null, product_version_id || null, customer_id || null, status, remote_code || null, password || null]);
+    await query(insertQuery, [deviceId, name ?? null, nickname, device_code || null, product_line_id, product_id || null, product_version_id || null, customer_id || null, status, remote_code || null, password || null, notes || null]);
 
     res.status(201).json({
       success: true,
@@ -324,7 +330,7 @@ router.put('/:id', [
     }
 
     // 只允许更新存在的字段（白名单）
-    const allowedFields = ['name', 'nickname', 'device_code', 'product_line_id', 'product_id', 'product_version_id', 'customer_id', 'status', 'remote_code', 'password'];
+    const allowedFields = ['name', 'nickname', 'device_code', 'product_line_id', 'product_id', 'product_version_id', 'customer_id', 'status', 'remote_code', 'password', 'notes'];
     const filteredUpdates = {};
     Object.keys(updates).forEach(key => {
       if (allowedFields.includes(key) && updates[key] !== undefined) {

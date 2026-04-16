@@ -20,7 +20,8 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
     customer_id: undefined,
     status: '正常',
     remote_code: '',
-    password: ''
+    password: '',
+    notes: ''
   });
 
   const [productLines, setProductLines] = useState<Array<{ id: number, name: string }>>([])
@@ -51,7 +52,8 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         customer_id: device.customer_id || undefined,
         status: device.status as '正常' | '异常' | '维护中',
         remote_code: device.remote_code || '',
-        password: device.password || ''
+        password: device.password || '',
+        notes: device.notes || ''
       });
       if (device.product_line_id) {
         fetchProducts(device.product_line_id);
@@ -301,6 +303,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         status: formData.status,
         remote_code: formData.remote_code?.trim() || null,
         password: formData.password?.trim() || null,
+        notes: formData.notes?.trim() || null,
         product_version_id: formData.product_version_id || null,
         product_line_id: device.product_line_id as number,
         // 传递 id 供父组件判断是否修改了生产序列号
@@ -317,6 +320,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         customer_id: formData.customer_id || null,
         remote_code: formData.remote_code?.trim() || null,
         password: formData.password?.trim() || null,
+        notes: formData.notes?.trim() || null,
         selectedModuleTypeIds: selectedModuleTypeIds
       };
     }
@@ -526,6 +530,18 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 {errors.identity && <p className="text-red-500 text-sm mt-1">{errors.identity}</p>}
               </div>
 
+              {/* 备注 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+                <textarea
+                  value={formData.notes || ''}
+                  onChange={(e) => handleChange('notes', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="请输入备注（选填）"
+                  rows={2}
+                />
+              </div>
+
               {/* 4. 客户 */}
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -725,6 +741,17 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
               onChange={(e) => handleChange('password', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="请输入密码"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+            <textarea
+              value={formData.notes || ''}
+              onChange={(e) => handleChange('notes', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="请输入备注（选填）"
+              rows={2}
             />
           </div>
             </>

@@ -650,6 +650,18 @@ async function createTables() {
       console.warn('⚠️ devices.bundle_id 迁移警告:', err.message);
     }
 
+    // 为 devices 表添加 notes 字段（备注）
+    try {
+      const [notesCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'notes'");
+      if (notesCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加 notes 字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN notes TEXT NULL");
+        console.log('✅ devices.notes 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ devices.notes 迁移警告:', err.message);
+    }
+
     // 为 device_documents 表添加 bundle_id 字段，并将 device_id 改为可 NULL
     try {
       const [docBundleIdCols] = await pool.execute("SHOW COLUMNS FROM device_documents LIKE 'bundle_id'");

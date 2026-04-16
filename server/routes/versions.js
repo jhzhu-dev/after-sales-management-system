@@ -29,6 +29,76 @@ const checklistUpload = multer({
   }
 });
 
+async function normalizeChecklistAttachmentUrl(attachment) {
+  if (!attachment || typeof attachment !== 'object' || !attachment.url) {
+    return attachment;
+  }
+
+  const normalizedAttachment = { ...attachment };
+
+  if (ossService.isOSSPath(normalizedAttachment.url)) {
+    try {
+      normalizedAttachment.url = await ossService.getSignedUrl(
+        normalizedAttachment.url,
+        3600 * 24 * 7,
+        normalizedAttachment.name || null
+      );
+    } catch (error) {
+      console.error('检查项附件签名URL生成失败:', error.message);
+    }
+  }
+
+  return normalizedAttachment;
+}
+
+async function normalizeChecklistValue(checklist) {
+  if (!checklist) {
+    return checklist;
+  }
+
+  const isStringChecklist = typeof checklist === 'string';
+  let parsedChecklist = checklist;
+
+  if (isStringChecklist) {
+    try {
+      parsedChecklist = JSON.parse(checklist);
+    } catch (error) {
+      console.error('检查项JSON解析失败，保留原始值:', error.message);
+      return checklist;
+    }
+  }
+
+  if (!Array.isArray(parsedChecklist)) {
+    return checklist;
+  }
+
+  const normalizedChecklist = await Promise.all(
+    parsedChecklist.map(async item => {
+      if (!item || typeof item !== 'object' || !Array.isArray(item.attachments)) {
+        return item;
+      }
+
+      return {
+        ...item,
+        attachments: await Promise.all(item.attachments.map(normalizeChecklistAttachmentUrl))
+      };
+    })
+  );
+
+  return isStringChecklist ? JSON.stringify(normalizedChecklist) : normalizedChecklist;
+}
+
+async function normalizeVersionRecord(version) {
+  if (!version || typeof version !== 'object') {
+    return version;
+  }
+
+  return {
+    ...version,
+    checklist: await normalizeChecklistValue(version.checklist)
+  };
+}
+
 // POST /api/versions/upload-checklist-image — 上传检查项附件图片（优先OSS，降级本地）
 router.post('/upload-checklist-image', checklistUpload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, error: '没有上传文件' });
@@ -151,6 +221,7 @@ router.get('/', async (req, res) => {
     `;
 
     const versions = await query(versionsQuery, params);
+    const normalizedVersions = await Promise.all(versions.map(normalizeVersionRecord));
 
     // 获取总数
     const countQuery = `
@@ -165,7 +236,7 @@ router.get('/', async (req, res) => {
 
     res.json({
       success: true,
-      data: versions,
+      data: normalizedVersions,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -200,7 +271,7 @@ router.get('/:id', async (req, res) => {
     `;
 
     const versionResult = await query(versionQuery, [id]);
-    const version = versionResult[0];
+    const version = await normalizeVersionRecord(versionResult[0]);
 
     if (!version) {
       return res.status(404).json({ success: false, error: '版本记录不存在' });

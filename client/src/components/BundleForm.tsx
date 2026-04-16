@@ -13,6 +13,7 @@ interface NewDeviceRow {
   key: number;
   id: string;
   device_code: string;
+  notes: string;
   product_line_id: number | '';
   product_id: number | '';
   product_version_id: number | '';
@@ -30,6 +31,7 @@ function emptyDeviceRow(): NewDeviceRow {
     key: ++rowKeyCounter,
     id: '',
     device_code: '',
+    notes: '',
     product_line_id: '',
     product_id: '',
     product_version_id: '',
@@ -273,6 +275,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
       const newDevices: NewBundleDevice[] = newDeviceRows.map(r => ({
         id: r.id.trim(),
         device_code: r.device_code.trim() || undefined,
+        notes: r.notes.trim() || undefined,
         product_line_id: r.product_line_id as number,
         product_id: r.product_id ? r.product_id as number : undefined,
         product_version_id: r.product_version_id ? r.product_version_id as number : undefined,
@@ -434,6 +437,17 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                           <option value="维护中">维护中</option>
                         </select>
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-0.5">备注</label>
+                      <textarea
+                        value={row.notes}
+                        onChange={e => updateNewDeviceRow(row.key, 'notes', e.target.value)}
+                        placeholder="备注（选填）"
+                        rows={2}
+                        className={`${inputCls} resize-none`}
+                      />
                     </div>
 
                     {row.moduleTypes.length > 0 && (
