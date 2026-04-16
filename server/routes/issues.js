@@ -315,7 +315,8 @@ router.post('/', [
       throw new Error('模块ID不能为空');
     }
     return true;
-  })
+  }),
+  body('custom_module_name').optional().isString()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -331,6 +332,7 @@ router.post('/', [
     const {
       device_id,
       module_id,
+      custom_module_name,
       description,
       severity = 'medium',
       status = 'open',
@@ -345,6 +347,8 @@ router.post('/', [
 
     // 处理module_id，空字符串转为null
     const processedModuleId = module_id && module_id.trim() ? module_id : null;
+    // 处理custom_module_name，只有在module_id为空时才保留
+    const processedCustomModuleName = !processedModuleId && custom_module_name && custom_module_name.trim() ? custom_module_name.trim() : null;
 
     // 检查设备是否存在
     const device = await query('SELECT id FROM devices WHERE id = ?', [device_id]);
@@ -365,10 +369,10 @@ router.post('/', [
 
     const insertQuery = `
       INSERT INTO issues (
-        id, device_id, module_id, category, description, severity, status, 
+        id, device_id, module_id, custom_module_name, category, description, severity, status, 
         assignee, contact_person, contact_phone, is_visit_required, visit_at, attachments
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     // 生成 issue ID：ISS + 提交时间 年月日时分秒（北京时间）
@@ -386,7 +390,7 @@ router.post('/', [
     const attachmentsJson = attachments ? JSON.stringify(attachments) : null;
 
     await query(insertQuery, [
-      issueId, device_id, processedModuleId, category, description, severity, status,
+      issueId, device_id, processedModuleId, processedCustomModuleName, category, description, severity, status,
       assignee, contact_person, contact_phone, is_visit_required, visit_at || null, attachmentsJson
     ]);
 
@@ -480,7 +484,7 @@ router.put('/:id', [
     }
 
     // 构建更新语句
-    const allowedFields = ['description', 'severity', 'status', 'category', 'assignee', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'attachments', 'resolution_description', 'resolved_at'];
+    const allowedFields = ['description', 'severity', 'status', 'category', 'assignee', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'attachments', 'resolution_description', 'resolved_at', 'module_id', 'custom_module_name'];
     const updateFields = [];
     const updateValues = [];
 

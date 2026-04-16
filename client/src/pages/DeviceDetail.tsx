@@ -1321,9 +1321,9 @@ const DeviceDetail: React.FC = () => {
                         >
                           <div className="flex justify-between items-start">
                             <div className="flex items-center gap-2">
-                              {(issue as any).module_category && (
+                              {((issue as any).module_category || (issue as any).custom_module_name) && (
                                 <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-700">
-                                  {(issue as any).module_category}
+                                  {(issue as any).module_category || (issue as any).custom_module_name}
                                 </span>
                               )}
                               <span className={`px-2 py-0.5 rounded text-xs font-medium ${

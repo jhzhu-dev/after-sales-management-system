@@ -522,8 +522,8 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     {
       key: 'module_category' as keyof Issue,
       title: <SortableHeader field="module_category" title="模块" />,
-      render: (value: string) => (
-        <div className="text-gray-900">{value || '-'}</div>
+      render: (value: string, issue: Issue) => (
+        <div className="text-gray-900">{value || (issue as any).custom_module_name || '-'}</div>
       ),
       width: '80px'
     },
@@ -1167,7 +1167,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                   <td style={{padding:'3pt 6pt',fontFamily:'monospace'}}>#{issue.id}</td>
                   <td style={{padding:'3pt 6pt'}}>{issue.device_name || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{issue.customer_name || '-'}</td>
-                  <td style={{padding:'3pt 6pt'}}>{issue.module_category || '-'}</td>
+                  <td style={{padding:'3pt 6pt'}}>{issue.module_category || (issue as any).custom_module_name || '-'}</td>
                   <td style={{padding:'3pt 6pt',maxWidth:'180pt',wordBreak:'break-word'}}>{issue.description}</td>
                   <td style={{padding:'3pt 6pt'}}>{issue.severity === 'low' ? '低' : issue.severity === 'medium' ? '中' : '高'}</td>
                   <td style={{padding:'3pt 6pt'}}>{issue.status === 'open' ? '待处理' : issue.status === 'in_progress' ? '处理中' : '已解决'}</td>

@@ -72,8 +72,7 @@ export interface VersionRelease {
 export interface Issue {
   id: number;
   device_id: string;
-  module_id?: number;
-  category: '硬件故障' | '软件Bug' | '操作咨询' | '安装调试' | '其他';
+  module_id?: number;  custom_module_name?: string;  category: '硬件故障' | '软件Bug' | '操作咨询' | '安装调试' | '其他';
   description: string;
   severity: 'low' | 'medium' | 'high';
   status: 'open' | 'in_progress' | 'closed';
@@ -214,8 +213,7 @@ export interface VersionFormData {
 
 export interface IssueFormData {
   device_id: string;
-  module_id?: string;
-  category?: '硬件故障' | '软件Bug' | '操作咨询' | '安装调试' | '其他';
+  module_id?: string;  custom_module_name?: string;  category?: '硬件故障' | '软件Bug' | '操作咨询' | '安装调试' | '其他';
   description: string;
   severity: 'low' | 'medium' | 'high';
   status: 'open' | 'in_progress' | 'closed';

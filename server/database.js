@@ -537,6 +537,52 @@ async function createTables() {
         console.log('✅ issues 表扩展字段成功');
       }
 
+      // 检查 issues.id 列类型，若为 INT 则迁移为 VARCHAR(50)
+      const [issueIdCol] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'id'");
+      if (issueIdCol.length > 0 && issueIdCol[0].Type.toLowerCase().includes('int')) {
+        console.log('🔄 正在将 issues.id 从 INT 迁移为 VARCHAR(50)...');
+        // 先去除 issue_logs 的外键约束
+        try {
+          const [fkRows] = await pool.execute(
+            `SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'issue_logs'
+             AND REFERENCED_TABLE_NAME = 'issues' AND COLUMN_NAME = 'issue_id'`
+          );
+          if (fkRows.length > 0) {
+            await pool.execute(`ALTER TABLE issue_logs DROP FOREIGN KEY ${fkRows[0].CONSTRAINT_NAME}`);
+          }
+        } catch (e) {
+          console.warn('⚠️ 移除 issue_logs 外键警告:', e.message);
+        }
+        // 迁移 issues.id
+        try {
+          await pool.execute("ALTER TABLE issues MODIFY COLUMN id VARCHAR(50) NOT NULL");
+          console.log('✅ issues.id 迁移为 VARCHAR(50) 成功');
+        } catch (e) {
+          console.warn('⚠️ issues.id 迁移失败:', e.message);
+        }
+        // 迁移 issue_logs.issue_id
+        try {
+          await pool.execute("ALTER TABLE issue_logs MODIFY COLUMN issue_id VARCHAR(50) NOT NULL");
+          console.log('✅ issue_logs.issue_id 迁移为 VARCHAR(50) 成功');
+        } catch (e) {
+          console.warn('⚠️ issue_logs.issue_id 迁移失败:', e.message);
+        }
+        // 尝试重新添加外键
+        try {
+          await pool.execute("ALTER TABLE issue_logs ADD CONSTRAINT fk_issue_logs_issue FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE");
+        } catch (e) {
+          // 忽略：外键重建失败不影响功能
+        }
+      }
+
+      // 检查 issues 表 custom_module_name 字段
+      const [issueCustomModuleCols] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'custom_module_name'");
+      if (issueCustomModuleCols.length === 0) {
+        await pool.execute("ALTER TABLE issues ADD COLUMN custom_module_name VARCHAR(255) NULL AFTER module_id");
+        console.log('✅ issues 表添加 custom_module_name 字段成功');
+      }
+
       // 创建 device_upgrades 表
       await pool.execute(`
         CREATE TABLE IF NOT EXISTS device_upgrades (

@@ -21,6 +21,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
   const [formData, setFormData] = useState<IssueFormData>({
     device_id: '',
     module_id: undefined,
+    custom_module_name: undefined,
     description: '',
     severity: 'medium',
     status: 'open',
@@ -57,9 +58,11 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
   useEffect(() => {
     fetchDevices('');
     if (issue) {
+      const hasCustomModule = !!(issue as any).custom_module_name && !issue.module_id;
       setFormData({
         device_id: issue.device_id || '',
-        module_id: issue.module_id?.toString() || undefined,
+        module_id: issue.module_id?.toString() || (hasCustomModule ? 'custom' : undefined),
+        custom_module_name: (issue as any).custom_module_name || undefined,
         description: issue.description || '',
         severity: issue.severity || 'medium',
         status: issue.status || 'open',
@@ -126,7 +129,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
 
   const handleDeviceSelect = (device: {id: string, name: string, device_code: string, customer_name: string, product_name: string, remote_code: string, nickname: string}) => {
     setSelectedDevice(device);
-    setFormData(prev => ({ ...prev, device_id: device.id, module_id: undefined }));
+    setFormData(prev => ({ ...prev, device_id: device.id, module_id: undefined, custom_module_name: undefined }));
     setModules([]);
     setDeviceSearch('');
     setDeviceDropdownOpen(false);
@@ -136,7 +139,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
 
   const handleDeviceClear = () => {
     setSelectedDevice(null);
-    setFormData(prev => ({ ...prev, device_id: '', module_id: undefined }));
+    setFormData(prev => ({ ...prev, device_id: '', module_id: undefined, custom_module_name: undefined }));
     setModules([]);
     setDeviceSearch('');
     setDevices([]);
@@ -167,7 +170,11 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'module_id' && value !== 'custom') {
+      setFormData(prev => ({ ...prev, module_id: value, custom_module_name: undefined }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
     
     // 清除相关错误
     if (errors[name]) {
@@ -176,7 +183,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
 
     // 如果选择设备，获取该设备的模块
     if (name === 'device_id') {
-      setFormData(prev => ({ ...prev, module_id: undefined }));
+      setFormData(prev => ({ ...prev, module_id: undefined, custom_module_name: undefined }));
       setModules([]);
       if (value) {
         fetchModules(value);
@@ -218,7 +225,10 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
         ...formData,
         resolution_description: formData.notes,
         notes: undefined,
-        attachments: attachments.length > 0 ? attachments : undefined
+        attachments: attachments.length > 0 ? attachments : undefined,
+        // 如果是自定义模块，不向后端传module_id
+        module_id: formData.module_id === 'custom' ? undefined : formData.module_id,
+        custom_module_name: formData.module_id === 'custom' ? (formData.custom_module_name || undefined) : undefined
       };
       // 当状态变为已解决时，自动记录处理时间
       if (formData.status === 'closed' && issue?.status !== 'closed') {
@@ -345,7 +355,18 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
                   {module.name}
                 </option>
               ))}
+              <option value="custom">其他（自定义）</option>
             </select>
+            {formData.module_id === 'custom' && (
+              <input
+                type="text"
+                name="custom_module_name"
+                value={formData.custom_module_name || ''}
+                onChange={handleInputChange}
+                placeholder="请输入自定义模块名称"
+                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            )}
             {/* 调试信息 */}
             {process.env.NODE_ENV === 'development' && (
               <div className="mt-1 text-xs text-gray-500">

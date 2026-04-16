@@ -303,10 +303,10 @@ export default function IssueDetail() {
                     <span className="text-sm font-medium text-gray-900 print:text-xs">{issue.device_type}</span>
                   </div>
                 )}
-                {issue.module_category && (
+                {(issue.module_category || (issue as any).custom_module_name) && (
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-500 print:text-xs">模块</span>
-                    <span className="text-sm font-medium text-gray-900 print:text-xs">{issue.module_category}</span>
+                    <span className="text-sm font-medium text-gray-900 print:text-xs">{issue.module_category || (issue as any).custom_module_name}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center">
