@@ -109,7 +109,7 @@ router.delete('/attachments/:attachmentId', async (req, res) => {
 // 获取所有版本发布记录
 router.get('/', async (req, res) => {
     try {
-        const { module_type_id, category } = req.query;
+        const { module_type_id, category, product_id } = req.query;
 
         let whereClause = '';
         let params = [];
@@ -124,6 +124,11 @@ router.get('/', async (req, res) => {
             params.push(category);
         }
 
+        if (product_id) {
+            whereClause += (whereClause ? ' AND' : 'WHERE') + ' EXISTS (SELECT 1 FROM version_release_products vrp WHERE vrp.release_id = vr.id AND vrp.product_id = ?)';
+            params.push(product_id);
+        }
+
         const releasesQuery = `
       SELECT 
         vr.*,
@@ -135,6 +140,29 @@ router.get('/', async (req, res) => {
     `;
 
         const releases = await query(releasesQuery, params);
+
+        // 批量获取所有关联产品型号
+        if (releases.length > 0) {
+            const releaseIds = releases.map(r => r.id);
+            const productsRows = await query(
+                `SELECT vrp.release_id, p.id, p.name, p.model
+                 FROM version_release_products vrp
+                 JOIN products p ON vrp.product_id = p.id
+                 WHERE vrp.release_id IN (${releaseIds.map(() => '?').join(',')})`,
+                releaseIds
+            );
+            // 按 release_id 分组
+            const productsMap = {};
+            for (const row of productsRows) {
+                if (!productsMap[row.release_id]) productsMap[row.release_id] = [];
+                productsMap[row.release_id].push({ id: row.id, name: row.name, model: row.model });
+            }
+            for (const r of releases) {
+                r.products = productsMap[r.id] || [];
+            }
+        } else {
+            for (const r of releases) r.products = [];
+        }
 
         res.json({
             success: true,
@@ -166,9 +194,16 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ success: false, error: '版本发布记录不存在' });
         }
 
+        const release = result[0];
+        const productsRows = await query(
+            `SELECT p.id, p.name, p.model FROM version_release_products vrp JOIN products p ON vrp.product_id = p.id WHERE vrp.release_id = ?`,
+            [id]
+        );
+        release.products = productsRows;
+
         res.json({
             success: true,
-            data: result[0]
+            data: release
         });
     } catch (error) {
         console.error('获取版本发布详情失败:', error);
@@ -193,7 +228,7 @@ router.post('/', [
             });
         }
 
-        const { module_type_id, version_number, title, change_log, category } = req.body;
+        const { module_type_id, version_number, title, change_log, category, product_ids } = req.body;
 
         // 检查模块类型是否存在
         const [moduleType] = await query('SELECT id FROM module_types WHERE id = ?', [module_type_id]);
@@ -209,10 +244,22 @@ router.post('/', [
         const releaseDate = req.body.release_date || new Date().toISOString().split('T')[0];
         const result = await query(insertQuery, [module_type_id, version_number, title, change_log, category || null, releaseDate]);
 
+        const newId = result.insertId;
+
+        // 写入产品型号关联
+        const ids = Array.isArray(product_ids) ? product_ids.filter(Number.isInteger) : [];
+        if (ids.length > 0) {
+            const values = ids.map(pid => [newId, pid]);
+            await query(
+                `INSERT IGNORE INTO version_release_products (release_id, product_id) VALUES ${values.map(() => '(?,?)').join(',')}`,
+                values.flat()
+            );
+        }
+
         res.status(201).json({
             success: true,
             message: '版本发布记录创建成功',
-            data: { id: result.insertId, module_type_id, version_number, title, change_log, category, release_date: releaseDate }
+            data: { id: newId, module_type_id, version_number, title, change_log, category, release_date: releaseDate }
         });
     } catch (error) {
         console.error('创建版本发布记录失败:', error);
@@ -238,7 +285,7 @@ router.put('/:id', [
         }
 
         const { id } = req.params;
-        const { version_number, title, change_log, release_date, category } = req.body;
+        const { version_number, title, change_log, release_date, category, product_ids } = req.body;
 
         // 检查版本发布记录是否存在
         const existing = await query('SELECT id FROM version_releases WHERE id = ?', [id]);
@@ -273,19 +320,33 @@ router.put('/:id', [
             params.push(category || null);
         }
 
-        if (updates.length === 0) {
+        if (updates.length === 0 && product_ids === undefined) {
             return res.status(400).json({
                 success: false,
                 error: '没有提供要更新的字段'
             });
         }
 
-        params.push(id);
+        if (updates.length > 0) {
+            params.push(id);
+            await query(
+                `UPDATE version_releases SET ${updates.join(', ')} WHERE id = ?`,
+                params
+            );
+        }
 
-        await query(
-            `UPDATE version_releases SET ${updates.join(', ')} WHERE id = ?`,
-            params
-        );
+        // 更新产品型号关联（delete + re-insert）
+        if (product_ids !== undefined) {
+            await query('DELETE FROM version_release_products WHERE release_id = ?', [id]);
+            const ids = Array.isArray(product_ids) ? product_ids.filter(Number.isInteger) : [];
+            if (ids.length > 0) {
+                const values = ids.map(pid => [Number(id), pid]);
+                await query(
+                    `INSERT IGNORE INTO version_release_products (release_id, product_id) VALUES ${values.map(() => '(?,?)').join(',')}`,
+                    values.flat()
+                );
+            }
+        }
 
         res.json({
             success: true,

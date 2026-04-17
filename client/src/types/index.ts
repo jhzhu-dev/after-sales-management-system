@@ -66,6 +66,7 @@ export interface VersionRelease {
   category?: string;
   release_date: string;
   created_at: string;
+  products?: { id: number; name: string; model: string }[];
 }
 
 // 问题类型

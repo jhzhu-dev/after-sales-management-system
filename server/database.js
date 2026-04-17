@@ -129,6 +129,18 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+    // 版本发布与产品型号关联表（多对多，依赖 version_releases 和 products）
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS version_release_products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        release_id INT NOT NULL,
+        product_id INT NOT NULL,
+        UNIQUE KEY uq_release_product (release_id, product_id),
+        FOREIGN KEY (release_id) REFERENCES version_releases(id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     // 设备表 - 依赖 product_lines 和 customers
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS devices (

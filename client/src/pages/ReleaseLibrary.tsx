@@ -38,6 +38,7 @@ const ReleaseLibrary: React.FC = () => {
     const [productLines, setProductLines] = useState<{ id: number; name: string }[]>([]);
     const [existingCategories, setExistingCategories] = useState<string[]>([]);
     const [activeCategory, setActiveCategory] = useState<string>('');
+    const [activeProductId, setActiveProductId] = useState<number | null>(null);
 
     const fetchModuleTypes = async () => {
         setModuleTypesLoaded(false);
@@ -104,6 +105,7 @@ const ReleaseLibrary: React.FC = () => {
         if (activeTypeId !== null) {
             fetchReleases();
             setActiveCategory('');
+            setActiveProductId(null);
         } else {
             setReleases([]);
             setExistingCategories([]);
@@ -317,10 +319,10 @@ const ReleaseLibrary: React.FC = () => {
                     <div className="p-4 3xl:p-6">
                         {/* 分类过滤 */}
                         {existingCategories.length > 0 && (
-                            <div className="flex items-center gap-2 mb-4 flex-wrap no-print">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap no-print">
                                 <span className="text-sm text-gray-500 mr-1">分类:</span>
                                 <button
-                                    onClick={() => setActiveCategory('')}
+                                    onClick={() => { setActiveCategory(''); setActiveProductId(null); }}
                                     className={`px-3 py-1 rounded-full text-sm transition-colors ${
                                         activeCategory === '' 
                                             ? 'bg-blue-600 text-white' 
@@ -332,7 +334,7 @@ const ReleaseLibrary: React.FC = () => {
                                 {existingCategories.map(cat => (
                                     <button
                                         key={cat}
-                                        onClick={() => setActiveCategory(cat)}
+                                        onClick={() => { setActiveCategory(cat); setActiveProductId(null); }}
                                         className={`px-3 py-1 rounded-full text-sm transition-colors ${
                                             activeCategory === cat 
                                                 ? 'bg-blue-600 text-white' 
@@ -344,10 +346,53 @@ const ReleaseLibrary: React.FC = () => {
                                 ))}
                             </div>
                         )}
+                        {/* 产品型号过滤（在分类下方，仅当选中分类且有关联产品时显示）*/}
                         {(() => {
-                            const filteredReleases = activeCategory
+                            const categoryReleases = activeCategory
                                 ? releases.filter(r => r.category === activeCategory)
                                 : releases;
+                            const productMap = new Map<number, { id: number; name: string; model: string }>();
+                            categoryReleases.forEach(r => (r.products || []).forEach(p => productMap.set(p.id, p)));
+                            const availableProducts = Array.from(productMap.values());
+                            if (activeCategory && availableProducts.length > 0) {
+                                return (
+                                    <div className="flex items-center gap-2 mb-4 flex-wrap no-print">
+                                        <span className="text-sm text-gray-400 mr-1">型号:</span>
+                                        <button
+                                            onClick={() => setActiveProductId(null)}
+                                            className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                                                activeProductId === null
+                                                    ? 'bg-purple-600 text-white'
+                                                    : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+                                            }`}
+                                        >
+                                            全部型号
+                                        </button>
+                                        {availableProducts.map(p => (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => setActiveProductId(activeProductId === p.id ? null : p.id)}
+                                                className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                                                    activeProductId === p.id
+                                                        ? 'bg-purple-600 text-white'
+                                                        : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+                                                }`}
+                                            >
+                                                {p.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
+                        {(() => {
+                            const categoryFiltered = activeCategory
+                                ? releases.filter(r => r.category === activeCategory)
+                                : releases;
+                            const filteredReleases = activeProductId
+                                ? categoryFiltered.filter(r => (r.products || []).some(p => p.id === activeProductId))
+                                : categoryFiltered;
                             if (loading) {
                                 return <div className="text-center py-12">加载中...</div>;
                             }
@@ -399,6 +444,13 @@ const ReleaseLibrary: React.FC = () => {
                                             <h3 className="text-lg font-bold text-gray-900 mb-2 truncate" title={release.title}>
                                                 {release.title}
                                             </h3>
+                                            {release.products && release.products.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mb-2">
+                                                    {release.products.map(p => (
+                                                        <span key={p.id} className="bg-purple-50 text-purple-600 px-2 py-0.5 rounded text-xs">{p.name}</span>
+                                                    ))}
+                                                </div>
+                                            )}
                                             <div className="text-sm text-gray-600 line-clamp-3 mb-4 min-h-[4.5rem] whitespace-pre-wrap">
                                                 {release.change_log || '无变更说明'}
                                             </div>
@@ -452,6 +504,9 @@ const ReleaseLibrary: React.FC = () => {
                                                                     {release.category}
                                                                 </span>
                                                             )}
+                                                            {release.products && release.products.length > 0 && release.products.map(p => (
+                                                                <span key={p.id} className="bg-purple-50 text-purple-600 px-2 py-0.5 rounded text-xs">{p.name}</span>
+                                                            ))}
                                                         </div>
                                                         <p className="text-sm text-gray-500 line-clamp-1">{release.change_log || '无变更说明'}</p>
                                                     </div>
@@ -495,7 +550,8 @@ const ReleaseLibrary: React.FC = () => {
 
                         {/* 打印专用版本列表 */}
                         {(() => {
-                            const fr = activeCategory ? releases.filter((r: any) => r.category === activeCategory) : releases;
+                            const catFr = activeCategory ? releases.filter((r: any) => r.category === activeCategory) : releases;
+                            const fr = activeProductId ? catFr.filter((r: any) => (r.products || []).some((p: any) => p.id === activeProductId)) : catFr;
                             const currentType = moduleTypes.find((t: any) => t.id === activeTypeId);
                             return (
                                 <div className="hidden print:block" style={{marginTop:'8pt'}}>

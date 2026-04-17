@@ -266,7 +266,7 @@ export const moduleVersionApi = {
 // 版本发布库相关API (新增)
 export const versionReleaseApi = {
   // 获取发布记录列表
-  getReleases: (params?: { module_type_id?: number }): Promise<ApiResponse<VersionRelease[]>> =>
+  getReleases: (params?: { module_type_id?: number; product_id?: number }): Promise<ApiResponse<VersionRelease[]>> =>
     api.get('/version-releases', { params }).then(res => res.data),
 
   // 获取单个发布记录

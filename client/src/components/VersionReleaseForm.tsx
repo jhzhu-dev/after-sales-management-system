@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import { productLineApi } from '../services/api';
 
 interface ModuleType {
   id: number;
@@ -16,6 +17,7 @@ interface VersionRelease {
   change_log?: string;
   category?: string;
   release_date: string;
+  products?: { id: number; name: string; model: string }[];
 }
 
 interface VersionReleaseFormProps {
@@ -43,6 +45,11 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
   const [categoryMode, setCategoryMode] = useState<'select' | 'custom'>('select');
   const [customCategory, setCustomCategory] = useState('');
 
+  // 产品型号多选
+  const [lineProducts, setLineProducts] = useState<{ id: number; name: string; model: string }[]>([]);
+  const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
   useEffect(() => {
     if (versionRelease) {
       setFormData({
@@ -53,6 +60,10 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
         category: versionRelease.category || '',
         release_date: versionRelease.release_date ? versionRelease.release_date.split('T')[0] : new Date().toISOString().split('T')[0]
       });
+      // 预选已关联的产品型号
+      if (versionRelease.products && versionRelease.products.length > 0) {
+        setSelectedProductIds(versionRelease.products.map(p => p.id));
+      }
       // 判断是已有分类还是自定义
       const allOptions = [...(productLines || []).map(pl => pl.name), ...(existingCategories || [])];
       if (versionRelease.category && !allOptions.includes(versionRelease.category)) {
@@ -66,6 +77,38 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
       }));
     }
   }, [versionRelease, moduleType, productLines, existingCategories]);
+
+  // 当分类（产品线）变化时，加载该产品线下的产品型号
+  useEffect(() => {
+    const currentCategory = categoryMode === 'select' ? formData.category : '';
+    if (!currentCategory) {
+      setLineProducts([]);
+      setSelectedProductIds([]);
+      return;
+    }
+    const matchedLine = productLines.find(pl => pl.name === currentCategory);
+    if (!matchedLine) {
+      setLineProducts([]);
+      setSelectedProductIds([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingProducts(true);
+    productLineApi.getProductsByLine(matchedLine.id).then(res => {
+      if (cancelled) return;
+      if (res.success) {
+        const prods = res.data.map((p: any) => ({ id: p.id, name: p.name, model: p.model }));
+        setLineProducts(prods);
+        // 编辑时：保留已预选的 ids（若新产品线中有对应产品）
+        setSelectedProductIds(prev => prev.filter(id => prods.some((p: any) => p.id === id)));
+      }
+    }).catch(() => {
+      if (!cancelled) setLineProducts([]);
+    }).finally(() => {
+      if (!cancelled) setLoadingProducts(false);
+    });
+    return () => { cancelled = true; };
+  }, [formData.category, categoryMode, productLines]);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -97,7 +140,8 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
     try {
       const submitData = {
         ...formData,
-        category: categoryMode === 'custom' ? customCategory.trim() : formData.category
+        category: categoryMode === 'custom' ? customCategory.trim() : formData.category,
+        product_ids: selectedProductIds
       };
       await onSubmit(submitData, files.length > 0 ? files : undefined);
       onClose();
@@ -253,6 +297,46 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
               可按产品线选择分类，也可自定义分类名称
             </p>
           </div>
+
+          {/* 产品型号多选（仅当选中产品线分类时显示） */}
+          {categoryMode === 'select' && lineProducts.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                产品型号
+                <span className="ml-1 text-xs font-normal text-gray-400">（可多选）</span>
+              </label>
+              {loadingProducts ? (
+                <p className="text-xs text-gray-400 py-2">加载中...</p>
+              ) : (
+                <div className="border border-gray-200 rounded-lg p-3 space-y-2 bg-gray-50 max-h-48 overflow-y-auto">
+                  {lineProducts.map(p => (
+                    <label key={p.id} className="flex items-center gap-2 cursor-pointer hover:bg-white rounded px-1 py-0.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedProductIds.includes(p.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedProductIds(prev => [...prev, p.id]);
+                          } else {
+                            setSelectedProductIds(prev => prev.filter(id => id !== p.id));
+                          }
+                        }}
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-mono text-gray-700">{p.model}</span>
+                      <span className="text-xs text-gray-500">{p.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {selectedProductIds.length > 0 && (
+                <p className="mt-1 text-xs text-blue-600">已选 {selectedProductIds.length} 个型号</p>
+              )}
+            </div>
+          )}
+          {categoryMode === 'select' && formData.category && !loadingProducts && lineProducts.length === 0 && productLines.some(pl => pl.name === formData.category) && (
+            <p className="text-xs text-gray-400 -mt-2">该产品线下暂无产品型号</p>
+          )}
 
           {/* 发布日期 */}
           <div>
