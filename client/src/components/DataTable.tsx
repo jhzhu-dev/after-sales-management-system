@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { cn } from '../utils';
 
 interface Column<T> {
@@ -23,6 +23,7 @@ interface DataTableProps<T> {
   onRowClick?: (record: T) => void;
   className?: string;
   compact?: boolean;
+  onLoadMore?: () => void;
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -33,12 +34,37 @@ export default function DataTable<T extends Record<string, any>>({
   rowKey,
   onRowClick,
   className,
-  compact = false
+  compact = false,
+  onLoadMore
 }: DataTableProps<T>) {
   const [sortConfig, setSortConfig] = useState<{
     key: keyof T | null;
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'asc' });
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const onLoadMoreRef = useRef(onLoadMore);
+  useLayoutEffect(() => { onLoadMoreRef.current = onLoadMore; });
+  const hasLoadMore = !!onLoadMore;
+  // IO uses viewport (root:null) so it fires correctly even when content fits without scrolling
+  useEffect(() => {
+    if (!hasLoadMore || !sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) onLoadMoreRef.current?.(); },
+      { root: null, threshold: 0, rootMargin: '50px' }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasLoadMore]);
+  // Fill-check: if content doesn't overflow the container, proactively trigger load
+  useEffect(() => {
+    if (!onLoadMore || !scrollRef.current) return;
+    const { scrollHeight, clientHeight } = scrollRef.current;
+    if (scrollHeight <= clientHeight) {
+      onLoadMoreRef.current?.();
+    }
+  }, [data, onLoadMore]);
 
   const handleSort = (key: keyof T) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -84,9 +110,9 @@ export default function DataTable<T extends Record<string, any>>({
 
   return (
     <div className={cn('bg-white rounded-lg shadow', className)}>
-      <div className="overflow-x-auto">
+      <div ref={scrollRef} className={onLoadMore ? 'overflow-auto' : 'overflow-x-auto'} style={onLoadMore ? { maxHeight: 'calc(100vh - 240px)' } : undefined}>
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               {columns.map((column) => (
                 <th
@@ -139,7 +165,7 @@ export default function DataTable<T extends Record<string, any>>({
               <tr
                 key={String(record[rowKey])}
                 className={cn(
-                  'hover:bg-gray-50 transition-colors',
+                  'hover:bg-blue-50 transition-colors duration-150',
                   onRowClick && 'cursor-pointer'
                 )}
                 onClick={() => onRowClick?.(record)}
@@ -158,6 +184,7 @@ export default function DataTable<T extends Record<string, any>>({
             ))}
           </tbody>
         </table>
+        {hasLoadMore && <div ref={sentinelRef} className="h-2" />}
       </div>
 
       {pagination && (

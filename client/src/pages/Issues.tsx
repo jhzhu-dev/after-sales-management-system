@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { PlusIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon, ChatBubbleLeftRightIcon, ArrowPathIcon, MagnifyingGlassIcon, PrinterIcon, BookOpenIcon } from '@heroicons/react/24/outline';
 import { issueApi, customerApi, moduleTypeApi, productLineApi, moduleVersionApi } from '../services/api';
@@ -26,6 +26,7 @@ export default function Issues() {
   }, [location.search]);
 
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [allIssues, setAllIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -33,6 +34,10 @@ export default function Issues() {
     total: 0,
     pages: 0
   });
+  const [visibleIssueCount, setVisibleIssueCount] = useState(20);
+  const [visibleUpgradeCount, setVisibleUpgradeCount] = useState(20);
+  const upgradeSentinelRef = useRef<HTMLDivElement | null>(null);
+  const upgradeScrollRef = useRef<HTMLDivElement | null>(null);
   const [filters, setFilters] = useState<FilterOptions>({
     page: 1,
     limit: 10,
@@ -71,23 +76,89 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
 
   useEffect(() => {
     if (activeTab === 'issues') {
-      console.log('useEffect触发，当前筛选条件:', filters);
       fetchIssues();
     }
-  }, [filters, activeTab]);
+  }, [activeTab]);
 
   // 版本演进数据
   useEffect(() => {
     if (activeTab === 'upgrades') {
+      setVisibleUpgradeCount(20);
       fetchUpgrades();
       if (customers.length === 0) fetchCustomers();
     }
   }, [activeTab, upgradeFilters]);
 
-  // 添加一个useEffect来监听筛选条件变化
+  // 处理并过滤对全量数据应用
+  const applyIssueFilters = useCallback(() => {
+    let filtered = [...allIssues];
+    if (filters.search) {
+      const s = filters.search.toLowerCase();
+      filtered = filtered.filter(issue =>
+        (issue.description && issue.description.toLowerCase().includes(s)) ||
+        (issue.device_name && issue.device_name.toLowerCase().includes(s)) ||
+        (issue.device_id && issue.device_id.toLowerCase().includes(s)) ||
+        (issue.customer_name && issue.customer_name.toLowerCase().includes(s)) ||
+        (issue.module_category && issue.module_category.toLowerCase().includes(s))
+      );
+    }
+    if (filters.status) filtered = filtered.filter(i => i.status === filters.status);
+    if (filters.severity) filtered = filtered.filter(i => i.severity === filters.severity);
+    if (filters.module) filtered = filtered.filter(i => i.module_category === filters.module);
+    if (filters.device_type) filtered = filtered.filter(i => (i as any).device_type === filters.device_type);
+    if (filters.customer) filtered = filtered.filter(i => i.customer_name === filters.customer);
+    if (sortField) {
+      filtered.sort((a, b) => {
+        const aValue = a[sortField as keyof Issue];
+        const bValue = b[sortField as keyof Issue];
+        if (aValue === bValue) return 0;
+        if (typeof aValue === 'string' && typeof bValue === 'string')
+          return sortOrder === 'asc' ? aValue.localeCompare(bValue, 'zh-CN') : bValue.localeCompare(aValue, 'zh-CN');
+        if (typeof aValue === 'number' && typeof bValue === 'number')
+          return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+        return 0;
+      });
+    }
+    setIssues(filtered);
+    setPagination({ current: 1, pageSize: filtered.length, total: filtered.length, pages: 1 });
+  }, [allIssues, filters, sortField, sortOrder]);
+
+  // 客户端过滤效果
   useEffect(() => {
-    console.log('筛选条件已更新:', filters);
-  }, [filters]);
+    applyIssueFilters();
+  }, [applyIssueFilters]);
+
+  // issues 无限滚动 —— 由 DataTable 内部的 onLoadMore 处理
+
+  // issues 返回定位
+  useEffect(() => {
+    if (allIssues.length === 0) return;
+    const savedId = sessionStorage.getItem('issues_highlight');
+    if (!savedId) return;
+    const tryScroll = (attemptsLeft: number) => {
+      const link = document.querySelector<HTMLElement>(`a[href="/issues/${savedId}"]`);
+      if (link) {
+        sessionStorage.removeItem('issues_highlight');
+        const row = link.closest('tr');
+        if (row) row.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'center' });
+      } else if (attemptsLeft > 0) {
+        setTimeout(() => tryScroll(attemptsLeft - 1), 50);
+      }
+    };
+    requestAnimationFrame(() => requestAnimationFrame(() => tryScroll(20)));
+  }, [issues]);
+
+  // upgrades 无限滚动
+  useEffect(() => {
+    const sentinel = upgradeSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) setVisibleUpgradeCount(prev => prev + 20); },
+      { root: upgradeScrollRef.current, threshold: 0, rootMargin: '50px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [upgrades]);
 
   // 获取模块类型和产品线列表
   useEffect(() => {
@@ -186,39 +257,9 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
   const fetchIssues = async () => {
     try {
       setLoading(true);
-      console.log('发送筛选参数:', filters);
-      const response = await issueApi.getIssues(filters);
+      const response = await issueApi.getIssues({ page: 1, limit: 1000 });
       if (response.success) {
-        console.log('获取到的问题数据:', response.data.length, '个问题');
-        
-        // 详细的问题信息
-        const issues = response.data;
-        console.log('问题详情:');
-        issues.forEach((issue, index) => {
-          console.log(`  [${index + 1}] ID: ${issue.id}, 描述: ${issue.description}, 严重性: ${issue.severity}, 状态: ${issue.status}`);
-        });
-        
-        // 统计信息
-        const statusStats = issues.reduce((acc: Record<string, number>, issue) => {
-          acc[issue.status] = (acc[issue.status] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-        
-        const severityStats = issues.reduce((acc: Record<string, number>, issue) => {
-          acc[issue.severity] = (acc[issue.severity] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-        
-        console.log('问题状态分布:', statusStats);
-        console.log('问题严重性分布:', severityStats);
-        
-        setIssues(issues);
-        setPagination({
-          current: response.pagination.page,
-          pageSize: response.pagination.limit,
-          total: response.pagination.total,
-          pages: response.pagination.pages
-        });
+        setAllIssues(response.data);
       }
     } catch (error) {
       console.error('获取问题列表失败:', error);
@@ -228,16 +269,13 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
   };
 
   const handleSearch = (search: string) => {
+    setVisibleIssueCount(20);
     setFilters(prev => ({ ...prev, search, page: 1 }));
   };
 
   const handleFilterChange = (key: string, value: string) => {
-    console.log(`筛选器变化: ${key} = ${value}`);
-    setFilters(prev => {
-      const newFilters = { ...prev, [key]: value, page: 1 };
-      console.log('新的筛选条件:', newFilters);
-      return newFilters;
-    });
+    setVisibleIssueCount(20);
+    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
   };
 
   const handlePageChange = (page: number, pageSize: number) => {
@@ -249,30 +287,9 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     if (sortField === field && sortOrder === 'asc') {
       newOrder = 'desc';
     }
+    setVisibleIssueCount(20);
     setSortField(field);
     setSortOrder(newOrder);
-    
-    // 对当前数据进行排序
-    const sortedIssues = [...issues].sort((a, b) => {
-      const aValue = a[field as keyof Issue];
-      const bValue = b[field as keyof Issue];
-      
-      if (aValue === bValue) return 0;
-      
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return newOrder === 'asc' 
-          ? aValue.localeCompare(bValue, 'zh-CN')
-          : bValue.localeCompare(aValue, 'zh-CN');
-      }
-      
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return newOrder === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-      
-      return 0;
-    });
-    
-    setIssues(sortedIssues);
   };
 
   const handleDelete = async (id: number, event?: React.MouseEvent) => {
@@ -295,7 +312,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             // 如果当前就在问题管理页面，只需要刷新列表
             await fetchIssues();
           } else {
-            // 其他情况，也跳转到问题管理页面
             navigate('/issues');
           }
         }
@@ -400,6 +416,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
   };
 
   const handleRowClick = (issue: Issue) => {
+    sessionStorage.setItem('issues_highlight', String(issue.id));
     navigate(`/issues/${issue.id}`);
   };
 
@@ -411,7 +428,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
 
     try {
       const response = await issueApi.batchUpdateStatus(selectedIssues, status);
-      if (response.success) {
+            if (response.success) {
         setSelectedIssues([]);
         fetchIssues();
         alert('批量更新成功');
@@ -750,7 +767,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             <p className="text-sm text-gray-500 whitespace-nowrap">共 {upgradeTotal} 条</p>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div ref={upgradeScrollRef} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-auto" style={{ maxHeight: 'calc(100vh - 240px)' }}>
           {upgradeLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -759,7 +776,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             <div className="text-center py-16 text-gray-400">暂无版本演进记录</div>
           ) : (
             <table className="min-w-full divide-y divide-gray-100">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   {['订单号','设备简称','客户','模块类型','版本号','变更说明','操作人','发布日期','检查项'].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
@@ -767,7 +784,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {upgrades.map((item: any) => {
+                {upgrades.slice(0, visibleUpgradeCount).map((item: any) => {
                   const checklist: any[] = (() => {
                     if (!item.checklist) return [];
                     if (Array.isArray(item.checklist)) return item.checklist;
@@ -782,7 +799,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                   };
                   return (
                     <React.Fragment key={item.id}>
-                      <tr className="hover:bg-gray-50 transition-colors">
+                      <tr className="hover:bg-blue-50 transition-colors duration-150">
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-900 text-sm">{item.device_name || '-'}</div>
                           <div className="text-xs text-gray-400">{item.device_id}</div>
@@ -891,7 +908,17 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               </tbody>
             </table>
           )}
+          {/* upgrades 无限滚动哨兵 */}
+          <div ref={upgradeSentinelRef} className="h-4" />
         </div>
+        {!upgradeLoading && upgrades.length > 0 && (
+          <div className="text-center text-sm text-gray-400 pb-4">
+            {visibleUpgradeCount >= upgrades.length
+              ? `已显示全部 ${upgrades.length} 条记录`
+              : `已显示 ${Math.min(visibleUpgradeCount, upgrades.length)} / ${upgrades.length} 条，向下滚动加载更多`
+            }
+          </div>
+        )}
       </div>
     );
   };
@@ -1102,7 +1129,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             </div>
             <div className="flex items-end">
               <button
-                onClick={() => setFilters({ page: 1, limit: 10, search: '', status: '', severity: '', module: '', device_type: '', customer: '' })}
+                onClick={() => { setVisibleIssueCount(20); setFilters({ page: 1, limit: 10, search: '', status: '', severity: '', module: '', device_type: '', customer: '' }); }}
                 className="w-full px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 重置筛选
@@ -1114,19 +1141,22 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         {/* 数据表格 */}
         <div className="print:hidden">
           <DataTable
-            data={issues}
+            data={issues.slice(0, visibleIssueCount)}
             columns={columns}
             loading={loading}
-            pagination={{
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-              onChange: handlePageChange
-            }}
             rowKey="id"
             onRowClick={handleRowClick}
+            onLoadMore={visibleIssueCount < issues.length ? () => setVisibleIssueCount(prev => prev + 20) : undefined}
           />
         </div>
+        {!loading && issues.length > 0 && (
+          <div className="text-center text-sm text-gray-400 pb-4 print:hidden">
+            {visibleIssueCount >= issues.length
+              ? `已显示全部 ${issues.length} 条记录`
+              : `已显示 ${Math.min(visibleIssueCount, issues.length)} / ${issues.length} 条，向下滚动加载更多`
+            }
+          </div>
+        )}
 
         {/* 打印专用故障表格 */}
         <div className="hidden print:block">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PencilIcon, TrashIcon, EyeIcon, ChevronUpIcon, ChevronDownIcon, PlusIcon, PrinterIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { deviceApi, moduleApi, productLineApi, bundleApi } from '../services/api';
@@ -55,6 +55,8 @@ export default function Devices() {
   const [showBundleForm, setShowBundleForm] = useState(false);
   const [editingBundle, setEditingBundle] = useState<DeviceBundle | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [visibleCount, setVisibleCount] = useState<number>(() => Math.max(20, parseInt(searchParams.get('visible') || '20')));
+  const [visibleBundleCount, setVisibleBundleCount] = useState(20);
 
   const fetchAllDevices = async () => {
     try {
@@ -111,11 +113,8 @@ export default function Devices() {
         return 0;
       });
     }
-    const page = bundleFilters.page || 1;
-    const limit = bundleFilters.limit || 10;
-    const start = (page - 1) * limit;
-    setFilteredBundles(filtered.slice(start, start + limit));
-    setBundlePagination({ current: page, pageSize: limit, total: filtered.length, pages: Math.ceil(filtered.length / limit) });
+    setFilteredBundles(filtered);
+    setBundlePagination({ current: 1, pageSize: filtered.length, total: filtered.length, pages: 1 });
   }, [allBundles, bundleFilters, bundleSortField, bundleSortOrder]);
 
   const applyFilters = useCallback(() => {
@@ -170,19 +169,12 @@ export default function Devices() {
       });
     }
 
-    // 分页
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedDevices = filtered.slice(startIndex, endIndex);
-
-    setFilteredDevices(paginatedDevices);
+    setFilteredDevices(filtered);
     setPagination({
-      current: page,
-      pageSize: limit,
+      current: 1,
+      pageSize: filtered.length,
       total: filtered.length,
-      pages: Math.ceil(filtered.length / limit)
+      pages: 1
     });
   }, [allDevices, filters, sortField, sortOrder]);
 
@@ -197,7 +189,7 @@ export default function Devices() {
     }
   }, [isInitialized]);
 
-  // 实时过滤效果
+  // 实时过滤效果（数据重载时不重置 visibleCount，保留返回时的滚动位置）
   useEffect(() => {
     if (isInitialized) {
       console.log('执行实时过滤，filters:', filters);
@@ -205,12 +197,54 @@ export default function Devices() {
     }
   }, [filters, allDevices, isInitialized, applyFilters]);
 
+  // 返回列表时定位到之前点击的设备行
+  useEffect(() => {
+    if (!isInitialized || filteredDevices.length === 0) return;
+    const savedId = sessionStorage.getItem('devices_highlight');
+    if (!savedId) return;
+
+    const tryScroll = (attemptsLeft: number) => {
+      const link = document.querySelector<HTMLElement>(`a[href="/devices/${savedId}"]`);
+      if (link) {
+        sessionStorage.removeItem('devices_highlight');
+        const row = link.closest('tr');
+        if (row) {
+          row.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'center' });
+        }
+      } else if (attemptsLeft > 0) {
+        // 元素还未渲染，稍后重试
+        setTimeout(() => tryScroll(attemptsLeft - 1), 50);
+      }
+    };
+
+    requestAnimationFrame(() => requestAnimationFrame(() => tryScroll(20)));
+  }, [isInitialized, filteredDevices]);
+
   // 多合一设备过滤效果
   useEffect(() => {
     if (isInitialized) {
       applyBundleFilters();
+      setVisibleBundleCount(20);
     }
   }, [bundleFilters, allBundles, isInitialized, applyBundleFilters]);
+
+  // 多合一设备返回定位
+  useEffect(() => {
+    if (!isInitialized || filteredBundles.length === 0) return;
+    const savedId = sessionStorage.getItem('bundles_highlight');
+    if (!savedId) return;
+    const tryScroll = (attemptsLeft: number) => {
+      const link = document.querySelector<HTMLElement>(`a[href="/bundles/${savedId}"]`);
+      if (link) {
+        sessionStorage.removeItem('bundles_highlight');
+        const row = link.closest('tr');
+        if (row) row.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'center' });
+      } else if (attemptsLeft > 0) {
+        setTimeout(() => tryScroll(attemptsLeft - 1), 50);
+      }
+    };
+    requestAnimationFrame(() => requestAnimationFrame(() => tryScroll(20)));
+  }, [isInitialized, filteredBundles]);
 
   // 页面可见性变化时重新获取数据
   useEffect(() => {
@@ -256,10 +290,12 @@ export default function Devices() {
   };
 
   const handleSearch = (search: string) => {
+    setVisibleCount(20);
     setFilters(prev => ({ ...prev, search, page: 1 }));
   };
 
   const handleFilterChange = (key: string, value: string) => {
+    setVisibleCount(20);
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
   };
 
@@ -272,6 +308,7 @@ export default function Devices() {
     if (sortField === field && sortOrder === 'asc') {
       newOrder = 'desc';
     }
+    setVisibleCount(20);
     setSortField(field);
     setSortOrder(newOrder);
     // 排序逻辑现在在applyFilters中处理
@@ -477,17 +514,17 @@ export default function Devices() {
   };
 
   const handleRowClick = (device: Device) => {
+    // 保存点击的设备 ID，返回后定位到该行
+    sessionStorage.setItem('devices_highlight', device.id);
     const params = new URLSearchParams();
-    if (filters.page && filters.page > 1) params.set('page', String(filters.page));
-    if (filters.limit && filters.limit !== 10) params.set('limit', String(filters.limit));
     if (filters.search) params.set('search', filters.search);
     if (filters.type) params.set('type', filters.type);
     if (filters.status) params.set('status', filters.status);
     if (sortField) params.set('sortField', sortField);
     if (sortOrder !== 'asc') params.set('sortOrder', sortOrder);
+    if (visibleCount > 20) params.set('visible', String(visibleCount));
     const qs = params.toString();
-    // 先把当前 URL 的 query 状态写回（replace，不增加历史条目）
-    navigate(`/devices?${qs}`, { replace: true });
+    navigate(`/devices${qs ? '?' + qs : ''}`, { replace: true });
     navigate(`/devices/${device.id}`);
   };
 
@@ -869,7 +906,7 @@ export default function Devices() {
             </div>
             <div className="flex items-end">
               <button
-                onClick={() => setFilters({ page: 1, limit: 10, search: '', type: '', status: '' } as any)}
+                onClick={() => { setFilters({ page: 1, limit: 20, search: '', type: '', status: '' } as any); setVisibleCount(20); }}
                 className="w-full px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 重置筛选
@@ -880,19 +917,22 @@ export default function Devices() {
 
         {/* 数据表格 */}
         <DataTable
-          data={filteredDevices}
+          data={filteredDevices.slice(0, visibleCount)}
           columns={columns}
           loading={loading}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            onChange: handlePageChange
-          }}
           rowKey="id"
           onRowClick={handleRowClick}
+          onLoadMore={visibleCount < filteredDevices.length ? () => setVisibleCount(prev => prev + 20) : undefined}
           className="print:hidden"
         />
+        {!loading && filteredDevices.length > 0 && (
+          <div className="text-center text-sm text-gray-400 pb-4 print:hidden">
+            {visibleCount >= filteredDevices.length
+              ? `已显示全部 ${filteredDevices.length} 条记录`
+              : `已显示 ${Math.min(visibleCount, filteredDevices.length)} / ${filteredDevices.length} 条，向下滚动加载更多`
+            }
+          </div>
+        )}
 
         {/* 打印专用表格 - 显示全部筛选结果 */}
         <div className="hidden print:block">
@@ -946,7 +986,7 @@ export default function Devices() {
             </div>
             <div className="flex items-end">
               <button
-                onClick={() => setBundleFilters({ page: 1, limit: 10, search: '' })}
+                onClick={() => { setBundleFilters({ page: 1, limit: 10, search: '' }); setVisibleBundleCount(20); }}
                 className="w-full px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 重置筛选
@@ -957,19 +997,25 @@ export default function Devices() {
 
         {/* 多合一设备数据表格 */}
         <DataTable
-          data={filteredBundles}
+          data={filteredBundles.slice(0, visibleBundleCount)}
           columns={bundleColumns}
           loading={loading}
-          pagination={{
-            current: bundlePagination.current,
-            pageSize: bundlePagination.pageSize,
-            total: bundlePagination.total,
-            onChange: (page: number, pageSize: number) => setBundleFilters(prev => ({ ...prev, page, limit: pageSize }))
-          }}
           rowKey="id"
-          onRowClick={(b: DeviceBundle) => navigate(`/bundles/${b.id}`)}
+          onRowClick={(b: DeviceBundle) => {
+            sessionStorage.setItem('bundles_highlight', String(b.id));
+            navigate(`/bundles/${b.id}`);
+          }}
+          onLoadMore={visibleBundleCount < filteredBundles.length ? () => setVisibleBundleCount(prev => prev + 20) : undefined}
           className="print:hidden"
         />
+        {!loading && filteredBundles.length > 0 && (
+          <div className="text-center text-sm text-gray-400 pb-4 print:hidden">
+            {visibleBundleCount >= filteredBundles.length
+              ? `已显示全部 ${filteredBundles.length} 条记录`
+              : `已显示 ${Math.min(visibleBundleCount, filteredBundles.length)} / ${filteredBundles.length} 条，向下滚动加载更多`
+            }
+          </div>
+        )}
 
         {/* 多合一设备打印表格 */}
         <div className="hidden print:block">
