@@ -923,6 +923,7 @@ export default function Devices() {
           rowKey="id"
           onRowClick={handleRowClick}
           onLoadMore={visibleCount < filteredDevices.length ? () => setVisibleCount(prev => prev + 20) : undefined}
+          scrollable
           className="print:hidden"
         />
         {!loading && filteredDevices.length > 0 && (
@@ -1006,6 +1007,7 @@ export default function Devices() {
             navigate(`/bundles/${b.id}`);
           }}
           onLoadMore={visibleBundleCount < filteredBundles.length ? () => setVisibleBundleCount(prev => prev + 20) : undefined}
+          scrollable
           className="print:hidden"
         />
         {!loading && filteredBundles.length > 0 && (

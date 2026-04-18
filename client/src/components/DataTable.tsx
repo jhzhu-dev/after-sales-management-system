@@ -24,6 +24,7 @@ interface DataTableProps<T> {
   className?: string;
   compact?: boolean;
   onLoadMore?: () => void;
+  scrollable?: boolean;
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -35,7 +36,8 @@ export default function DataTable<T extends Record<string, any>>({
   onRowClick,
   className,
   compact = false,
-  onLoadMore
+  onLoadMore,
+  scrollable = false
 }: DataTableProps<T>) {
   const [sortConfig, setSortConfig] = useState<{
     key: keyof T | null;
@@ -110,7 +112,7 @@ export default function DataTable<T extends Record<string, any>>({
 
   return (
     <div className={cn('bg-white rounded-lg shadow', className)}>
-      <div ref={scrollRef} className={onLoadMore ? 'overflow-auto' : 'overflow-x-auto'} style={onLoadMore ? { maxHeight: 'calc(100vh - 240px)' } : undefined}>
+      <div ref={scrollRef} className={(scrollable || onLoadMore) ? 'overflow-auto' : 'overflow-x-auto'} style={(scrollable || onLoadMore) ? { maxHeight: 'calc(100vh - 240px)' } : undefined}>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>

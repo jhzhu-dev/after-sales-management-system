@@ -1147,6 +1147,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             rowKey="id"
             onRowClick={handleRowClick}
             onLoadMore={visibleIssueCount < issues.length ? () => setVisibleIssueCount(prev => prev + 20) : undefined}
+            scrollable
           />
         </div>
         {!loading && issues.length > 0 && (
