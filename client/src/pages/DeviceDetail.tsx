@@ -542,11 +542,25 @@ const DeviceDetail: React.FC = () => {
   };
 
   // 获取指定模块类型的发布库版本
+  // 如果版本库中该类型下有与当前设备产品型号关联的版本，则只显示该产品型号下的版本
   const fetchModuleReleases = async (typeId: string) => {
     try {
-      const response = await versionReleaseApi.getReleases({ module_type_id: parseInt(typeId) });
-      if (response.success) {
-        setModuleReleases(response.data);
+      const productId = device?.product_id;
+      // 先拉全量
+      const allRes = await versionReleaseApi.getReleases({ module_type_id: parseInt(typeId) });
+      if (!allRes.success) return;
+      const allData: VersionRelease[] = allRes.data;
+      // 判断是否有任意版本与当前产品型号关联
+      const hasProductMatch = productId && allData.some(r =>
+        (r.products || []).some(p => p.id === productId)
+      );
+      if (hasProductMatch) {
+        // 只保留关联该产品型号的版本
+        setModuleReleases(allData.filter(r =>
+          (r.products || []).some(p => p.id === productId)
+        ));
+      } else {
+        setModuleReleases(allData);
       }
     } catch (error) {
       console.error('获取发布版本失败:', error);
@@ -813,7 +827,7 @@ const DeviceDetail: React.FC = () => {
                 if (fromBundle && bundleId) {
                   navigate(`/bundles/${bundleId}`);
                 } else {
-                  navigate('/devices');
+                  navigate(-1);
                 }
               }}
               className="flex items-center text-gray-600 hover:text-gray-900 transition-colors no-print"
@@ -873,11 +887,6 @@ const DeviceDetail: React.FC = () => {
                 {device.product_line_name || '-'}
                 {device.product_model && (
                   <span className="text-gray-500 text-base ml-2">/ {device.product_model}</span>
-                )}
-                {device.product_version_number && (
-                  <span className="text-blue-600 text-sm ml-2">
-                    [{device.product_version_number}{device.product_version_name ? ` - ${device.product_version_name}` : ''}]
-                  </span>
                 )}
               </p>
             </div>

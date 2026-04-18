@@ -47,31 +47,39 @@ router.get('/', async (req, res) => {
     const devicesQuery = `
       SELECT 
         d.id, d.name, d.nickname, d.device_code, d.product_line_id,
-        d.product_id, d.product_version_id, d.customer_id, d.location,
+        d.product_id, d.customer_id, d.location,
         d.status, d.remote_code, d.password, d.notes, d.bundle_id,
         d.created_at, d.updated_at,
         pl.name as product_line_name,
         p.name as product_name,
         p.model as product_model,
-        pv.version_number as product_version_number,
-        pv.version_name as product_version_name,
         c.name as customer_name,
         c.short_name as customer_short_name,
         db.id as bundle_id_val,
         db.bundle_code,
         db.name as bundle_name,
         COUNT(DISTINCT i.id) as issue_count,
-        COUNT(DISTINCT CASE WHEN i.status = 'open' THEN i.id END) as open_issues
+        COUNT(DISTINCT CASE WHEN i.status = 'open' THEN i.id END) as open_issues,
+        (SELECT mv.version_number
+         FROM modules m2
+         JOIN module_versions mv ON mv.module_id = m2.id
+         WHERE m2.device_id = d.id AND m2.type_id = 437838
+         ORDER BY mv.created_at DESC
+         LIMIT 1) as mechanical_version,
+        (SELECT COUNT(*) FROM modules m3 WHERE m3.device_id = d.id) as module_total,
+        (SELECT COUNT(DISTINCT m4.id) FROM modules m4
+         WHERE m4.device_id = d.id
+           AND EXISTS (SELECT 1 FROM module_versions mv4 WHERE mv4.module_id = m4.id)
+        ) as module_versioned
       FROM devices d
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       LEFT JOIN products p ON d.product_id = p.id
-      LEFT JOIN product_versions pv ON d.product_version_id = pv.id
       LEFT JOIN customers c ON d.customer_id = c.id
       LEFT JOIN device_bundles db ON d.bundle_id = db.id
       LEFT JOIN modules m ON d.id = m.device_id
       LEFT JOIN issues i ON d.id = i.device_id
       ${whereClause}
-      GROUP BY d.id, pl.name, p.name, p.model, pv.version_number, pv.version_name, c.name, c.short_name, db.id, db.bundle_code, db.name
+      GROUP BY d.id, pl.name, p.name, p.model, c.name, c.short_name, db.id, db.bundle_code, db.name
       ORDER BY d.created_at DESC
       LIMIT ${parseInt(limitNum)} OFFSET ${parseInt(offset)}
     `;
@@ -116,14 +124,12 @@ router.get('/:id', async (req, res) => {
     const deviceQuery = `
     SELECT
     d.id, d.name, d.nickname, d.device_code, d.product_line_id,
-    d.product_id, d.product_version_id, d.customer_id, d.location,
+    d.product_id, d.customer_id, d.location,
     d.status, d.remote_code, d.password, d.notes, d.bundle_id,
     d.created_at, d.updated_at,
     pl.name as product_line_name,
       p.name as product_name,
       p.model as product_model,
-      pv.version_number as product_version_number,
-      pv.version_name as product_version_name,
       c.name as customer_name,
       c.short_name as customer_short_name,
       db.id as bundle_id_val,
@@ -133,13 +139,12 @@ router.get('/:id', async (req, res) => {
       FROM devices d
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       LEFT JOIN products p ON d.product_id = p.id
-      LEFT JOIN product_versions pv ON d.product_version_id = pv.id
       LEFT JOIN customers c ON d.customer_id = c.id
       LEFT JOIN device_bundles db ON d.bundle_id = db.id
       LEFT JOIN modules m ON d.id = m.device_id
       LEFT JOIN issues i ON d.id = i.device_id
       WHERE d.id = ?
-      GROUP BY d.id, pl.name, p.name, p.model, pv.version_number, pv.version_name, c.name, c.short_name, db.id, db.bundle_code, db.name
+      GROUP BY d.id, pl.name, p.name, p.model, c.name, c.short_name, db.id, db.bundle_code, db.name
         `;
 
     const deviceResult = await query(deviceQuery, [id]);
@@ -215,7 +220,7 @@ router.post('/', [
       });
     }
 
-    const { id, name, device_code, product_line_id, product_id, product_version_id, customer_id, status = '正常', remote_code, password, notes } = req.body;
+    const { id, name, device_code, product_line_id, product_id, customer_id, status = '正常', remote_code, password, notes } = req.body;
 
     // 如果提供了ID，使用用户提供的ID，否则自动生成
     let deviceId = id;
@@ -238,8 +243,8 @@ router.post('/', [
     }
 
     const insertQuery = `
-      INSERT INTO devices(id, name, nickname, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password, notes)
-      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO devices(id, name, nickname, device_code, product_line_id, product_id, customer_id, status, remote_code, password, notes)
+      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     // 自动生成设备俗称：{客户中文名称}{产品简称}{生产序列号末2位数字}号
@@ -268,12 +273,12 @@ router.post('/', [
       console.warn('生成设备俗称失败:', e.message);
     }
 
-    await query(insertQuery, [deviceId, name ?? null, nickname, device_code || null, product_line_id, product_id || null, product_version_id || null, customer_id || null, status, remote_code || null, password || null, notes || null]);
+    await query(insertQuery, [deviceId, name ?? null, nickname, device_code || null, product_line_id, product_id || null, customer_id || null, status, remote_code || null, password || null, notes || null]);
 
     res.status(201).json({
       success: true,
       message: '设备创建成功',
-      data: { id: deviceId, name, nickname, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password }
+      data: { id: deviceId, name, nickname, device_code, product_line_id, product_id, customer_id, status, remote_code, password }
     });
   } catch (error) {
     console.error('创建设备失败:', error);
@@ -330,7 +335,7 @@ router.put('/:id', [
     }
 
     // 只允许更新存在的字段（白名单）
-    const allowedFields = ['name', 'nickname', 'device_code', 'product_line_id', 'product_id', 'product_version_id', 'customer_id', 'status', 'remote_code', 'password', 'notes'];
+    const allowedFields = ['name', 'nickname', 'device_code', 'product_line_id', 'product_id', 'customer_id', 'status', 'remote_code', 'password', 'notes'];
     const filteredUpdates = {};
     Object.keys(updates).forEach(key => {
       if (allowedFields.includes(key) && updates[key] !== undefined) {

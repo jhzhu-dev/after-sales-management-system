@@ -103,8 +103,6 @@ router.get('/:id', async (req, res) => {
         pl.name as product_line_name,
         p.name as product_name,
         p.model as product_model,
-        pv.version_number as product_version_number,
-        pv.version_name as product_version_name,
         c.name as customer_name,
         c.short_name as customer_short_name,
         COUNT(DISTINCT i.id) as issue_count,
@@ -112,7 +110,6 @@ router.get('/:id', async (req, res) => {
       FROM devices d
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       LEFT JOIN products p ON d.product_id = p.id
-      LEFT JOIN product_versions pv ON d.product_version_id = pv.id
       LEFT JOIN customers c ON d.customer_id = c.id
       LEFT JOIN issues i ON d.id = i.device_id
       WHERE d.bundle_id = ?
@@ -254,7 +251,7 @@ router.post('/', [
         }
 
         await connection.execute(
-          `INSERT INTO devices (id, name, nickname, device_code, product_line_id, product_id, product_version_id, customer_id, status, remote_code, password, bundle_id, notes)
+          `INSERT INTO devices (id, name, nickname, device_code, product_line_id, product_id, customer_id, status, remote_code, password, bundle_id, notes)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             deviceId,
@@ -263,7 +260,6 @@ router.post('/', [
             nd.device_code || null,
             nd.product_line_id,
             nd.product_id || null,
-            nd.product_version_id || null,
             customer_id,
             deviceStatus,
             remote_code || null,

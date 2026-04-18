@@ -178,6 +178,40 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     }
 });
 
+// 预览产品资料（返回可内联显示的URL）
+router.get('/:id/preview', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const documents = await query('SELECT * FROM product_documents WHERE id = ?', [id]);
+        if (documents.length === 0) {
+            return res.status(404).json({ success: false, error: '文档不存在' });
+        }
+        const document = documents[0];
+        if (ossService.isOSSPath(document.file_path)) {
+            try {
+                const ossPathMatch = document.file_path.match(/^oss:\/\/([^\/]+)\/(.+)$/);
+                if (!ossPathMatch) {
+                    return res.status(500).json({ success: false, error: '无效的OSS路径' });
+                }
+                const [, , objectName] = ossPathMatch;
+                const url = ossService.client.signatureUrl(objectName, { expires: 3600 });
+                return res.json({ success: true, data: { url, original_name: document.original_name, title: document.title } });
+            } catch (ossError) {
+                console.error('生成预览链接失败:', ossError);
+                return res.status(500).json({ success: false, error: '生成预览链接失败' });
+            }
+        }
+        // 本地文件返回下载链接
+        return res.json({
+            success: true,
+            data: { url: `/api/product-documents/${id}/download`, original_name: document.original_name, title: document.title }
+        });
+    } catch (error) {
+        console.error('获取预览链接失败:', error);
+        res.status(500).json({ success: false, error: '获取预览链接失败' });
+    }
+});
+
 // 下载产品资料
 router.get('/:id/download', async (req, res) => {
     try {

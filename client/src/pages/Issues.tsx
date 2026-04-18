@@ -340,7 +340,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     { key: 'device_id', label: '设备序列号' },
     { key: 'device_nickname', label: '设备简称' },
     { key: 'customer_name', label: '客户' },
-    { key: 'product_version_display', label: '迭代版本' },
     { key: 'module_type', label: '模块类型' },
     { key: 'old_version', label: '旧版本号' },
     { key: 'version_number', label: '新版本号' },
@@ -377,7 +376,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
       release_date: v.release_date ? new Date(v.release_date).toLocaleDateString('zh-CN') : '',
       product_name: v.product_name || '-',
       customer_name: v.customer_name || '-',
-      product_version_display: v.product_version_number ? `${v.product_version_number}${v.product_version_name ? ' - ' + v.product_version_name : ''}` : '-',
     }));
     const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
     exportToExcel(rows, UPGRADE_EXPORT_COLUMNS, `版本演进_${timestamp}`);
@@ -617,17 +615,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         )
       },
       {
-        key: 'product_version',
-        title: '迭代版本',
-        render: (_: any, item: any) => (
-          <div className="text-sm text-gray-900">
-            {item.product_version_number
-              ? `${item.product_version_number}${item.product_version_name ? ' - ' + item.product_version_name : ''}`
-              : '-'}
-          </div>
-        )
-      },
-      {
         key: 'module_type',
         title: '模块类型',
         render: (val: string) => (
@@ -774,7 +761,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  {['订单号','设备简称','客户','迭代版本','模块类型','版本号','变更说明','操作人','发布日期','检查项'].map(h => (
+                  {['订单号','设备简称','客户','模块类型','版本号','变更说明','操作人','发布日期','检查项'].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -802,11 +789,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                         </td>
                         <td className="px-4 py-3 text-sm text-blue-600 font-medium">{item.device_nickname || '-'}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{item.customer_name || '-'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {item.product_version_number
-                            ? `${item.product_version_number}${item.product_version_name ? ' - ' + item.product_version_name : ''}`
-                            : '-'}
-                        </td>
                         <td className="px-4 py-3">
                           <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">{item.module_type}</span>
                         </td>
@@ -1189,7 +1171,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                   <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>订单号</th>
                   <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>产品线</th>
                   <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>产品型号</th>
-                  <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>迭代版本</th>
                   <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>模块类型</th>
                   <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>版本号</th>
                   <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>版本类型</th>
@@ -1204,7 +1185,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                     <td style={{padding:'3pt 6pt'}}>{v.device_name || '-'}</td>
                     <td style={{padding:'3pt 6pt'}}>{v.device_type || '-'}</td>
                     <td style={{padding:'3pt 6pt'}}>{v.product_model || '-'}</td>
-                    <td style={{padding:'3pt 6pt'}}>{v.product_version_number ? `${v.product_version_number}${v.product_version_name ? ' - ' + v.product_version_name : ''}` : '-'}</td>
                     <td style={{padding:'3pt 6pt'}}>{v.module_type || '-'}</td>
                     <td style={{padding:'3pt 6pt',fontFamily:'monospace'}}>{v.old_version ? `${v.old_version} → ` : ''}{v.version_number}</td>
                     <td style={{padding:'3pt 6pt'}}>{v.version_type === 'factory' ? '出厂' : '更新'}</td>

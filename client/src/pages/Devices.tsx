@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { PencilIcon, TrashIcon, EyeIcon, ChevronUpIcon, ChevronDownIcon, PlusIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, EyeIcon, ChevronUpIcon, ChevronDownIcon, PlusIcon, PrinterIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { deviceApi, moduleApi, productLineApi, bundleApi } from '../services/api';
 import { Device, DeviceBundle, FilterOptions, DeviceFormData } from '../types';
 import Layout from '../components/Layout';
@@ -38,16 +38,16 @@ export default function Devices() {
     total: 0,
     pages: 0
   });
-  const [filters, setFilters] = useState<FilterOptions>({
-    page: 1,
-    limit: 10,
-    search: '',
-    type: '',
-    status: ''
-  });
+  const [filters, setFilters] = useState<FilterOptions>(() => ({
+    page: parseInt(searchParams.get('page') || '1'),
+    limit: parseInt(searchParams.get('limit') || '10'),
+    search: searchParams.get('search') || '',
+    type: searchParams.get('type') || '',
+    status: searchParams.get('status') || ''
+  }));
   const [bundleFilters, setBundleFilters] = useState({ page: 1, limit: 10, search: '' });
-  const [sortField, setSortField] = useState<string>('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<string>(searchParams.get('sortField') || '');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>((searchParams.get('sortOrder') as 'asc' | 'desc') || 'asc');
   const [bundleSortField, setBundleSortField] = useState<string>('');
   const [bundleSortOrder, setBundleSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showDeviceForm, setShowDeviceForm] = useState(false);
@@ -134,8 +134,7 @@ export default function Devices() {
         (device.customer_name && device.customer_name.toLowerCase().includes(searchLower)) ||
         (device.customer_short_name && device.customer_short_name.toLowerCase().includes(searchLower)) ||
         (device.remote_code && device.remote_code.toLowerCase().includes(searchLower)) ||
-        (device.product_version_number && device.product_version_number.toLowerCase().includes(searchLower)) ||
-        (device.product_version_name && device.product_version_name.toLowerCase().includes(searchLower))
+        false
       );
     }
 
@@ -375,12 +374,10 @@ export default function Devices() {
         (d.customer_name && d.customer_name.toLowerCase().includes(s)) ||
         (d.customer_short_name && d.customer_short_name.toLowerCase().includes(s)) ||
         (d.remote_code && d.remote_code.toLowerCase().includes(s)) ||
-        (d.product_version_number && d.product_version_number.toLowerCase().includes(s)) ||
-        (d.product_version_name && d.product_version_name.toLowerCase().includes(s))
+        false
       );
     }
     if (filters.type) filtered = filtered.filter(d => d.product_line_name === filters.type);
-    if ((filters as any).version) filtered = filtered.filter(d => d.product_version_number === (filters as any).version);
     if (filters.status) filtered = filtered.filter(d => d.status === filters.status);
     return filtered;
   })();
@@ -390,11 +387,10 @@ export default function Devices() {
     { key: 'device_code', label: '设备编码' },
     { key: 'name', label: '订单号' },
     { key: 'product_name', label: '产品名称' },
-    { key: 'product_version_number', label: '迭代版本' },
-    { key: 'product_version_name', label: '版本名称' },
     { key: 'customer_name', label: '客户' },
     { key: 'customer_short_name', label: '客户简称' },
     { key: 'remote_code', label: '远程码' },
+    { key: 'mechanical_version', label: '机械版本' },
     { key: 'status', label: '状态' },
     { key: 'open_issues', label: '待解决问题' },
     { key: 'created_at', label: '创建时间' },
@@ -481,6 +477,17 @@ export default function Devices() {
   };
 
   const handleRowClick = (device: Device) => {
+    const params = new URLSearchParams();
+    if (filters.page && filters.page > 1) params.set('page', String(filters.page));
+    if (filters.limit && filters.limit !== 10) params.set('limit', String(filters.limit));
+    if (filters.search) params.set('search', filters.search);
+    if (filters.type) params.set('type', filters.type);
+    if (filters.status) params.set('status', filters.status);
+    if (sortField) params.set('sortField', sortField);
+    if (sortOrder !== 'asc') params.set('sortOrder', sortOrder);
+    const qs = params.toString();
+    // 先把当前 URL 的 query 状态写回（replace，不增加历史条目）
+    navigate(`/devices?${qs}`, { replace: true });
     navigate(`/devices/${device.id}`);
   };
 
@@ -541,22 +548,6 @@ export default function Devices() {
       )
     },
     {
-      key: 'product_version_number' as keyof Device,
-      title: <SortableHeader field="product_version_number" title="迭代版本" />,
-      render: (value: string, record: Device) => (
-        value ? (
-          <div>
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-              {value}
-            </span>
-            {record.product_version_name && (
-              <div className="text-xs text-gray-500 mt-0.5">{record.product_version_name}</div>
-            )}
-          </div>
-        ) : <span className="text-gray-300">—</span>
-      )
-    },
-    {
       key: 'customer_name' as keyof Device,
       title: <SortableHeader field="customer_name" title="客户" />,
       render: (value: string, record: Device) => (
@@ -575,6 +566,36 @@ export default function Devices() {
         if (!value) return <span className="text-gray-300">—</span>;
         const display = value.includes(' ') ? value : value.replace(/(\d{3})(?=\d)/g, '$1 ');
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-white text-blue-600 border border-blue-200">{display}</span>;
+      }
+    },
+    {
+      key: 'mechanical_version' as keyof Device,
+      title: '机械版本',
+      render: (value: string) => value
+        ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">{value}</span>
+        : <span className="text-gray-300">—</span>
+    },
+    {
+      key: 'module_versioned' as keyof Device,
+      title: <span title="各模块版本号填写完整度">版本完整度</span>,
+      render: (_: any, record: Device) => {
+        const total = record.module_total ?? 0;
+        const done = record.module_versioned ?? 0;
+        if (total === 0) return <span className="text-gray-300">—</span>;
+        const missing = total - done;
+        if (missing === 0) return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+            <CheckCircleIcon className="h-3.5 w-3.5" />{done}/{total}
+          </span>
+        );
+        return (
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200 cursor-default"
+            title={`还有 ${missing} 个模块未填写版本号`}
+          >
+            <ExclamationTriangleIcon className="h-3.5 w-3.5" />{done}/{total}
+          </span>
+        );
       }
     },
     {
@@ -882,8 +903,8 @@ export default function Devices() {
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>设备编码</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>订单号</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>产品名称</th>
-                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>迭代版本</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>客户</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>机械版本</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>状态</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>创建时间</th>
               </tr>
@@ -895,8 +916,8 @@ export default function Devices() {
                   <td style={{padding:'3pt 6pt'}}>{d.device_code || '-'}</td>
                   <td style={{padding:'3pt 6pt', fontWeight:'500'}}>{d.name}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.product_name || '-'}</td>
-                  <td style={{padding:'3pt 6pt'}}>{d.product_version_number ? `${d.product_version_number}${d.product_version_name ? ` ${d.product_version_name}` : ''}` : '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.customer_name || '-'}</td>
+                  <td style={{padding:'3pt 6pt'}}>{d.mechanical_version || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.status}</td>
                   <td style={{padding:'3pt 6pt'}}>{new Date(d.created_at).toLocaleDateString('zh-CN')}</td>
                 </tr>

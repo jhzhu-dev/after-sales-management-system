@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { Device, DeviceFormData, Customer } from '../types';
-import { productLineApi, customerApi, productApi, productModuleApi, productVersionApi } from '../services/api';
+import { productLineApi, customerApi, productApi, productModuleApi } from '../services/api';
 
 interface DeviceFormProps {
   device?: Device | null;
@@ -16,7 +16,6 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
     device_code: '',
     product_line_id: '',
     product_id: undefined,
-    product_version_id: undefined,
     customer_id: undefined,
     status: '正常',
     remote_code: '',
@@ -25,8 +24,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
   });
 
   const [productLines, setProductLines] = useState<Array<{ id: number, name: string }>>([])
-  const [products, setProducts] = useState<Array<{ id: number, name: string, model?: string }>>([])
-  const [productVersions, setProductVersions] = useState<Array<{ id: number, version_number: string, version_name?: string, is_current: boolean, status: string }>>([])
+  const [products, setProducts] = useState<Array<{ id: number, name: string, model?: string }>>([]);
   const [moduleTypes, setModuleTypes] = useState<Array<{ id: number, name: string, code: string, is_required: boolean }>>([]);
   const [selectedModuleTypeIds, setSelectedModuleTypeIds] = useState<number[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -48,7 +46,6 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         device_code: device.device_code || '',
         product_line_id: device.product_line_id || '',
         product_id: device.product_id || undefined,
-        product_version_id: device.product_version_id || undefined,
         customer_id: device.customer_id || undefined,
         status: device.status as '正常' | '异常' | '维护中',
         remote_code: device.remote_code || '',
@@ -60,7 +57,6 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       }
       if (device.product_id) {
         fetchModuleTypesByProduct(device.product_id);
-        fetchProductVersions(device.product_id);
       }
       if (device.customer_id) {
         const displayName = device.customer_name || '';
@@ -108,27 +104,6 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       }
     } catch (error) {
       console.error('获取产品模块类型失败:', error);
-    }
-  };
-
-  const fetchProductVersions = async (productId: number | null | undefined) => {
-    if (!productId) {
-      setProductVersions([]);
-      return;
-    }
-    try {
-      const result = await productVersionApi.getVersions({ product_id: productId });
-      if (result.success) {
-        setProductVersions(result.data.map((v: any) => ({
-          id: v.id,
-          version_number: v.version_number,
-          version_name: v.version_name,
-          is_current: v.is_current,
-          status: v.status
-        })));
-      }
-    } catch (error) {
-      console.error('获取产品迭代版本失败:', error);
     }
   };
 
@@ -196,10 +171,9 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
   const handleChange = (field: keyof DeviceFormData, value: string | number | undefined) => {
     if (field === 'product_line_id') {
       // 合并成一次 setState，避免覆盖
-      setFormData(prev => ({ ...prev, product_line_id: value as string | number, product_id: undefined, product_version_id: undefined }));
+      setFormData(prev => ({ ...prev, product_line_id: value as string | number, product_id: undefined }));
       fetchProducts(value as string | number);
       fetchModuleTypesByProduct(null);
-      setProductVersions([]);
     } else {
       setFormData(prev => ({ ...prev, [field]: value }));
     }
@@ -213,11 +187,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       setErrors(prev => ({ ...prev, identity: '' }));
     }
 
-    // 当产品型号改变时，获取该产品的模块列表和迭代版本
+    // 当产品型号改变时，获取该产品的模块列表
     if (field === 'product_id') {
       fetchModuleTypesByProduct(value as number | null | undefined);
-      fetchProductVersions(value as number | null | undefined);
-      setFormData(prev => ({ ...prev, product_id: value as number | undefined, product_version_id: undefined }));
+      setFormData(prev => ({ ...prev, product_id: value as number | undefined }));
     }
 
     // 当设备名称改变时，自动匹配产品线
@@ -304,7 +277,6 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         remote_code: formData.remote_code?.trim() || null,
         password: formData.password?.trim() || null,
         notes: formData.notes?.trim() || null,
-        product_version_id: formData.product_version_id || null,
         product_line_id: device.product_line_id as number,
         // 传递 id 供父组件判断是否修改了生产序列号
         id: formData.id?.trim() || device.id,
@@ -316,7 +288,6 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         id: formData.id?.trim() || undefined,
         device_code: formData.device_code?.trim() || null,
         product_id: formData.product_id || null,
-        product_version_id: formData.product_version_id || null,
         customer_id: formData.customer_id || null,
         remote_code: formData.remote_code?.trim() || null,
         password: formData.password?.trim() || null,
@@ -444,28 +415,9 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   </div>
                 )}
               </div>
-            </>
-          )}
 
-          {/* 编辑模式：迭代版本选择 */}
-          {device && productVersions.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                迭代版本
-              </label>
-              <select
-                value={formData.product_version_id || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, product_version_id: e.target.value ? parseInt(e.target.value) : undefined }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">请选择迭代版本（选填）</option>
-                {productVersions.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.version_number}{v.version_name ? ` - ${v.version_name}` : ''}{v.is_current ? ' (当前)' : ''} [{v.status}]
-                  </option>
-                ))}
-              </select>
-            </div>
+
+            </>
           )}
 
           {/* 新增模式：1. 订单号（非必填） */}
@@ -528,18 +480,6 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   placeholder="请输入远程码"
                 />
                 {errors.identity && <p className="text-red-500 text-sm mt-1">{errors.identity}</p>}
-              </div>
-
-              {/* 备注 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-                <textarea
-                  value={formData.notes || ''}
-                  onChange={(e) => handleChange('notes', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="请输入备注（选填）"
-                  rows={2}
-                />
               </div>
 
               {/* 4. 客户 */}
@@ -640,26 +580,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 </div>
               )}
 
-              {/* 6.1 迭代版本 - 选择产品型号后显示 */}
-              {productVersions.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    迭代版本
-                  </label>
-                  <select
-                    value={formData.product_version_id || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, product_version_id: e.target.value ? parseInt(e.target.value) : undefined }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">请选择迭代版本（选填）</option>
-                    {productVersions.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.version_number}{v.version_name ? ` - ${v.version_name}` : ''}{v.is_current ? ' (当前)' : ''} [{v.status}]
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+
 
               {/* 7. 选配模块 */}
               <div>
@@ -699,6 +620,18 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* 备注 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+                <textarea
+                  value={formData.notes || ''}
+                  onChange={(e) => handleChange('notes', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="请输入备注（选填）"
+                  rows={2}
+                />
               </div>
             </>
           )}

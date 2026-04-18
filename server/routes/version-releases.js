@@ -50,6 +50,39 @@ router.get('/categories', async (req, res) => {
 
 // ==================== 附件管理（放在 /:id 路由之前避免冲突）====================
 
+// 预览附件（返回可内联显示的URL）
+router.get('/attachments/:attachmentId/preview', async (req, res) => {
+    try {
+        const { attachmentId } = req.params;
+        const [attachment] = await query('SELECT * FROM release_attachments WHERE id = ?', [attachmentId]);
+        if (!attachment) {
+            return res.status(404).json({ success: false, error: '附件不存在' });
+        }
+        if (ossService.isOSSPath(attachment.file_path)) {
+            try {
+                const ossPathMatch = attachment.file_path.match(/^oss:\/\/([^\/]+)\/(.+)$/);
+                if (!ossPathMatch) {
+                    return res.status(500).json({ success: false, error: '无效的OSS路径' });
+                }
+                const [, , objectName] = ossPathMatch;
+                const url = ossService.client.signatureUrl(objectName, { expires: 3600 });
+                return res.json({ success: true, data: { url, original_name: attachment.original_name } });
+            } catch (ossError) {
+                console.error('生成预览链接失败:', ossError);
+                return res.status(500).json({ success: false, error: '生成预览链接失败' });
+            }
+        }
+        // 本地文件返回下载链接
+        return res.json({
+            success: true,
+            data: { url: `/api/version-releases/attachments/${attachmentId}/download`, original_name: attachment.original_name }
+        });
+    } catch (error) {
+        console.error('获取预览链接失败:', error);
+        res.status(500).json({ success: false, error: '获取预览链接失败' });
+    }
+});
+
 // 下载附件（获取签名URL或本地路径）
 router.get('/attachments/:attachmentId/download', async (req, res) => {
     try {
@@ -141,13 +174,14 @@ router.get('/', async (req, res) => {
 
         const releases = await query(releasesQuery, params);
 
-        // 批量获取所有关联产品型号
+        // 批量获取所有关联产品型号（含产品线信息）
         if (releases.length > 0) {
             const releaseIds = releases.map(r => r.id);
             const productsRows = await query(
-                `SELECT vrp.release_id, p.id, p.name, p.model
+                `SELECT vrp.release_id, p.id, p.name, p.model, pl.id as product_line_id, pl.name as product_line_name
                  FROM version_release_products vrp
                  JOIN products p ON vrp.product_id = p.id
+                 LEFT JOIN product_lines pl ON p.product_line_id = pl.id
                  WHERE vrp.release_id IN (${releaseIds.map(() => '?').join(',')})`,
                 releaseIds
             );
@@ -155,7 +189,7 @@ router.get('/', async (req, res) => {
             const productsMap = {};
             for (const row of productsRows) {
                 if (!productsMap[row.release_id]) productsMap[row.release_id] = [];
-                productsMap[row.release_id].push({ id: row.id, name: row.name, model: row.model });
+                productsMap[row.release_id].push({ id: row.id, name: row.name, model: row.model, product_line_id: row.product_line_id, product_line_name: row.product_line_name });
             }
             for (const r of releases) {
                 r.products = productsMap[r.id] || [];
@@ -288,11 +322,19 @@ router.put('/:id', [
         const { version_number, title, change_log, release_date, category, product_ids } = req.body;
 
         // 检查版本发布记录是否存在
-        const existing = await query('SELECT id FROM version_releases WHERE id = ?', [id]);
+        const existing = await query('SELECT id, source FROM version_releases WHERE id = ?', [id]);
         if (existing.length === 0) {
             return res.status(404).json({
                 success: false,
                 error: '版本发布记录不存在'
+            });
+        }
+
+        // 禁止修改同步记录
+        if (existing[0].source === 'synced') {
+            return res.status(403).json({
+                success: false,
+                error: '该版本记录由产品型号自动同步，请到对应产品型号下修改'
             });
         }
 
@@ -366,6 +408,16 @@ router.put('/:id', [
 router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
+
+        // 检查是否是同步记录
+        const sourceCheck = await query('SELECT source FROM version_releases WHERE id = ?', [id]);
+        if (sourceCheck.length > 0 && sourceCheck[0].source === 'synced') {
+            return res.status(403).json({
+                success: false,
+                error: '该版本记录由产品型号自动同步，请到对应产品型号下删除'
+            });
+        }
+
         // 删除关联的附件文件（OSS/本地）
         const attachments = await query('SELECT * FROM release_attachments WHERE release_id = ?', [id]);
         for (const att of attachments) {

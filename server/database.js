@@ -739,7 +739,98 @@ async function createTables() {
       console.warn('⚠️ device_documents.bundle_id 迁移警告:', err.message);
     }
 
+    // Phase 8b: 补充历史同步版本的附件（幂等：每次启动检查并补充缺失的附件）
+    try {
+      const syncedRels = await query(`
+        SELECT vr.id as release_id, vrp.product_id, pv.id as pv_id
+        FROM version_releases vr
+        JOIN version_release_products vrp ON vr.id = vrp.release_id
+        JOIN product_versions pv ON pv.product_id = vrp.product_id AND pv.version_number = vr.version_number
+        WHERE vr.source = 'synced'
+      `);
+      for (const rel of syncedRels) {
+        const attCount = await query('SELECT COUNT(*) as cnt FROM release_attachments WHERE release_id = ?', [rel.release_id]);
+        const pvDocCount = await query('SELECT COUNT(*) as cnt FROM product_version_documents WHERE product_version_id = ?', [rel.pv_id]);
+        // 仅当附件数量不一致时才重新同步
+        if (attCount[0].cnt !== pvDocCount[0].cnt) {
+          const docs = await query('SELECT * FROM product_version_documents WHERE product_version_id = ?', [rel.pv_id]);
+          await query('DELETE FROM release_attachments WHERE release_id = ?', [rel.release_id]);
+          for (const doc of docs) {
+            const fileName = doc.file_path.split('/').pop() || doc.name;
+            await query(
+              'INSERT INTO release_attachments (release_id, file_name, original_name, file_path, file_size) VALUES (?,?,?,?,?)',
+              [rel.release_id, fileName, doc.name, doc.file_path, doc.file_size || null]
+            );
+          }
+          console.log(`✅ release_id=${rel.release_id} 附件已同步（${docs.length} 个）`);
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ 版本附件同步警告:', err.message);
+    }
+
     console.log('✅ 数据库表结构创建/更新成功');
+
+    // Phase 9: 删除 devices 表中的 product_version_id 字段（功能已移除）
+    try {
+      const [pvIdCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'product_version_id'");
+      if (pvIdCols.length > 0) {
+        // 先删除外键约束（如果存在）
+        try {
+          await pool.execute('ALTER TABLE devices DROP FOREIGN KEY fk_device_product_version');
+        } catch (e) { /* 外键可能不存在，忽略 */ }
+        await pool.execute('ALTER TABLE devices DROP COLUMN product_version_id');
+        console.log('✅ devices.product_version_id 字段已删除');
+      }
+    } catch (err) {
+      console.warn('⚠️ 删除 product_version_id 字段警告:', err.message);
+    }
+
+    // Phase 8: version_releases 添加 source 字段（区分手动创建 vs 产品型号同步）
+    try {
+      const [srcCols] = await pool.execute("SHOW COLUMNS FROM version_releases LIKE 'source'");
+      if (srcCols.length === 0) {
+        await pool.execute("ALTER TABLE version_releases ADD COLUMN source ENUM('manual','synced') NOT NULL DEFAULT 'manual' AFTER release_date");
+        console.log('✅ version_releases.source 字段添加成功');
+        // 将已知的同步记录标记为 synced（通过关联产品型号的版本记录判断）
+        await pool.execute(`
+          UPDATE version_releases vr
+          JOIN version_release_products vrp ON vr.id = vrp.release_id
+          JOIN product_versions pv ON pv.product_id = vrp.product_id AND pv.version_number = vr.version_number
+          SET vr.source = 'synced'
+          WHERE vr.module_type_id = 437838
+        `);
+        console.log('✅ 历史同步记录 source 标记完成');
+
+        // 同步历史附件：将 product_version_documents 对应附件写入 release_attachments
+        const [syncedRels] = await pool.execute(`
+          SELECT vr.id as release_id, vrp.product_id, pv.id as pv_id
+          FROM version_releases vr
+          JOIN version_release_products vrp ON vr.id = vrp.release_id
+          JOIN product_versions pv ON pv.product_id = vrp.product_id AND pv.version_number = vr.version_number
+          WHERE vr.source = 'synced'
+        `);
+        for (const rel of syncedRels) {
+          const [docs] = await pool.execute(
+            'SELECT * FROM product_version_documents WHERE product_version_id = ?',
+            [rel.pv_id]
+          );
+          await pool.execute('DELETE FROM release_attachments WHERE release_id = ?', [rel.release_id]);
+          for (const doc of docs) {
+            const fileName = doc.file_path.split('/').pop() || doc.name;
+            await pool.execute(
+              'INSERT INTO release_attachments (release_id, file_name, original_name, file_path, file_size) VALUES (?,?,?,?,?)',
+              [rel.release_id, fileName, doc.name, doc.file_path, doc.file_size || null]
+            );
+          }
+        }
+        if (syncedRels.length > 0) {
+          console.log(`✅ 历史同步版本附件已补充（共 ${syncedRels.length} 个版本）`);
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ version_releases.source 迁移警告:', err.message);
+    }
   } catch (error) {
     console.error('❌ 创建表结构失败:', error.message);
     throw error;

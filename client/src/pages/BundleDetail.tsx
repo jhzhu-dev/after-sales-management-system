@@ -296,7 +296,6 @@ const BundleDetail: React.FC = () => {
     { key: 'id', label: '生产序列号' },
     { key: 'name', label: '订单号' },
     { key: 'product_name', label: '产品名称' },
-    { key: 'product_version_number', label: '迭代版本' },
     { key: 'customer_name', label: '客户' },
     { key: 'status', label: '状态' },
   ];
@@ -479,7 +478,6 @@ const BundleDetail: React.FC = () => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">订单号</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">简称</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">产品名称</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">迭代版本</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">待解决问题</th>
                       </tr>
@@ -495,13 +493,6 @@ const BundleDetail: React.FC = () => {
                           <td className="px-4 py-3 text-sm text-gray-900">{device.name || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{device.nickname || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{device.product_name || '-'}</td>
-                          <td className="px-4 py-3">
-                            {device.product_version_number ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                {device.product_version_number}
-                              </span>
-                            ) : <span className="text-gray-300">—</span>}
-                          </td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(device.status)}`}>
                               {device.status}

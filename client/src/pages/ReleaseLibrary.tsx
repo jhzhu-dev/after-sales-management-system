@@ -19,6 +19,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import VersionReleaseForm from '../components/VersionReleaseForm';
+import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
 import api, { versionReleaseApi, moduleTypeApi, productLineApi } from '../services/api';
 import { VersionRelease } from '../types';
 
@@ -35,10 +36,13 @@ const ReleaseLibrary: React.FC = () => {
     const [editingRelease, setEditingRelease] = useState<VersionRelease | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [detailAttachments, setDetailAttachments] = useState<any[]>([]);
+    const [previewAttachments, setPreviewAttachments] = useState<Attachment[]>([]);
+    const [previewIndex, setPreviewIndex] = useState(0);
     const [productLines, setProductLines] = useState<{ id: number; name: string }[]>([]);
     const [existingCategories, setExistingCategories] = useState<string[]>([]);
     const [activeCategory, setActiveCategory] = useState<string>('');
     const [activeProductId, setActiveProductId] = useState<number | null>(null);
+    const [activeProductLineId, setActiveProductLineId] = useState<number | null>(null);
 
     const fetchModuleTypes = async () => {
         setModuleTypesLoaded(false);
@@ -106,6 +110,7 @@ const ReleaseLibrary: React.FC = () => {
             fetchReleases();
             setActiveCategory('');
             setActiveProductId(null);
+            setActiveProductLineId(null);
         } else {
             setReleases([]);
             setExistingCategories([]);
@@ -206,6 +211,22 @@ const ReleaseLibrary: React.FC = () => {
         }
     };
 
+    const handlePreviewAttachment = async (attachment: any, allAtts: any[]) => {
+        try {
+            const atts: Attachment[] = [];
+            for (const a of allAtts) {
+                const res = await api.get(`/version-releases/attachments/${a.id}/preview`);
+                if (res.data.success) atts.push({ name: a.original_name, url: res.data.data.url, size: a.file_size });
+            }
+            const idx = allAtts.findIndex(a => a.id === attachment.id);
+            setPreviewAttachments(atts);
+            setPreviewIndex(idx >= 0 ? idx : 0);
+        } catch (err) {
+            console.error('获取预览链接失败:', err);
+            alert('获取预览链接失败');
+        }
+    };
+
     const handleDownloadAttachment = async (attachment: any) => {
         try {
             const res = await api.get(`/version-releases/attachments/${attachment.id}/download`);
@@ -245,6 +266,7 @@ const ReleaseLibrary: React.FC = () => {
     const handlePrint = () => window.print();
 
     return (
+        <>
         <Layout>
             <div className="space-y-4 3xl:space-y-6">
                 <div className="flex items-center justify-between">
@@ -317,37 +339,123 @@ const ReleaseLibrary: React.FC = () => {
                     </div>
 
                     <div className="p-4 3xl:p-6">
-                        {/* 分类过滤 */}
-                        {existingCategories.length > 0 && (
-                            <div className="flex items-center gap-2 mb-2 flex-wrap no-print">
-                                <span className="text-sm text-gray-500 mr-1">分类:</span>
-                                <button
-                                    onClick={() => { setActiveCategory(''); setActiveProductId(null); }}
-                                    className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                                        activeCategory === '' 
-                                            ? 'bg-blue-600 text-white' 
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
-                                >
-                                    全部
-                                </button>
-                                {existingCategories.map(cat => (
+                        {/* 机械 tab：产品线 → 产品型号两级筛选 */}
+                        {(() => {
+                            const activeType = moduleTypes.find(t => t.id === activeTypeId);
+                            if (activeType?.name !== '机械') return null;
+                            // 收集所有产品线
+                            const lineMap = new Map<number, string>();
+                            releases.forEach(r => (r.products || []).forEach(p => {
+                                if (p.product_line_id) lineMap.set(p.product_line_id, p.product_line_name || String(p.product_line_id));
+                            }));
+                            const lines = Array.from(lineMap.entries()).map(([id, name]) => ({ id, name }));
+                            if (lines.length === 0) return null;
+                            return (
+                                <div className="mb-2 no-print">
+                                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                                        <span className="text-sm text-gray-500 mr-1">产品线:</span>
+                                        <button
+                                            onClick={() => { setActiveProductLineId(null); setActiveProductId(null); }}
+                                            className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                                                activeProductLineId === null
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            全部
+                                        </button>
+                                        {lines.map(line => (
+                                            <button
+                                                key={line.id}
+                                                onClick={() => { setActiveProductLineId(line.id); setActiveProductId(null); }}
+                                                className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                                                    activeProductLineId === line.id
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                {line.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {activeProductLineId !== null && (() => {
+                                        const lineReleases = releases.filter(r => (r.products || []).some(p => p.product_line_id === activeProductLineId));
+                                        const productMap = new Map<number, { id: number; name: string }>();
+                                        lineReleases.forEach(r => (r.products || []).forEach(p => {
+                                            if (p.product_line_id === activeProductLineId) productMap.set(p.id, { id: p.id, name: p.name });
+                                        }));
+                                        const products = Array.from(productMap.values());
+                                        if (products.length === 0) return null;
+                                        return (
+                                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                <span className="text-sm text-gray-400 mr-1">型号:</span>
+                                                <button
+                                                    onClick={() => setActiveProductId(null)}
+                                                    className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                                                        activeProductId === null
+                                                            ? 'bg-purple-600 text-white'
+                                                            : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+                                                    }`}
+                                                >
+                                                    全部型号
+                                                </button>
+                                                {products.map(p => (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => setActiveProductId(activeProductId === p.id ? null : p.id)}
+                                                        className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                                                            activeProductId === p.id
+                                                                ? 'bg-purple-600 text-white'
+                                                                : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+                                                        }`}
+                                                    >
+                                                        {p.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            );
+                        })()}
+                        {/* 非机械 tab：原有分类过滤 */}
+                        {(() => {
+                            const activeType = moduleTypes.find(t => t.id === activeTypeId);
+                            if (activeType?.name === '机械') return null;
+                            if (existingCategories.length === 0) return null;
+                            return (
+                                <div className="flex items-center gap-2 mb-2 flex-wrap no-print">
+                                    <span className="text-sm text-gray-500 mr-1">分类:</span>
                                     <button
-                                        key={cat}
-                                        onClick={() => { setActiveCategory(cat); setActiveProductId(null); }}
+                                        onClick={() => { setActiveCategory(''); setActiveProductId(null); }}
                                         className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                                            activeCategory === cat 
-                                                ? 'bg-blue-600 text-white' 
+                                            activeCategory === ''
+                                                ? 'bg-blue-600 text-white'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                         }`}
                                     >
-                                        {cat}
+                                        全部
                                     </button>
-                                ))}
-                            </div>
-                        )}
-                        {/* 产品型号过滤（在分类下方，仅当选中分类且有关联产品时显示）*/}
+                                    {existingCategories.map(cat => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => { setActiveCategory(cat); setActiveProductId(null); }}
+                                            className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                                                activeCategory === cat
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+                            );
+                        })()}
+                        {/* 非机械 tab：原有型号过滤 */}
                         {(() => {
+                            const activeType = moduleTypes.find(t => t.id === activeTypeId);
+                            if (activeType?.name === '机械') return null;
                             const categoryReleases = activeCategory
                                 ? releases.filter(r => r.category === activeCategory)
                                 : releases;
@@ -387,12 +495,26 @@ const ReleaseLibrary: React.FC = () => {
                             return null;
                         })()}
                         {(() => {
-                            const categoryFiltered = activeCategory
-                                ? releases.filter(r => r.category === activeCategory)
-                                : releases;
-                            const filteredReleases = activeProductId
-                                ? categoryFiltered.filter(r => (r.products || []).some(p => p.id === activeProductId))
-                                : categoryFiltered;
+                            const activeType = moduleTypes.find(t => t.id === activeTypeId);
+                            const isMechanical = activeType?.name === '机械';
+                            // 机械：按产品线 → 产品型号过滤
+                            // 非机械：按分类 → 产品型号过滤
+                            let filteredReleases: VersionRelease[];
+                            if (isMechanical) {
+                                let base = activeProductLineId !== null
+                                    ? releases.filter(r => (r.products || []).some(p => p.product_line_id === activeProductLineId))
+                                    : releases;
+                                filteredReleases = activeProductId
+                                    ? base.filter(r => (r.products || []).some(p => p.id === activeProductId))
+                                    : base;
+                            } else {
+                                const categoryFiltered = activeCategory
+                                    ? releases.filter(r => r.category === activeCategory)
+                                    : releases;
+                                filteredReleases = activeProductId
+                                    ? categoryFiltered.filter(r => (r.products || []).some(p => p.id === activeProductId))
+                                    : categoryFiltered;
+                            }
                             if (loading) {
                                 return <div className="text-center py-12">加载中...</div>;
                             }
@@ -457,6 +579,12 @@ const ReleaseLibrary: React.FC = () => {
                                             <div className="pt-4 border-t border-gray-100">
                                                 <div className="flex justify-between items-center mb-2">
                                                     <span className="text-xs text-gray-400">ID: {release.id}</span>
+                                                    {release.source === 'synced' && (
+                                                        <span title="该记录由产品型号自动同步，如需修改请到对应产品型号下操作"
+                                                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 cursor-help">
+                                                            来源：产品型号同步
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button 
@@ -465,20 +593,24 @@ const ReleaseLibrary: React.FC = () => {
                                                     >
                                                         查看详情
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleEditRelease(release)}
-                                                        className="px-3 py-1.5 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded transition-colors"
-                                                        title="编辑"
-                                                    >
-                                                        <PencilIcon className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteRelease(release)}
-                                                        className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
-                                                        title="删除"
-                                                    >
-                                                        <TrashIcon className="w-4 h-4" />
-                                                    </button>
+                                                    {release.source !== 'synced' && (
+                                                        <button
+                                                            onClick={() => handleEditRelease(release)}
+                                                            className="px-3 py-1.5 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded transition-colors"
+                                                            title="编辑"
+                                                        >
+                                                            <PencilIcon className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    {release.source !== 'synced' && (
+                                                        <button
+                                                            onClick={() => handleDeleteRelease(release)}
+                                                            className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
+                                                            title="删除"
+                                                        >
+                                                            <TrashIcon className="w-4 h-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -497,7 +629,7 @@ const ReleaseLibrary: React.FC = () => {
                                                     </div>
                                                     {/* 版本名称 - 突出显示 */}
                                                     <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-1">
+                                                        <div className="flex items-center gap-2 flex-wrap mb-1">
                                                             <h3 className="text-lg font-bold text-gray-900">{release.title}</h3>
                                                             {release.category && (
                                                                 <span className="bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full text-xs">
@@ -507,6 +639,12 @@ const ReleaseLibrary: React.FC = () => {
                                                             {release.products && release.products.length > 0 && release.products.map(p => (
                                                                 <span key={p.id} className="bg-purple-50 text-purple-600 px-2 py-0.5 rounded text-xs">{p.name}</span>
                                                             ))}
+                                                            {release.source === 'synced' && (
+                                                                <span title="该记录由产品型号自动同步，如需修改请到对应产品型号下操作"
+                                                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 cursor-help">
+                                                                    来源：产品型号同步
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <p className="text-sm text-gray-500 line-clamp-1">{release.change_log || '无变更说明'}</p>
                                                     </div>
@@ -524,20 +662,24 @@ const ReleaseLibrary: React.FC = () => {
                                                         >
                                                             详情
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleEditRelease(release)}
-                                                            className="px-3 py-1.5 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded transition-colors"
-                                                            title="编辑"
-                                                        >
-                                                            <PencilIcon className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteRelease(release)}
-                                                            className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
-                                                            title="删除"
-                                                        >
-                                                            <TrashIcon className="w-4 h-4" />
-                                                        </button>
+                                                        {release.source !== 'synced' && (
+                                                            <button
+                                                                onClick={() => handleEditRelease(release)}
+                                                                className="px-3 py-1.5 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded transition-colors"
+                                                                title="编辑"
+                                                            >
+                                                                <PencilIcon className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        {release.source !== 'synced' && (
+                                                            <button
+                                                                onClick={() => handleDeleteRelease(release)}
+                                                                className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
+                                                                title="删除"
+                                                            >
+                                                                <TrashIcon className="w-4 h-4" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -550,8 +692,18 @@ const ReleaseLibrary: React.FC = () => {
 
                         {/* 打印专用版本列表 */}
                         {(() => {
-                            const catFr = activeCategory ? releases.filter((r: any) => r.category === activeCategory) : releases;
-                            const fr = activeProductId ? catFr.filter((r: any) => (r.products || []).some((p: any) => p.id === activeProductId)) : catFr;
+                            const activeType = moduleTypes.find(t => t.id === activeTypeId);
+                            const isMechanical = activeType?.name === '机械';
+                            let fr: any[];
+                            if (isMechanical) {
+                                let base = activeProductLineId !== null
+                                    ? releases.filter((r: any) => (r.products || []).some((p: any) => p.product_line_id === activeProductLineId))
+                                    : releases;
+                                fr = activeProductId ? base.filter((r: any) => (r.products || []).some((p: any) => p.id === activeProductId)) : base;
+                            } else {
+                                const catFr = activeCategory ? releases.filter((r: any) => r.category === activeCategory) : releases;
+                                fr = activeProductId ? catFr.filter((r: any) => (r.products || []).some((p: any) => p.id === activeProductId)) : catFr;
+                            }
                             const currentType = moduleTypes.find((t: any) => t.id === activeTypeId);
                             return (
                                 <div className="hidden print:block" style={{marginTop:'8pt'}}>
@@ -709,6 +861,13 @@ const ReleaseLibrary: React.FC = () => {
                                                 </div>
                                                 <div className="flex items-center gap-2 flex-shrink-0">
                                                     <button
+                                                        onClick={() => handlePreviewAttachment(att, detailAttachments)}
+                                                        className="text-gray-500 hover:text-blue-600 p-1.5 hover:bg-blue-50 rounded transition-colors"
+                                                        title="预览"
+                                                    >
+                                                        <EyeIcon className="h-4 w-4" />
+                                                    </button>
+                                                    <button
                                                         onClick={() => handleDownloadAttachment(att)}
                                                         className="text-blue-600 hover:text-blue-800 p-1.5 hover:bg-blue-50 rounded transition-colors"
                                                         title="下载"
@@ -757,6 +916,16 @@ const ReleaseLibrary: React.FC = () => {
                 </div>
             )}
         </Layout>
+
+        {/* 附件预览 */}
+        {previewAttachments.length > 0 && (
+            <AttachmentViewer
+                attachments={previewAttachments}
+                initialIndex={previewIndex}
+                onClose={() => setPreviewAttachments([])}
+            />
+        )}
+        </>
     );
 };
 

@@ -6,6 +6,85 @@ const fs = require('fs');
 const { query, transaction } = require('../database');
 const ossService = require('../services/oss-service');
 
+// 机械模块类型ID（用于同步到版本库）
+const MECHANICAL_MODULE_TYPE_ID = 437838;
+
+/**
+ * 将产品迭代版本同步到版本库（含附件）
+ * @param {number} product_id 产品型号ID
+ * @param {object} versionData { version_number, version_name, description, release_date }
+ * @param {number} product_version_id 产品迭代版本ID（用于同步附件）
+ */
+async function syncToVersionLibrary(product_id, versionData, product_version_id) {
+    const { version_number, version_name, description, release_date } = versionData;
+    const title = version_name || version_number;
+    try {
+        // 查找已同步记录（通过 version_releases JOIN version_release_products）
+        const existing = await query(`
+            SELECT vr.id FROM version_releases vr
+            JOIN version_release_products vrp ON vr.id = vrp.release_id
+            WHERE vr.module_type_id = ? AND vr.version_number = ? AND vrp.product_id = ? AND vr.source = 'synced'
+        `, [MECHANICAL_MODULE_TYPE_ID, version_number, product_id]);
+
+        let releaseId;
+        if (existing.length > 0) {
+            releaseId = existing[0].id;
+            await query(
+                `UPDATE version_releases SET version_number=?, title=?, change_log=?, release_date=? WHERE id=?`,
+                [version_number, title, description || null, release_date || null, releaseId]
+            );
+        } else {
+            const result = await query(
+                `INSERT INTO version_releases (module_type_id, version_number, title, change_log, release_date, source) VALUES (?,?,?,?,?,'synced')`,
+                [MECHANICAL_MODULE_TYPE_ID, version_number, title, description || null, release_date || null]
+            );
+            releaseId = result.insertId;
+            await query(
+                `INSERT IGNORE INTO version_release_products (release_id, product_id) VALUES (?,?)`,
+                [releaseId, product_id]
+            );
+        }
+
+        // 同步附件：删除旧附件，重新插入
+        if (product_version_id && releaseId) {
+            const docs = await query(
+                'SELECT * FROM product_version_documents WHERE product_version_id = ?',
+                [product_version_id]
+            );
+            await query('DELETE FROM release_attachments WHERE release_id = ?', [releaseId]);
+            for (const doc of docs) {
+                const fileName = doc.file_path.split('/').pop() || doc.name;
+                await query(
+                    `INSERT INTO release_attachments (release_id, file_name, original_name, file_path, file_size) VALUES (?,?,?,?,?)`,
+                    [releaseId, fileName, doc.name, doc.file_path, doc.file_size || null]
+                );
+            }
+        }
+    } catch (e) {
+        console.warn('同步到版本库警告:', e.message);
+    }
+}
+
+/**
+ * 从版本库中删除同步记录
+ * @param {number} product_id 产品型号ID
+ * @param {string} version_number 版本号
+ */
+async function deleteFromVersionLibrary(product_id, version_number) {
+    try {
+        const existing = await query(`
+            SELECT vr.id FROM version_releases vr
+            JOIN version_release_products vrp ON vr.id = vrp.release_id
+            WHERE vr.module_type_id = ? AND vr.version_number = ? AND vrp.product_id = ? AND vr.source = 'synced'
+        `, [MECHANICAL_MODULE_TYPE_ID, version_number, product_id]);
+        for (const row of existing) {
+            await query('DELETE FROM version_releases WHERE id = ?', [row.id]);
+        }
+    } catch (e) {
+        console.warn('从版本库删除同步记录警告:', e.message);
+    }
+}
+
 // 配置文件上传
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -33,8 +112,7 @@ router.get('/', async (req, res) => {
 
         let sql = `
             SELECT pv.*, p.name as product_name, p.model as product_model,
-                   (SELECT COUNT(*) FROM product_version_documents pvd WHERE pvd.product_version_id = pv.id) as document_count,
-                   (SELECT COUNT(*) FROM devices d WHERE d.product_version_id = pv.id) as device_count
+                   (SELECT COUNT(*) FROM product_version_documents pvd WHERE pvd.product_version_id = pv.id) as document_count
             FROM product_versions pv
             LEFT JOIN products p ON pv.product_id = p.id
             WHERE 1=1
@@ -174,6 +252,9 @@ router.post('/', async (req, res) => {
             data: { id: result.insertId, ...req.body },
             message: '迭代版本创建成功'
         });
+
+        // 异步同步到版本库（不阻塞响应）
+        syncToVersionLibrary(product_id, { version_number, version_name, description, release_date }, result.insertId).catch(console.warn);
     } catch (error) {
         console.error('创建迭代版本失败:', error);
         if (error.code === 'ER_DUP_ENTRY') {
@@ -223,6 +304,18 @@ router.put('/:id', async (req, res) => {
         updateValues.push(id);
         await query(`UPDATE product_versions SET ${updateFields.join(', ')} WHERE id = ?`, updateValues);
 
+        // 同步到版本库
+        const updated = await query('SELECT * FROM product_versions WHERE id = ?', [id]);
+        if (updated.length > 0) {
+            const v = updated[0];
+            syncToVersionLibrary(v.product_id, {
+                version_number: v.version_number,
+                version_name: v.version_name,
+                description: v.description,
+                release_date: v.release_date
+            }, v.id).catch(console.warn);
+        }
+
         res.json({ success: true, message: '迭代版本更新成功' });
     } catch (error) {
         console.error('更新迭代版本失败:', error);
@@ -268,6 +361,9 @@ router.delete('/:id', async (req, res) => {
         }
 
         await query('DELETE FROM product_versions WHERE id = ?', [id]);
+
+        // 同步删除版本库中的同步记录
+        deleteFromVersionLibrary(existing[0].product_id, existing[0].version_number).catch(console.warn);
 
         res.json({ success: true, message: '迭代版本删除成功' });
     } catch (error) {
@@ -387,6 +483,21 @@ router.post('/:id/documents', upload.array('files', 10), async (req, res) => {
             data: results,
             message: `${results.length} 个文件上传成功`
         });
+
+        // 上传后触发同步，将最新附件同步到版本发布中心
+        const versionRow = await query(
+            'SELECT pv.*, p.id as prod_id FROM product_versions pv JOIN products p ON pv.product_id = p.id WHERE pv.id = ?',
+            [id]
+        );
+        if (versionRow.length > 0) {
+            const vr = versionRow[0];
+            syncToVersionLibrary(vr.prod_id, {
+                version_number: vr.version_number,
+                version_name: vr.version_name,
+                description: vr.description,
+                release_date: vr.release_date
+            }, parseInt(id)).catch(console.warn);
+        }
     } catch (error) {
         console.error('上传版本文档失败:', error);
         if (req.files) {
@@ -500,6 +611,21 @@ router.delete('/documents/:docId', async (req, res) => {
         await query('DELETE FROM product_version_documents WHERE id = ?', [docId]);
 
         res.json({ success: true, message: '文档删除成功' });
+
+        // 删除后触发同步，将最新附件同步到版本发布中心
+        const versionRow = await query(
+            'SELECT pv.*, p.id as prod_id FROM product_versions pv JOIN products p ON pv.product_id = p.id WHERE pv.id = ?',
+            [document.product_version_id]
+        );
+        if (versionRow.length > 0) {
+            const vr = versionRow[0];
+            syncToVersionLibrary(vr.prod_id, {
+                version_number: vr.version_number,
+                version_name: vr.version_name,
+                description: vr.description,
+                release_date: vr.release_date
+            }, document.product_version_id).catch(console.warn);
+        }
     } catch (error) {
         console.error('删除版本文档失败:', error);
         res.status(500).json({ success: false, error: '删除版本文档失败' });

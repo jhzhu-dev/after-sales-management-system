@@ -18,9 +18,6 @@ export interface Device {
   product_id?: number | null;
   product_name?: string | null;
   product_model?: string | null;
-  product_version_id?: number | null;
-  product_version_number?: string | null;
-  product_version_name?: string | null;
   customer_id?: number;
   customer_name?: string;
   customer_short_name?: string;
@@ -36,6 +33,9 @@ export interface Device {
   bundle_code?: string | null;
   bundle_name?: string | null;
   notes?: string | null;
+  mechanical_version?: string | null;
+  module_total?: number;
+  module_versioned?: number;
 }
 
 // 模块类型 (仅用于设备详情页面)
@@ -65,8 +65,9 @@ export interface VersionRelease {
   change_log?: string;
   category?: string;
   release_date: string;
+  source?: 'manual' | 'synced';
   created_at: string;
-  products?: { id: number; name: string; model: string }[];
+  products?: { id: number; name: string; model: string; product_line_id?: number; product_line_name?: string }[];
 }
 
 // 问题类型
@@ -187,7 +188,6 @@ export interface DeviceFormData {
   device_code?: string | null;
   product_line_id: string | number;
   product_id?: number | null;
-  product_version_id?: number | null;
   customer_id?: number | null;
   status: '正常' | '异常' | '维护中';
   remote_code?: string | null;
@@ -517,7 +517,6 @@ export interface NewBundleDevice {
   device_code?: string;
   product_line_id: number;
   product_id?: number;
-  product_version_id?: number;
   status?: string;
   module_type_ids?: number[];
   notes?: string;

@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { DeviceBundle, Device, Customer, NewBundleDevice } from '../types';
-import { customerApi, deviceApi, bundleApi, productLineApi, productApi, productModuleApi, productVersionApi } from '../services/api';
+import { customerApi, deviceApi, bundleApi, productLineApi, productApi, productModuleApi } from '../services/api';
 
 interface BundleFormProps {
   bundle?: DeviceBundle | null;
@@ -16,11 +16,9 @@ interface NewDeviceRow {
   notes: string;
   product_line_id: number | '';
   product_id: number | '';
-  product_version_id: number | '';
   status: string;
   module_type_ids: number[];
   products: Array<{ id: number; name: string; model?: string }>;
-  versions: Array<{ id: number; version_number: string; version_name?: string }>;
   moduleTypes: Array<{ id: number; name: string; code: string; is_required: boolean }>;
 }
 
@@ -34,11 +32,9 @@ function emptyDeviceRow(): NewDeviceRow {
     notes: '',
     product_line_id: '',
     product_id: '',
-    product_version_id: '',
     status: '正常',
     module_type_ids: [],
     products: [],
-    versions: [],
     moduleTypes: [],
   };
 }
@@ -183,28 +179,26 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
 
   const handleProductLineChange = async (key: number, plId: number | '') => {
     if (!plId) {
-      setNewDeviceRows(prev => prev.map(r => r.key === key ? { ...r, product_line_id: '', product_id: '', product_version_id: '', products: [], versions: [], moduleTypes: [], module_type_ids: [] } : r));
+      setNewDeviceRows(prev => prev.map(r => r.key === key ? { ...r, product_line_id: '', product_id: '', products: [], moduleTypes: [], module_type_ids: [] } : r));
       return;
     }
     try {
       const res = await productApi.getProducts({ product_line_id: Number(plId), is_active: true });
       if (res.success) {
-        setNewDeviceRows(prev => prev.map(r => r.key === key ? { ...r, product_line_id: plId, product_id: '', product_version_id: '', products: res.data, versions: [], moduleTypes: [], module_type_ids: [] } : r));
+        setNewDeviceRows(prev => prev.map(r => r.key === key ? { ...r, product_line_id: plId, product_id: '', products: res.data, moduleTypes: [], module_type_ids: [] } : r));
       }
     } catch (e) { console.error(e); }
   };
 
   const handleProductChange = async (key: number, productId: number | '') => {
     if (!productId) {
-      setNewDeviceRows(prev => prev.map(r => r.key === key ? { ...r, product_id: '', product_version_id: '', versions: [], moduleTypes: [], module_type_ids: [] } : r));
+      setNewDeviceRows(prev => prev.map(r => r.key === key ? { ...r, product_id: '', moduleTypes: [], module_type_ids: [] } : r));
       return;
     }
     try {
-      const [versRes, modRes] = await Promise.all([
-        productVersionApi.getVersions({ product_id: productId }),
+      const [modRes] = await Promise.all([
         productModuleApi.getProductModules(productId)
       ]);
-      const versions = versRes.success ? versRes.data.map((v: any) => ({ id: v.id, version_number: v.version_number, version_name: v.version_name })) : [];
       let moduleTypes: any[] = [];
       let autoSelectedIds: number[] = [];
       if (modRes.success) {
@@ -216,7 +210,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
         }));
         autoSelectedIds = moduleTypes.filter((m: any) => m.is_required).map((m: any) => m.id);
       }
-      setNewDeviceRows(prev => prev.map(r => r.key === key ? { ...r, product_id: productId, product_version_id: '', versions, moduleTypes, module_type_ids: autoSelectedIds } : r));
+      setNewDeviceRows(prev => prev.map(r => r.key === key ? { ...r, product_id: productId, moduleTypes, module_type_ids: autoSelectedIds } : r));
     } catch (e) { console.error(e); }
   };
 
@@ -278,7 +272,6 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
         notes: r.notes.trim() || undefined,
         product_line_id: r.product_line_id as number,
         product_id: r.product_id ? r.product_id as number : undefined,
-        product_version_id: r.product_version_id ? r.product_version_id as number : undefined,
         status: r.status,
         module_type_ids: r.module_type_ids.length > 0 ? r.module_type_ids : undefined,
       }));
@@ -414,19 +407,12 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-0.5">产品型号</label>
                         <select value={row.product_id} onChange={e => handleProductChange(row.key, e.target.value ? parseInt(e.target.value) : '')} disabled={!row.product_line_id} className={`${selectCls} disabled:bg-gray-100`}>
                           <option value="">选择产品</option>
                           {row.products.map(p => (<option key={p.id} value={p.id}>{p.name}{p.model ? ` (${p.model})` : ''}</option>))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-0.5">迭代版本</label>
-                        <select value={row.product_version_id} onChange={e => updateNewDeviceRow(row.key, 'product_version_id', e.target.value ? parseInt(e.target.value) : '')} disabled={!row.product_id} className={`${selectCls} disabled:bg-gray-100`}>
-                          <option value="">选择版本</option>
-                          {row.versions.map(v => (<option key={v.id} value={v.id}>{v.version_number}{v.version_name ? ` - ${v.version_name}` : ''}</option>))}
                         </select>
                       </div>
                       <div>
@@ -438,6 +424,8 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                         </select>
                       </div>
                     </div>
+
+
 
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-0.5">备注</label>
