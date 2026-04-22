@@ -99,8 +99,15 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
       if (res.success) {
         const prods = res.data.map((p: any) => ({ id: p.id, name: p.name, model: p.model }));
         setLineProducts(prods);
-        // 编辑时：保留已预选的 ids（若新产品线中有对应产品）
-        setSelectedProductIds(prev => prev.filter(id => prods.some((p: any) => p.id === id)));
+        // 编辑时，若当前分类与原版本分类相同，直接从 versionRelease.products 恢复预选
+        // 避免 Effect 执行顺序导致 prev 已被清空的竞态问题
+        const isOriginalCategory = versionRelease?.category === currentCategory;
+        if (isOriginalCategory && versionRelease?.products?.length) {
+          const preSelectedIds = versionRelease.products.map(p => p.id);
+          setSelectedProductIds(preSelectedIds.filter(id => prods.some((p: any) => p.id === id)));
+        } else {
+          setSelectedProductIds([]);
+        }
       }
     }).catch(() => {
       if (!cancelled) setLineProducts([]);
@@ -108,7 +115,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
       if (!cancelled) setLoadingProducts(false);
     });
     return () => { cancelled = true; };
-  }, [formData.category, categoryMode, productLines]);
+  }, [formData.category, categoryMode, productLines, versionRelease]);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
