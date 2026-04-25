@@ -34,6 +34,7 @@ router.get('/', async (req, res) => {
         d.name as device_name,
         pl.name as device_type,
         mt.name as module_type,
+        mt.feishu_user_open_id,
         mv.version_number as current_version,
         mv.version_type as current_version_type,
         mv.release_date as current_version_date

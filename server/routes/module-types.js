@@ -36,6 +36,8 @@ router.get('/', async (req, res) => {
         code,
         description,
         is_active,
+        feishu_user_open_id,
+        feishu_user_name,
         created_at,
         updated_at
       FROM module_types
@@ -79,7 +81,7 @@ router.get('/', async (req, res) => {
 router.get('/active', async (req, res) => {
   try {
     const typesQuery = `
-      SELECT id, name, code, description
+      SELECT id, name, code, description, feishu_user_open_id, feishu_user_name
       FROM module_types
       WHERE is_active = 1
       ORDER BY name
@@ -113,6 +115,8 @@ router.get('/:id', async (req, res) => {
         code,
         description,
         is_active,
+        feishu_user_open_id,
+        feishu_user_name,
         created_at,
         updated_at
       FROM module_types
@@ -159,7 +163,7 @@ router.post('/', [
       });
     }
     
-    const { name, code, description, is_active = true } = req.body;
+    const { name, code, description, is_active = true, feishu_user_open_id = null, feishu_user_name = null } = req.body;
     
     // 检查名称和代码是否已存在
     const existingName = await query(
@@ -188,11 +192,11 @@ router.post('/', [
     
     // 创建模块类型（使用自增主键）
     const insertQuery = `
-      INSERT INTO module_types (name, code, description, is_active)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO module_types (name, code, description, is_active, feishu_user_open_id, feishu_user_name)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
     
-    const result = await query(insertQuery, [name, code, description, is_active]);
+    const result = await query(insertQuery, [name, code, description, is_active, feishu_user_open_id || null, feishu_user_name || null]);
     const typeId = result.insertId;
     
     res.status(201).json({
@@ -228,7 +232,7 @@ router.put('/:id', [
     }
     
     const { id } = req.params;
-    const { name, code, description, is_active } = req.body;
+    const { name, code, description, is_active, feishu_user_open_id, feishu_user_name } = req.body;
     
     // 检查模块类型是否存在
     const existingType = await query(
@@ -292,6 +296,14 @@ router.put('/:id', [
     if (is_active !== undefined) {
       updateFields.push('is_active = ?');
       params.push(is_active);
+    }
+    if (feishu_user_open_id !== undefined) {
+      updateFields.push('feishu_user_open_id = ?');
+      params.push(feishu_user_open_id || null);
+    }
+    if (feishu_user_name !== undefined) {
+      updateFields.push('feishu_user_name = ?');
+      params.push(feishu_user_name || null);
     }
     
     if (updateFields.length === 0) {

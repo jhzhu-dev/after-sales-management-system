@@ -15,6 +15,7 @@ router.get('/:productId/modules', async (req, res) => {
         pm.module_type_id,
         mt.name as module_type_name,
         mt.code as module_type_code,
+        mt.feishu_user_open_id,
         pm.is_required,
         pm.default_config,
         pm.created_at

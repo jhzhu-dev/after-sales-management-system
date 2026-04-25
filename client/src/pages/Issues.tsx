@@ -431,7 +431,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             if (response.success) {
         setSelectedIssues([]);
         fetchIssues();
-        alert('批量更新成功');
       }
     } catch (error) {
       console.error('批量更新失败:', error);
@@ -956,7 +955,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               ].map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => { setActiveTab(tab.id); navigate('?tab=' + tab.id, { replace: true }); }}
                   className={`flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all ${
                     activeTab === tab.id
                       ? 'bg-white text-blue-600 shadow-sm'

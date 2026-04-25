@@ -399,6 +399,7 @@ export const moduleTypeApi = {
     code: string;
     description?: string;
     is_active?: boolean;
+    feishu_user_open_id?: string;
   }): Promise<ApiResponse<ModuleType>> =>
     api.post('/module-types', data).then(res => res.data),
 
@@ -408,6 +409,7 @@ export const moduleTypeApi = {
     code?: string;
     description?: string;
     is_active?: boolean;
+    feishu_user_open_id?: string;
   }): Promise<ApiResponse<any>> =>
     api.put(`/module-types/${id}`, data).then(res => res.data),
 
@@ -511,6 +513,11 @@ export const kbArticleApi = {
     api.delete(`/kb-articles/${id}`).then(res => res.data),
   markHelpful: (id: number): Promise<any> =>
     api.post(`/kb-articles/${id}/helpful`).then(res => res.data),
+  uploadAttachment: (files: File[]): Promise<any> => {
+    const fd = new FormData();
+    files.forEach(f => fd.append('files', f));
+    return api.post('/kb-articles/upload-attachment', fd).then(res => res.data);
+  },
 };
 
 // SOP 检查清单模板 API
@@ -563,6 +570,28 @@ export const bundleApi = {
 
   removeDevice: (bundleId: number, deviceId: string): Promise<ApiResponse<any>> =>
     api.delete(`/device-bundles/${bundleId}/devices/${deviceId}`).then(res => res.data),
+};
+
+// ─── 飞书集成 API ──────────────────────────────────────────────────────────────
+export const feishuApi = {
+  getConfig: (): Promise<ApiResponse<any>> =>
+    api.get('/feishu/config').then(res => res.data),
+
+  saveConfig: (data: {
+    app_id?: string;
+    app_secret?: string;
+    chat_id?: string;
+  }): Promise<ApiResponse<any>> =>
+    api.post('/feishu/config', data).then(res => res.data),
+
+  syncUsers: (): Promise<ApiResponse<{ synced: number; chatName?: string; clearedModules?: string[]; timestamp: string }>> =>
+    api.post('/feishu/sync-users').then(res => res.data),
+
+  getUsers: (): Promise<ApiResponse<Array<{ open_id: string; name: string; department: string; avatar_url?: string }>>> =>
+    api.get('/feishu/users').then(res => res.data),
+
+  testMessage: (): Promise<ApiResponse<any>> =>
+    api.post('/feishu/test-message').then(res => res.data),
 };
 
 export default api;

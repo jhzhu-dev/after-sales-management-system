@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { query, transaction } = require('../database');
 const router = express.Router();
+const feishuService = require('../services/feishu-service');
 
 // 获取所有设备
 router.get('/', async (req, res) => {
@@ -274,6 +275,31 @@ router.post('/', [
     }
 
     await query(insertQuery, [deviceId, name ?? null, nickname, device_code || null, product_line_id, product_id || null, customer_id || null, status, remote_code || null, password || null, notes || null]);
+
+    // ── 飞书通知（异步，支持多人）──
+    const { notify_open_id, notify_open_ids, send_notify } = req.body;
+    // 合并单值与数组，兼容旧格式
+    const recipientIds = [
+      ...(Array.isArray(notify_open_ids) ? notify_open_ids : []),
+      ...(notify_open_id && !Array.isArray(notify_open_ids) ? [notify_open_id] : [])
+    ].filter(Boolean);
+
+    if (send_notify && recipientIds.length > 0) {
+      query(`SELECT d.*, pl.name as product_line_name, p.model as product_model, c.name as customer_name
+             FROM devices d
+             LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+             LEFT JOIN products p ON d.product_id = p.id
+             LEFT JOIN customers c ON d.customer_id = c.id
+             WHERE d.id = ?`, [deviceId])
+        .then(rows => {
+          if (rows[0]) {
+            recipientIds.forEach(openId => {
+              feishuService.sendDeviceNotification(rows[0], openId);
+            });
+          }
+        })
+        .catch(() => {});
+    }
 
     res.status(201).json({
       success: true,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -8,10 +8,13 @@ import {
   BookOpenIcon,
   HandThumbUpIcon,
   EyeIcon,
+  PaperClipIcon,
+  ArrowUpTrayIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
 import { kbArticleApi, moduleTypeApi } from '../services/api';
 import { KbArticle } from '../types';
+import AttachmentViewer, { Attachment } from './AttachmentViewer';
 
 const CAT_PALETTE = [
   'bg-blue-100 text-blue-700',
@@ -41,6 +44,13 @@ interface FormData {
   is_pinned: boolean;
 }
 
+interface PendingAttachment {
+  name: string;
+  url: string;
+  ossPath: string | null;
+  size: number;
+}
+
 const BLANK: FormData = {
   title: '',
   symptom: '',
@@ -58,6 +68,7 @@ export default function KnowledgeBase({ productLines }: Props) {
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('');
   const [plFilter, setPlFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
   const [detail, setDetail] = useState<KbArticle | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -76,6 +87,11 @@ export default function KnowledgeBase({ productLines }: Props) {
   const [form, setForm] = useState<FormData>(BLANK);
   const [errs, setErrs] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [pendingAtts, setPendingAtts] = useState<PendingAttachment[]>([]);
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewAtts, setPreviewAtts] = useState<Attachment[]>([]);
+  const [previewIdx, setPreviewIdx] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -106,6 +122,7 @@ export default function KnowledgeBase({ productLines }: Props) {
   const openCreate = () => {
     setEditId(null);
     setForm(BLANK);
+    setPendingAtts([]);
     setErrs({});
     setShowForm(true);
   };
@@ -119,9 +136,17 @@ export default function KnowledgeBase({ productLines }: Props) {
       solution: a.solution,
       category: a.category,
       product_line_id: a.product_line_id ? String(a.product_line_id) : '',
-      tags: a.tags ? a.tags.join(', ') : '',
+      tags: a.tags ? a.tags.join('/') : '',
       is_pinned: a.is_pinned,
     });
+    // 已有附件作为 pending（url 已刷新，可直接复用）
+    const existingAtts: PendingAttachment[] = (a.attachments || []).map(att => ({
+      name: att.name,
+      url: att.url,
+      ossPath: att.ossPath || null,
+      size: att.size || 0,
+    }));
+    setPendingAtts(existingAtts);
     setErrs({});
     setShowForm(true);
     setDetail(null);
@@ -156,6 +181,34 @@ export default function KnowledgeBase({ productLines }: Props) {
     return Object.keys(e).length === 0;
   };
 
+  const handleAttachmentUpload = async (files: File[]) => {
+    if (!files.length) return;
+    setUploadingCount(c => c + files.length);
+    try {
+      const result = await kbArticleApi.uploadAttachment(files);
+      if (result.success) {
+        setPendingAtts(prev => [...prev, ...result.data]);
+      } else {
+        alert('上传失败: ' + (result.error || '未知错误'));
+      }
+    } catch {
+      alert('上传失败，请检查网络连接');
+    } finally {
+      setUploadingCount(c => c - files.length);
+    }
+  };
+
+  const handleRemoveAtt = (idx: number) => {
+    setPendingAtts(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
@@ -168,7 +221,8 @@ export default function KnowledgeBase({ productLines }: Props) {
         solution: form.solution.trim(),
         category: form.category,
         product_line_id: form.product_line_id ? parseInt(form.product_line_id) : undefined,
-        tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        tags: form.tags ? form.tags.split('/').map(t => t.trim()).filter(Boolean) : [],
+        attachments: pendingAtts.length > 0 ? pendingAtts : [],
         is_pinned: form.is_pinned,
       };
       if (editId) {
@@ -177,6 +231,7 @@ export default function KnowledgeBase({ productLines }: Props) {
         await kbArticleApi.createArticle(payload);
       }
       setShowForm(false);
+      setPendingAtts([]);
       load();
     } catch {
       alert('保存失败，请重试');
@@ -186,6 +241,16 @@ export default function KnowledgeBase({ productLines }: Props) {
   };
 
   const f = (k: keyof FormData, v: any) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleTagClick = (e: React.MouseEvent, tag: string) => {
+    e.stopPropagation();
+    setTagFilter(prev => prev === tag ? '' : tag);
+    setDetail(null);
+  };
+
+  const displayedArticles = tagFilter
+    ? articles.filter(a => a.tags?.includes(tagFilter))
+    : articles;
 
   return (
     <div className="space-y-4">
@@ -219,7 +284,15 @@ export default function KnowledgeBase({ productLines }: Props) {
             {productLines.map(pl => <option key={pl.id} value={String(pl.id)}>{pl.name}</option>)}
           </select>
           <div className="flex-1" />
-          <span className="text-sm text-gray-400">共 {articles.length} 条</span>
+          {tagFilter && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-xs font-medium">
+              #{tagFilter}
+              <button onClick={() => setTagFilter('')} className="ml-0.5 hover:text-blue-900">
+                <XMarkIcon className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          <span className="text-sm text-gray-400">共 {displayedArticles.length} 条</span>
           <button
             onClick={openCreate}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -239,9 +312,15 @@ export default function KnowledgeBase({ productLines }: Props) {
           <p className="text-gray-500 font-medium">暂无知识词条</p>
           <p className="text-gray-400 text-sm mt-1">点击"新增词条"开始积累运维知识</p>
         </div>
+      ) : displayedArticles.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
+          <BookOpenIcon className="h-12 w-12 text-gray-200 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">没有匹配关键词 <span className="text-blue-600">#{tagFilter}</span> 的词条</p>
+          <button onClick={() => setTagFilter('')} className="mt-2 text-sm text-blue-500 hover:underline">清除筛选</button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {articles.map(a => (
+          {displayedArticles.map(a => (
             <div
               key={a.id}
               onClick={() => handleView(a)}
@@ -264,7 +343,15 @@ export default function KnowledgeBase({ productLines }: Props) {
                   <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium">{a.product_line_name}</span>
                 )}
                 {a.tags?.map(t => (
-                  <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">#{t}</span>
+                  <span
+                    key={t}
+                    onClick={e => handleTagClick(e, t)}
+                    className={`text-xs px-2 py-0.5 rounded-full cursor-pointer transition-colors ${
+                      tagFilter === t
+                        ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
+                        : 'bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                    }`}
+                  >#{t}</span>
                 ))}
               </div>
               <p
@@ -276,8 +363,11 @@ export default function KnowledgeBase({ productLines }: Props) {
               <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-50">
                 <div className="flex items-center gap-3 text-xs text-gray-400">
                   <span className="flex items-center gap-1"><EyeIcon className="h-3.5 w-3.5" />{a.view_count}</span>
-                  <span className="flex items-center gap-1"><HandThumbUpIcon className="h-3.5 w-3.5" />{a.helpful_count}</span>
-                </div>
+                  <span className="flex items-center gap-1"><HandThumbUpIcon className="h-3.5 w-3.5" />{a.helpful_count}</span>                  {a.attachments && a.attachments.length > 0 && (
+                    <span className="flex items-center gap-1">
+                      <PaperClipIcon className="h-3.5 w-3.5" />{a.attachments.length}
+                    </span>
+                  )}                </div>
                 <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => openEdit(a)}
@@ -318,7 +408,15 @@ export default function KnowledgeBase({ productLines }: Props) {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium">{detail.product_line_name}</span>
                   )}
                   {detail.tags?.map(t => (
-                    <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">#{t}</span>
+                    <span
+                      key={t}
+                      onClick={e => handleTagClick(e, t)}
+                      className={`text-xs px-2 py-0.5 rounded-full cursor-pointer transition-colors ${
+                        tagFilter === t
+                          ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
+                          : 'bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                      }`}
+                    >#{t}</span>
                   ))}
                 </div>
               </div>
@@ -348,8 +446,44 @@ export default function KnowledgeBase({ productLines }: Props) {
               <div>
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">解决方案</h3>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed bg-green-50 rounded-lg p-3">{detail.solution}</p>
-              </div>
-            </div>
+              </div>              {/* 附件列表 */}
+              {detail.attachments && detail.attachments.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1">
+                    <PaperClipIcon className="h-3.5 w-3.5" />附件 ({detail.attachments.length})
+                  </h3>
+                  <ul className="space-y-1.5">
+                    {detail.attachments.map((att, i) => {
+                      const ext = att.name.split('.').pop()?.toLowerCase() || '';
+                      const isImg = ['jpg','jpeg','png','gif','webp','bmp','svg'].includes(ext);
+                      const isPdf = ext === 'pdf';
+                      const isVideo = ['mp4','webm','mov','avi'].includes(ext);
+                      const canPreview = isImg || isPdf || isVideo;
+                      return (
+                        <li key={i} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded px-3 py-1.5 text-sm">
+                          <PaperClipIcon className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+                          {canPreview ? (
+                            <button
+                              onClick={() => {
+                                const atts: Attachment[] = (detail.attachments || []).map(a => ({ name: a.name, url: a.url, size: a.size }));
+                                setPreviewAtts(atts);
+                                setPreviewIdx(i);
+                              }}
+                              className="text-blue-700 hover:underline truncate text-left flex-1"
+                            >{att.name}</button>
+                          ) : (
+                            <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline truncate flex-1">{att.name}</a>
+                          )}
+                          <span className="text-gray-400 text-xs flex-shrink-0">{att.size ? formatFileSize(att.size) : ''}</span>
+                          <a href={att.url} download={att.name} className="text-gray-400 hover:text-blue-600 flex-shrink-0" title="下载">
+                            <ArrowUpTrayIcon className="h-3.5 w-3.5 rotate-180" />
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}            </div>
             <div className="flex items-center justify-between px-5 pb-5 border-t pt-4">
               <div className="flex items-center gap-4 text-xs text-gray-400">
                 <span className="flex items-center gap-1"><EyeIcon className="h-3.5 w-3.5" />查看 {detail.view_count} 次</span>
@@ -467,15 +601,64 @@ export default function KnowledgeBase({ productLines }: Props) {
               {/* 标签 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  标签 <span className="text-gray-400 font-normal text-xs">（逗号分隔）</span>
+                  标签 <span className="text-gray-400 font-normal text-xs">（用 / 分隔）</span>
                 </label>
                 <input
                   type="text"
                   value={form.tags}
                   onChange={e => f('tags', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="如：屏幕, 断电, 底盘"
+                  placeholder="如：屏幕/断电/底盘"
                 />
+              </div>
+
+              {/* 附件上传 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  附件 <span className="text-gray-400 font-normal text-xs">（选填，支持图片、PDF、日志等）</span>
+                </label>
+                <div
+                  className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => {
+                    e.preventDefault();
+                    const files = Array.from(e.dataTransfer.files);
+                    if (files.length) handleAttachmentUpload(files);
+                  }}
+                >
+                  <ArrowUpTrayIcon className="h-5 w-5 mx-auto text-blue-400 mb-1" />
+                  <p className="text-xs text-blue-500">
+                    {uploadingCount > 0 ? `上传中 (${uploadingCount})…` : '点击或拖拽上传附件'}
+                  </p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={e => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length) handleAttachmentUpload(files);
+                    e.target.value = '';
+                  }}
+                />
+                {pendingAtts.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {pendingAtts.map((att, i) => (
+                      <li key={i} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded px-3 py-1.5 text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <PaperClipIcon className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                          <span className="truncate text-gray-700">{att.name}</span>
+                          <span className="text-gray-400 flex-shrink-0">{formatFileSize(att.size)}</span>
+                        </div>
+                        <button type="button" onClick={() => handleRemoveAtt(i)} className="ml-2 text-red-400 hover:text-red-600 flex-shrink-0">
+                          <XMarkIcon className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               {/* 置顶 */}
@@ -508,6 +691,14 @@ export default function KnowledgeBase({ productLines }: Props) {
             </form>
           </div>
         </div>
+      )}
+      {/* 附件预览 */}
+      {previewAtts.length > 0 && (
+        <AttachmentViewer
+          attachments={previewAtts}
+          initialIndex={previewIdx}
+          onClose={() => setPreviewAtts([])}
+        />
       )}
     </div>
   );

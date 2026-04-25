@@ -831,6 +831,73 @@ async function createTables() {
     } catch (err) {
       console.warn('⚠️ version_releases.source 迁移警告:', err.message);
     }
+
+    // ==================== 飞书通知集成 ====================
+    // feishu_config 表：存储飞书应用配置
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS feishu_config (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        app_id VARCHAR(100),
+        app_secret VARCHAR(200),
+        chat_id VARCHAR(100) COMMENT '统一通知群',
+        issues_chat_id VARCHAR(100) COMMENT '售后问题通知群（已废弃，保留向后兼容）',
+        devices_chat_id VARCHAR(100) COMMENT '设备创建通知群（已废弃，保留向后兼容）',
+        upgrades_chat_id VARCHAR(100) COMMENT '升级任务通知群（已废弃，保留向后兼容）',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log('✅ feishu_config 表就绪');
+
+    // feishu_users 表：同步的飞书通讯录员工
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS feishu_users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        open_id VARCHAR(100) UNIQUE NOT NULL,
+        union_id VARCHAR(100),
+        name VARCHAR(100) NOT NULL,
+        department VARCHAR(100),
+        avatar_url VARCHAR(500),
+        is_active TINYINT(1) DEFAULT 1,
+        synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log('✅ feishu_users 表就绪');
+
+    // issues 表新增 assignee_open_id 列（向后兼容）
+    try {
+      const [aoidCols] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'assignee_open_id'");
+      if (aoidCols.length === 0) {
+        await pool.execute("ALTER TABLE issues ADD COLUMN assignee_open_id VARCHAR(100) DEFAULT NULL AFTER assignee");
+        console.log('✅ issues.assignee_open_id 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ issues.assignee_open_id 迁移警告:', err.message);
+    }
+
+    // module_types 表新增 feishu_user_open_id 列（关联飞书默认负责人）
+    try {
+      const [fuCols] = await pool.execute("SHOW COLUMNS FROM module_types LIKE 'feishu_user_open_id'");
+      if (fuCols.length === 0) {
+        await pool.execute("ALTER TABLE module_types ADD COLUMN feishu_user_open_id VARCHAR(100) DEFAULT NULL COMMENT '关联飞书负责人 open_id'");
+        console.log('✅ module_types.feishu_user_open_id 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ module_types.feishu_user_open_id 迁移警告:', err.message);
+    }
+
+    // feishu_config 表新增 chat_id 列（统一通知群，合并三个群为一个）
+    try {
+      const [chatIdCols] = await pool.execute("SHOW COLUMNS FROM feishu_config LIKE 'chat_id'");
+      if (chatIdCols.length === 0) {
+        await pool.execute("ALTER TABLE feishu_config ADD COLUMN chat_id VARCHAR(100) DEFAULT NULL COMMENT '统一通知群 Chat ID' AFTER app_secret");
+        // 迁移旧数据：用 issues_chat_id（最常用）作为新 chat_id
+        await pool.execute("UPDATE feishu_config SET chat_id = COALESCE(NULLIF(issues_chat_id,''), NULLIF(devices_chat_id,''), NULLIF(upgrades_chat_id,''))");
+        console.log('✅ feishu_config.chat_id 字段添加成功，旧数据已迁移');
+      }
+    } catch (err) {
+      console.warn('⚠️ feishu_config.chat_id 迁移警告:', err.message);
+    }
+
   } catch (error) {
     console.error('❌ 创建表结构失败:', error.message);
     throw error;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     BuildingOfficeIcon,
     CpuChipIcon,
@@ -24,6 +25,7 @@ import api, { versionReleaseApi, moduleTypeApi, productLineApi } from '../servic
 import { VersionRelease } from '../types';
 
 const ReleaseLibrary: React.FC = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [releases, setReleases] = useState<VersionRelease[]>([]);
     const [moduleTypes, setModuleTypes] = useState<any[]>([]);
     const [activeTypeId, setActiveTypeId] = useState<number | null>(null);
@@ -51,7 +53,9 @@ const ReleaseLibrary: React.FC = () => {
             if (response.success) {
                 setModuleTypes(response.data);
                 if (response.data.length > 0 && activeTypeId === null) {
-                    setActiveTypeId(response.data[0].id);
+                    const urlTypeId = parseInt(searchParams.get('typeId') || '', 10);
+                    const found = urlTypeId && response.data.find((t: any) => t.id === urlTypeId);
+                    setActiveTypeId(found ? urlTypeId : response.data[0].id);
                 }
                 if (response.data.length === 0) {
                     setActiveTypeId(null);
@@ -325,7 +329,7 @@ const ReleaseLibrary: React.FC = () => {
                             {moduleTypes.map((type) => (
                                 <button
                                     key={type.id}
-                                    onClick={() => setActiveTypeId(type.id)}
+                                    onClick={() => { setActiveTypeId(type.id); setSearchParams({ typeId: String(type.id) }, { replace: true }); }}
                                     className={`flex items-center gap-2 py-4 px-6 border-b-2 font-medium text-sm transition-colors ${activeTypeId === type.id
                                             ? 'border-blue-500 text-blue-600 bg-blue-50/30'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

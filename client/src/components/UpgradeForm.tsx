@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { DeviceUpgradeFormData, Device } from '../types';
-import { deviceApi } from '../services/api';
+import { DeviceUpgradeFormData, Device, FeishuUser } from '../types';
+import { deviceApi, feishuApi } from '../services/api';
+import FeishuUserPicker from './FeishuUserPicker';
 
 interface UpgradeFormProps {
     deviceId: string;
@@ -21,7 +22,19 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
     const [loading, setLoading] = useState(false);
     const [devices, setDevices] = useState<Device[]>([]);
 
+    // 飞书通知
+    const [feishuUsers, setFeishuUsers] = useState<FeishuUser[]>([]);
+    const [feishuEnabled, setFeishuEnabled] = useState(false);
+    const [operatorOpenId, setOperatorOpenId] = useState('');
+    const [notifyOperator, setNotifyOperator] = useState(true);
+
     useEffect(() => {
+        feishuApi.getUsers().then(res => {
+            if (res.success && res.data && res.data.length > 0) {
+                setFeishuUsers(res.data as FeishuUser[]);
+                setFeishuEnabled(true);
+            }
+        }).catch(() => {});
         if (!deviceId) {
             fetchDevices();
         }
@@ -40,7 +53,11 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
         e.preventDefault();
         setLoading(true);
         try {
-            await onSubmit(formData);
+            await onSubmit({
+                ...formData,
+                operator_open_id: operatorOpenId || undefined,
+                notify_operator: feishuEnabled && notifyOperator && !!operatorOpenId,
+            });
             onClose();
         } catch (error) {
             console.error('保存升级记录失败:', error);
@@ -103,15 +120,30 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">执行人 *</label>
-                            <input
-                                type="text"
-                                name="operator_id"
-                                value={formData.operator_id}
-                                onChange={handleChange}
-                                required
-                                placeholder="执行工程师姓名"
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
+                            {feishuEnabled ? (
+                                <FeishuUserPicker
+                                    users={feishuUsers}
+                                    value={operatorOpenId}
+                                    onChange={(openId, name) => {
+                                        setOperatorOpenId(openId);
+                                        setFormData(prev => ({ ...prev, operator_id: name }));
+                                    }}
+                                    notifyChecked={notifyOperator}
+                                    onNotifyChange={setNotifyOperator}
+                                    notifyLabel="通知执行人（飞书）"
+                                    placeholder="选择执行工程师"
+                                />
+                            ) : (
+                                <input
+                                    type="text"
+                                    name="operator_id"
+                                    value={formData.operator_id}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="执行工程师姓名"
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            )}
                         </div>
                     </div>
 

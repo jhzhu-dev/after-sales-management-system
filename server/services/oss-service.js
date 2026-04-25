@@ -312,6 +312,14 @@ class OSSService {
         return `${base}/devices/${deviceFolder}/module-versions/${moduleFolder}/${versionFolder}/${params.fileName}`;
       }
 
+      case 'kb-attachments-pending': {
+        return `${base}/knowledge-base/pending/${params.fileName}`;
+      }
+
+      case 'kb-attachments': {
+        return `${base}/knowledge-base/${params.articleId}/${params.fileName}`;
+      }
+
       default:
         throw new Error(`buildPathByType: 未知路径类型 "${type}"`);
     }

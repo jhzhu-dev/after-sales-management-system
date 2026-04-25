@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { query } = require('../database');
 const router = express.Router();
+const feishuService = require('../services/feishu-service');
 
 /**
  * @route GET /api/device-upgrades
@@ -120,6 +121,16 @@ router.post('/', [
             data: { id: result.insertId },
             message: '升级记录创建成功'
         });
+
+        // ── 飞书通知（异步）──
+        const { operator_open_id, notify_operator } = req.body;
+        if (notify_operator && operator_open_id) {
+          const upgradeData = {
+            id: result.insertId, device_id, upgrade_type,
+            description, old_version, new_version
+          };
+          feishuService.sendUpgradeNotification(upgradeData, operator_open_id).catch(() => {});
+        }
     } catch (error) {
         console.error('创建升级记录失败:', error);
         res.status(500).json({ success: false, error: '创建升级记录失败' });

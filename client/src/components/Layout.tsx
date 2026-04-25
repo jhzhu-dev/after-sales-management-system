@@ -23,6 +23,7 @@ const navigation = [
   { name: '产品线管理', href: '/product-lines', icon: CubeIcon },
   { name: '版本库中心', href: '/releases', icon: WrenchScrewdriverIcon },
   { name: '系统设置', href: '/settings', icon: Cog6ToothIcon },
+  { name: '飞书设置', href: '/feishu-settings', icon: Cog6ToothIcon, adminOnly: true },
 ];
 
 export default function Layout({ children }: LayoutProps) {
@@ -45,7 +46,7 @@ export default function Layout({ children }: LayoutProps) {
 
         <nav className="mt-4 3xl:mt-8 px-3 3xl:px-4">
           <ul className="space-y-1 3xl:space-y-2">
-            {navigation.map((item) => {
+            {navigation.filter(item => item.adminOnly ? user?.role === 'admin' : true).map((item) => {
               const isActive = location.pathname === item.href;
               return (
                 <li key={item.name}>

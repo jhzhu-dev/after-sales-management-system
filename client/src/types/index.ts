@@ -1,3 +1,12 @@
+// 飞书用户
+export interface FeishuUser {
+  open_id: string;
+  name: string;
+  department: string;
+  avatar_url?: string;
+  synced_at?: string;
+}
+
 // 客户类型
 export interface Customer {
   id: number;
@@ -79,6 +88,9 @@ export interface Issue {
   severity: 'low' | 'medium' | 'high';
   status: 'open' | 'in_progress' | 'closed';
   assignee?: string;
+  assignee_open_id?: string;
+  follower_open_ids?: string[];
+  follower_names?: string[];
   contact_person?: string;
   contact_phone?: string;
   is_visit_required: boolean;
@@ -194,6 +206,11 @@ export interface DeviceFormData {
   password?: string | null;
   notes?: string | null;
   selectedModuleTypeIds?: number[];
+  // 飞书通知字段（仅前端用，不入库）
+  notify_open_ids?: string[];  // 多人通知
+  send_notify?: boolean;
+  // 展个居学兼容
+  notify_open_id?: string;
 }
 
 export interface ModuleFormData {
@@ -218,8 +235,8 @@ export interface IssueFormData {
   description: string;
   severity: 'low' | 'medium' | 'high';
   status: 'open' | 'in_progress' | 'closed';
-  assignee?: string;
-  contact_person?: string;
+  assignee?: string;  assignee_open_id?: string;
+  notify_assignee?: boolean;  contact_person?: string;
   contact_phone?: string;
   is_visit_required?: boolean;
   visit_at?: string;
@@ -236,6 +253,8 @@ export interface DeviceUpgradeFormData {
   old_version?: string;
   new_version?: string;
   operator_id?: string;
+  operator_open_id?: string;
+  notify_operator?: boolean;
   upgrade_at?: string;
 }
 
@@ -351,6 +370,7 @@ export interface ModuleType {
   code: string;
   description?: string;
   is_active: boolean;
+  feishu_user_open_id?: string | null;  // 关联飞书默认负责人
   created_at: string;
   updated_at: string;
 }
@@ -442,6 +462,7 @@ export interface KbArticle {
   product_line_id?: number | null;
   product_line_name?: string | null;
   tags?: string[] | null;
+  attachments?: Array<{ name: string; url: string; ossPath?: string | null; size?: number }> | null;
   is_pinned: boolean;
   view_count: number;
   helpful_count: number;
@@ -520,6 +541,7 @@ export interface NewBundleDevice {
   status?: string;
   module_type_ids?: number[];
   notes?: string;
+  notify_open_ids?: string[];
 }
 
 export interface DeviceBundleFormData {

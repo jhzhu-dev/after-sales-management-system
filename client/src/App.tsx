@@ -16,6 +16,7 @@ const ProductLines = React.lazy(() => import('./pages/ProductLines'));
 const ProductDetail = React.lazy(() => import('./pages/ProductDetail'));
 const Products = React.lazy(() => import('./pages/Products'));
 const BundleDetail = React.lazy(() => import('./pages/BundleDetail'));
+const FeishuSettings = React.lazy(() => import('./pages/FeishuSettings'));
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
               <Route path="/after-sales" element={<Navigate to="/issues" replace />} />
               <Route path="/upgrades" element={<Navigate to="/issues" replace />} />
               <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+              <Route path="/feishu-settings" element={<PrivateRoute><FeishuSettings /></PrivateRoute>} />
             </Routes>
           </React.Suspense>
         </div>

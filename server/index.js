@@ -49,6 +49,9 @@ const sopTemplateRoutes = require('./routes/module-sop-templates');
 // Phase 7: 多合一设备组合路由
 const deviceBundleRoutes = require('./routes/device-bundles');
 
+// 飞书通知集成
+const feishuRoutes = require('./routes/feishu');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -185,6 +188,10 @@ app.use('/api/module-sop-templates', sopTemplateRoutes);
 
 // 多合一设备组合路由
 app.use('/api/device-bundles', deviceBundleRoutes);
+
+// 飞书管理路由（需要登录）
+app.use('/api/feishu', authenticate, feishuRoutes);
+
 
 // 所有非API路由都返回前端应用
 app.get('*', (req, res) => {

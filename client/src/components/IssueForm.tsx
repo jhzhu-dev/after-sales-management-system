@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import { Issue, IssueFormData } from '../types';
-import { deviceApi, moduleApi } from '../services/api';
+import { Issue, IssueFormData, FeishuUser } from '../types';
+import { deviceApi, moduleApi, feishuApi } from '../services/api';
 import api from '../services/api';
+import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 
 interface UploadedAttachment {
   name: string;
@@ -29,12 +30,19 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
     notes: ''
   });
   const [devices, setDevices] = useState<Array<{id: string, name: string, device_code: string, customer_name: string, product_name: string, remote_code: string, nickname: string}>>([]); 
-  const [modules, setModules] = useState<Array<{id: string, name: string, device_id: string}>>([])
+  const [modules, setModules] = useState<Array<{id: string, name: string, device_id: string, feishu_user_open_id?: string | null}>>([])
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
   const [uploadingCount, setUploadingCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 飞书通知状态
+  const [feishuUsers, setFeishuUsers] = useState<FeishuUser[]>([]);
+  const [feishuEnabled, setFeishuEnabled] = useState(false);
+  const [notifyModuleUsers, setNotifyModuleUsers] = useState(false);
+  const [notifyOpenIds, setNotifyOpenIds] = useState<string[]>([]);
+  const [pinnedOpenIds, setPinnedOpenIds] = useState<string[]>([]);
 
   // 设备模糊搜索状态
   const [deviceSearch, setDeviceSearch] = useState('');
@@ -57,6 +65,13 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
 
   useEffect(() => {
     fetchDevices('');
+    // 加载飞书用户列表
+    feishuApi.getUsers().then(res => {
+      if (res.success && res.data && res.data.length > 0) {
+        setFeishuUsers(res.data as FeishuUser[]);
+        setFeishuEnabled(true);
+      }
+    }).catch(() => {});
     if (issue) {
       const hasCustomModule = !!(issue as any).custom_module_name && !issue.module_id;
       setFormData({
@@ -69,9 +84,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
         assignee: issue.assignee || '',
         notes: issue.resolution_description || ''
       });
-      if (issue.device_id) {
-        fetchModules(issue.device_id);
-        // 编辑时恢复已选设备显示
+      // 编辑模式下不恢复飞书通知状态（每次创建才触发通知）
         setSelectedDevice({
           id: issue.device_id,
           name: issue.device_name || issue.device_id,
@@ -81,6 +94,8 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
           remote_code: (issue as any).remote_code || '',
           nickname: (issue as any).device_nickname || ''
         });
+      if (issue.device_id) {
+        fetchModules(issue.device_id);
       }
       // 加载已有附件
       if ((issue as any).attachments) {
@@ -154,8 +169,9 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
       if (response.success) {
         const moduleList = response.data.map((module: any) => ({
           id: module.id,
-          name: module.module_type || module.name || `模块${module.id}`, // 使用module_type字段
-          device_id: module.device_id
+          name: module.module_type || module.name || `模块${module.id}`,
+          device_id: module.device_id,
+          feishu_user_open_id: module.feishu_user_open_id || null
         }));
         console.log('处理后的模块列表:', moduleList);
         setModules(moduleList);
@@ -172,6 +188,21 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
     
     if (name === 'module_id' && value !== 'custom') {
       setFormData(prev => ({ ...prev, module_id: value, custom_module_name: undefined }));
+      // 切换模块时：移除旧模块置顶人，替换为新模块置顶人
+      const mt = value ? modules.find(m => String(m.id) === value) : null;
+      const newPinned = mt?.feishu_user_open_id ? [mt.feishu_user_open_id] : [];
+      setPinnedOpenIds(newPinned);
+      setNotifyOpenIds(prev => {
+        // 先移除旧的置顶人，再加入新的置顶人
+        let next = prev.filter(id => !pinnedOpenIds.includes(id));
+        newPinned.forEach(id => { if (!next.includes(id)) next.push(id); });
+        return next;
+      });
+    } else if (name === 'module_id' && value === 'custom') {
+      setFormData(prev => ({ ...prev, module_id: value }));
+      // 自定义模块：移除旧置顶人，不添加新置顶人
+      setNotifyOpenIds(prev => prev.filter(id => !pinnedOpenIds.includes(id)));
+      setPinnedOpenIds([]);
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -228,7 +259,9 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
         attachments: attachments.length > 0 ? attachments : undefined,
         // 如果是自定义模块，不向后端传module_id
         module_id: formData.module_id === 'custom' ? undefined : formData.module_id,
-        custom_module_name: formData.module_id === 'custom' ? (formData.custom_module_name || undefined) : undefined
+        custom_module_name: formData.module_id === 'custom' ? (formData.custom_module_name || undefined) : undefined,
+        // 飞书多人通知
+        notify_open_ids: feishuEnabled && notifyModuleUsers && notifyOpenIds.length > 0 ? notifyOpenIds : undefined,
       };
       // 当状态变为已解决时，自动记录处理时间
       if (formData.status === 'closed' && issue?.status !== 'closed') {
@@ -456,6 +489,44 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               placeholder="请输入登记人"
             />
           </div>
+
+          {/* 通知模块处理人 */}
+          {feishuEnabled && feishuUsers.length > 0 && (
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={notifyModuleUsers}
+                  onChange={e => {
+                    setNotifyModuleUsers(e.target.checked);
+                    // 展开时若模块有关联负责人，自动预填
+                    if (e.target.checked && notifyOpenIds.length === 0 && pinnedOpenIds.length > 0) {
+                      setNotifyOpenIds(pinnedOpenIds);
+                    }
+                  }}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  通知相关人员处理
+                  {pinnedOpenIds.length > 0 && (
+                    <span className="ml-1.5 text-xs font-normal text-blue-600">
+                      （模块关联负责人将置顶）
+                    </span>
+                  )}
+                </span>
+              </label>
+              {notifyModuleUsers && (
+                <div className="mt-2">
+                  <FeishuMultiUserPicker
+                    users={feishuUsers}
+                    pinnedOpenIds={pinnedOpenIds}
+                    value={notifyOpenIds}
+                    onChange={setNotifyOpenIds}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 附件上传 */}
           <div>

@@ -1,7 +1,8 @@
 ﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import { DeviceBundle, Device, Customer, NewBundleDevice } from '../types';
-import { customerApi, deviceApi, bundleApi, productLineApi, productApi, productModuleApi } from '../services/api';
+import { DeviceBundle, Device, Customer, NewBundleDevice, FeishuUser } from '../types';
+import { customerApi, deviceApi, bundleApi, productLineApi, productApi, productModuleApi, feishuApi } from '../services/api';
+import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 
 interface BundleFormProps {
   bundle?: DeviceBundle | null;
@@ -19,7 +20,23 @@ interface NewDeviceRow {
   status: string;
   module_type_ids: number[];
   products: Array<{ id: number; name: string; model?: string }>;
-  moduleTypes: Array<{ id: number; name: string; code: string; is_required: boolean }>;
+  moduleTypes: Array<{ id: number; name: string; code: string; is_required: boolean; feishu_user_open_id?: string | null }>;
+  notify_open_ids: string[];
+  pinned_open_ids: string[];
+}
+
+function calcPinnedFromSelected(
+  moduleTypes: Array<{ id: number; feishu_user_open_id?: string | null }>,
+  selectedIds: number[]
+): string[] {
+  const pinned: string[] = [];
+  selectedIds.forEach(typeId => {
+    const mt = moduleTypes.find(m => m.id === typeId);
+    if (mt?.feishu_user_open_id && !pinned.includes(mt.feishu_user_open_id)) {
+      pinned.push(mt.feishu_user_open_id);
+    }
+  });
+  return pinned;
 }
 
 let rowKeyCounter = 0;
@@ -36,6 +53,8 @@ function emptyDeviceRow(): NewDeviceRow {
     module_type_ids: [],
     products: [],
     moduleTypes: [],
+    notify_open_ids: [],
+    pinned_open_ids: [],
   };
 }
 
@@ -65,6 +84,10 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
   const searchRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
+  const [feishuEnabled, setFeishuEnabled] = useState(false);
+  const [feishuUsers, setFeishuUsers] = useState<FeishuUser[]>([]);
+  const manuallyRemovedPerRowRef = useRef<Map<number, Set<string>>>(new Map());
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -77,6 +100,16 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
     if (isEdit && bundle) {
       loadBundleDevices();
     }
+    // 加载飞书配置和用户
+    feishuApi.getConfig().then(res => {
+      if (res.success && res.data?.is_enabled) setFeishuEnabled(true);
+    }).catch(() => {});
+    feishuApi.getUsers().then(res => {
+      if (res.success && res.data && res.data.length > 0) {
+        setFeishuUsers(res.data as FeishuUser[]);
+        setFeishuEnabled(true); // 有用户即启用
+      }
+    }).catch(() => {});
   }, []);
 
   // Close search dropdown on outside click
@@ -206,11 +239,21 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
           id: m.module_type_id,
           name: m.module_type_name,
           code: m.module_type_code,
-          is_required: !!m.is_required
+          is_required: !!m.is_required,
+          feishu_user_open_id: m.feishu_user_open_id || null
         }));
         autoSelectedIds = moduleTypes.filter((m: any) => m.is_required).map((m: any) => m.id);
       }
-      setNewDeviceRows(prev => prev.map(r => r.key === key ? { ...r, product_id: productId, moduleTypes, module_type_ids: autoSelectedIds } : r));
+      // 计算置顶用户（必选模块关联的飞书用户）
+      const pinnedIds = calcPinnedFromSelected(moduleTypes, autoSelectedIds);
+      setNewDeviceRows(prev => prev.map(r => r.key === key ? {
+        ...r,
+        product_id: productId,
+        moduleTypes,
+        module_type_ids: autoSelectedIds,
+        pinned_open_ids: pinnedIds,
+        notify_open_ids: pinnedIds, // 自动预选置顶用户
+      } : r));
     } catch (e) { console.error(e); }
   };
 
@@ -219,7 +262,19 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
     setNewDeviceRows(prev => prev.map(r => {
       if (r.key !== key) return r;
       const has = r.module_type_ids.includes(typeId);
-      return { ...r, module_type_ids: has ? r.module_type_ids.filter(id => id !== typeId) : [...r.module_type_ids, typeId] };
+      const newModuleIds = has ? r.module_type_ids.filter(id => id !== typeId) : [...r.module_type_ids, typeId];
+      const newPinned = calcPinnedFromSelected(r.moduleTypes, newModuleIds);
+      const manuallyRemoved = manuallyRemovedPerRowRef.current.get(key) || new Set<string>();
+      let newNotify = [...r.notify_open_ids];
+      // 新增置顶用户：若未被手动移除则自动勾选
+      newPinned.filter(id => !r.pinned_open_ids.includes(id)).forEach(id => {
+        if (!newNotify.includes(id) && !manuallyRemoved.has(id)) newNotify.push(id);
+      });
+      // 移除的置顶用户：从通知列表中移除（除非手动保留）
+      r.pinned_open_ids.filter(id => !newPinned.includes(id)).forEach(id => {
+        if (!manuallyRemoved.has(id)) newNotify = newNotify.filter(n => n !== id);
+      });
+      return { ...r, module_type_ids: newModuleIds, pinned_open_ids: newPinned, notify_open_ids: newNotify };
     }));
   };
 
@@ -274,6 +329,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
         product_id: r.product_id ? r.product_id as number : undefined,
         status: r.status,
         module_type_ids: r.module_type_ids.length > 0 ? r.module_type_ids : undefined,
+        notify_open_ids: feishuEnabled && r.notify_open_ids.length > 0 ? r.notify_open_ids : undefined,
       }));
 
       await bundleApi.createBundle({
@@ -453,6 +509,31 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                             );
                           })}
                         </div>
+                      </div>
+                    )}
+
+                    {feishuEnabled && feishuUsers.length > 0 && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          通知同事填写版本号（飞书）
+                          {row.pinned_open_ids.length > 0 && (
+                            <span className="ml-1 text-blue-500 font-normal">{row.pinned_open_ids.length} 位模块关联负责人已置顶</span>
+                          )}
+                        </label>
+                        <FeishuMultiUserPicker
+                          users={feishuUsers}
+                          pinnedOpenIds={row.pinned_open_ids}
+                          value={row.notify_open_ids}
+                          onChange={(ids) => {
+                            const manuallyRemoved = manuallyRemovedPerRowRef.current.get(row.key) || new Set<string>();
+                            row.pinned_open_ids.forEach(id => {
+                              if (row.notify_open_ids.includes(id) && !ids.includes(id)) manuallyRemoved.add(id);
+                              if (!row.notify_open_ids.includes(id) && ids.includes(id)) manuallyRemoved.delete(id);
+                            });
+                            manuallyRemovedPerRowRef.current.set(row.key, manuallyRemoved);
+                            updateNewDeviceRow(row.key, 'notify_open_ids', ids);
+                          }}
+                        />
                       </div>
                     )}
                   </div>

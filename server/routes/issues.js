@@ -6,6 +6,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const ossService = require('../services/oss-service');
+const feishuService = require('../services/feishu-service');
 
 // ─── 问题附件上传配置 ──────────────────────────────────────────────────────────
 const issueUploadStorage = multer.diskStorage({
@@ -266,6 +267,7 @@ router.get('/:id', async (req, res) => {
       SELECT 
         i.*,
         d.name as device_name,
+        d.remote_code as device_remote_code,
         pl.name as device_type,
         c.name as customer_name,
         c.short_name as customer_short_name,
@@ -286,9 +288,55 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ success: false, error: '问题不存在' });
     }
 
+    // 将 follower_open_ids 解析为名字列表（优先使用历史快照，防止用户离群后丢名字）
+    let followerNames = [];
+    const followerIds = issue.follower_open_ids
+      ? (typeof issue.follower_open_ids === 'string' ? JSON.parse(issue.follower_open_ids) : issue.follower_open_ids)
+      : [];
+    if (followerIds.length > 0) {
+      // 先尝试从名字快照恢复
+      const cachedNames = issue.follower_names_json
+        ? (typeof issue.follower_names_json === 'string' ? JSON.parse(issue.follower_names_json) : issue.follower_names_json)
+        : [];
+      if (Array.isArray(cachedNames) && cachedNames.length === followerIds.length) {
+        followerNames = cachedNames;
+      } else {
+        const placeholders = followerIds.map(() => '?').join(',');
+        const feishuUsers = await query(
+          `SELECT open_id, name FROM feishu_users WHERE open_id IN (${placeholders})`,
+          followerIds
+        );
+        const nameMap = {};
+        feishuUsers.forEach(u => { nameMap[u.open_id] = u.name; });
+        followerNames = followerIds.map(id => nameMap[id] || id);
+      }
+    }
+
+    // 刷新附件 OSS 签名 URL（避免过期）
+    if (issue.attachments && ossService.enabled) {
+      try {
+        const atts = typeof issue.attachments === 'string'
+          ? JSON.parse(issue.attachments)
+          : issue.attachments;
+        if (Array.isArray(atts)) {
+          const refreshed = await Promise.all(atts.map(async att => {
+            const ossPath = att.ossPath || (ossService.isOSSPath(att.url) ? att.url : null);
+            if (ossPath) {
+              try {
+                const freshUrl = await ossService.getSignedUrl(ossPath, 3600 * 24 * 7, att.name);
+                return { ...att, ossPath, url: freshUrl };
+              } catch (_) { return att; }
+            }
+            return att;
+          }));
+          issue.attachments = refreshed;
+        }
+      } catch (_) {}
+    }
+
     res.json({
       success: true,
-      data: issue
+      data: { ...issue, follower_names: followerNames }
     });
   } catch (error) {
     console.error('获取问题详情失败:', error);
@@ -438,6 +486,36 @@ router.post('/', [
       }
     }
 
+    // ── 飞书通知（异步，不阻塞响应）──
+    const { assignee_open_id, notify_assignee, notify_open_ids } = req.body;
+    // 支持多人通知（notify_open_ids[]）或旧的单人（assignee_open_id + notify_assignee）
+    const recipientIds = Array.isArray(notify_open_ids) && notify_open_ids.length > 0
+      ? notify_open_ids
+      : (notify_assignee && assignee_open_id ? [assignee_open_id] : []);
+    if (recipientIds.length > 0) {
+      // 保存跟进人 open_id 列表
+      query('UPDATE issues SET follower_open_ids = ? WHERE id = ?', [JSON.stringify(recipientIds), issueId]).catch(() => {});
+      if (assignee_open_id) {
+        query('UPDATE issues SET assignee_open_id = ? WHERE id = ?', [assignee_open_id, issueId]).catch(() => {});
+      }
+      // 同时保存跟进人姓名快照（防止用户离群后名字丢失）
+      {
+        const ph = recipientIds.map(() => '?').join(',');
+        query(`SELECT open_id, name FROM feishu_users WHERE open_id IN (${ph})`, recipientIds)
+          .then(rows => {
+            const nm = {}; rows.forEach(u => { nm[u.open_id] = u.name; });
+            const names = recipientIds.map(id => nm[id] || id);
+            query('UPDATE issues SET follower_names_json = ? WHERE id = ?', [JSON.stringify(names), issueId]).catch(() => {});
+          }).catch(() => {});
+      }
+      query(`SELECT i.*, d.nickname as device_name FROM issues i LEFT JOIN devices d ON i.device_id = d.id WHERE i.id = ?`, [issueId])
+        .then(rows => {
+          if (rows[0]) {
+            recipientIds.forEach(openId => feishuService.sendIssueNotification(rows[0], openId));
+          }
+        }).catch(() => {});
+    }
+
     res.status(201).json({
       success: true,
       message: '问题创建成功',
@@ -484,7 +562,10 @@ router.put('/:id', [
     }
 
     // 构建更新语句
-    const allowedFields = ['description', 'severity', 'status', 'category', 'assignee', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'attachments', 'resolution_description', 'resolved_at', 'module_id', 'custom_module_name'];
+    // 读取更新前的旧值用于变更检测
+    const oldIssue = (await query('SELECT status, assignee, assignee_open_id FROM issues WHERE id = ?', [id]))[0];
+
+    const allowedFields = ['description', 'severity', 'status', 'category', 'assignee', 'assignee_open_id', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'attachments', 'resolution_description', 'resolved_at', 'module_id', 'custom_module_name'];
     const updateFields = [];
     const updateValues = [];
 
@@ -522,6 +603,35 @@ router.put('/:id', [
     `;
 
     await query(updateQuery, updateValues);
+
+    // ── 飞书通知（异步）──
+    const { notify_assignee, assignee_open_id, notify_open_ids } = req.body;
+    // 支持多人通知（notify_open_ids[]）或旧的单人（assignee_open_id + notify_assignee）
+    const recipientIds = Array.isArray(notify_open_ids) && notify_open_ids.length > 0
+      ? notify_open_ids
+      : (notify_assignee && assignee_open_id ? [assignee_open_id] : []);
+    if (recipientIds.length > 0) {
+      // 更新跟进人列表
+      query('UPDATE issues SET follower_open_ids = ? WHERE id = ?', [JSON.stringify(recipientIds), id]).catch(() => {});
+      // 同时更新跟进人姓名快照（防止用户离群后名字丢失）
+      {
+        const ph = recipientIds.map(() => '?').join(',');
+        query(`SELECT open_id, name FROM feishu_users WHERE open_id IN (${ph})`, recipientIds)
+          .then(rows => {
+            const nm = {}; rows.forEach(u => { nm[u.open_id] = u.name; });
+            const names = recipientIds.map(id => nm[id] || id);
+            query('UPDATE issues SET follower_names_json = ? WHERE id = ?', [JSON.stringify(names), id]).catch(() => {});
+          }).catch(() => {});
+      }
+      const statusChanged = updates.status && updates.status !== oldIssue?.status;
+      const changeType = statusChanged ? 'status_changed' : 'assigned';
+      query(`SELECT i.*, d.nickname as device_name FROM issues i LEFT JOIN devices d ON i.device_id = d.id WHERE i.id = ?`, [id])
+        .then(rows => {
+          if (rows[0]) {
+            recipientIds.forEach(openId => feishuService.sendIssueUpdateNotification(rows[0], changeType, openId));
+          }
+        }).catch(() => {});
+    }
 
     res.json({
       success: true,

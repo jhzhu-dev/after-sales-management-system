@@ -91,8 +91,6 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
       if (onLogAdded) {
         onLogAdded();
       }
-
-      alert('处理记录添加成功');
     } catch (error) {
       console.error('添加处理记录失败:', error);
       alert('添加处理记录失败');

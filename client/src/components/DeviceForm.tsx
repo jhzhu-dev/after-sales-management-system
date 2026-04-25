@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
-import { Device, DeviceFormData, Customer } from '../types';
-import { productLineApi, customerApi, productApi, productModuleApi } from '../services/api';
+import { Device, DeviceFormData, Customer, FeishuUser } from '../types';
+import { productLineApi, customerApi, productApi, productModuleApi, feishuApi } from '../services/api';
+import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 
 interface DeviceFormProps {
   device?: Device | null;
@@ -25,7 +26,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
 
   const [productLines, setProductLines] = useState<Array<{ id: number, name: string }>>([])
   const [products, setProducts] = useState<Array<{ id: number, name: string, model?: string }>>([]);
-  const [moduleTypes, setModuleTypes] = useState<Array<{ id: number, name: string, code: string, is_required: boolean }>>([]);
+  const [moduleTypes, setModuleTypes] = useState<Array<{ id: number, name: string, code: string, is_required: boolean, feishu_user_open_id?: string | null }>>([]);
   const [selectedModuleTypeIds, setSelectedModuleTypeIds] = useState<number[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -36,7 +37,21 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // 飞书通知
+  const [feishuUsers, setFeishuUsers] = useState<FeishuUser[]>([]);
+  const [feishuEnabled, setFeishuEnabled] = useState(false);
+  const [notifyOpenIds, setNotifyOpenIds] = useState<string[]>([]);
+  const [pinnedOpenIds, setPinnedOpenIds] = useState<string[]>([]);
+  // 记录用户手动取消勾选的 id，避免模块改变时重新强制勾选
+  const manuallyRemovedRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
+    feishuApi.getUsers().then(res => {
+      if (res.success && res.data && res.data.length > 0) {
+        setFeishuUsers(res.data as FeishuUser[]);
+        setFeishuEnabled(true);
+      }
+    }).catch(() => {});
     fetchProductLines();
     fetchCustomers();
     if (device) {
@@ -93,7 +108,8 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
           id: m.module_type_id,
           name: m.module_type_name,
           code: m.module_type_code,
-          is_required: !!m.is_required
+          is_required: !!m.is_required,
+          feishu_user_open_id: m.feishu_user_open_id || null
         }));
         // 排序：可选模块在前，必选模块在后
         const sorted = [...modules].sort((a: any, b: any) => (a.is_required === b.is_required ? 0 : a.is_required ? 1 : -1));
@@ -240,6 +256,46 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
     );
   };
 
+  // 当选中模块变化时，重新计算置顶用户并自动勾选
+  useEffect(() => {
+    if (!feishuEnabled || feishuUsers.length === 0) return;
+
+    // 从当前选中的模块类型中收集关联的飞书用户（去重）
+    const newPinned: string[] = [];
+    selectedModuleTypeIds.forEach(typeId => {
+      const mt = moduleTypes.find(m => m.id === typeId);
+      if (mt?.feishu_user_open_id && !newPinned.includes(mt.feishu_user_open_id)) {
+        newPinned.push(mt.feishu_user_open_id);
+      }
+    });
+
+    // 找出新增的置顶用户（上一次没有）
+    const prevPinned = pinnedOpenIds;
+    const added = newPinned.filter(id => !prevPinned.includes(id));
+    // 找出移除的置顶用户（上一次有，现在没有）
+    const removed = prevPinned.filter(id => !newPinned.includes(id));
+
+    setPinnedOpenIds(newPinned);
+
+    setNotifyOpenIds(prev => {
+      let next = [...prev];
+      // 新增置顶用户且未被手动移除过：自动勾选
+      added.forEach(id => {
+        if (!next.includes(id) && !manuallyRemovedRef.current.has(id)) {
+          next.push(id);
+        }
+      });
+      // 移除置顶用户：从选中列表中移除（除非用户手动添加过）
+      removed.forEach(id => {
+        if (!manuallyRemovedRef.current.has(id)) {
+          next = next.filter(i => i !== id);
+        }
+      });
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedModuleTypeIds, moduleTypes, feishuEnabled, feishuUsers]);
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -292,7 +348,9 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         remote_code: formData.remote_code?.trim() || null,
         password: formData.password?.trim() || null,
         notes: formData.notes?.trim() || null,
-        selectedModuleTypeIds: selectedModuleTypeIds
+        selectedModuleTypeIds: selectedModuleTypeIds,
+        notify_open_ids: notifyOpenIds.filter(Boolean),
+        send_notify: feishuEnabled && notifyOpenIds.length > 0,
       };
     }
 
@@ -633,6 +691,38 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   rows={2}
                 />
               </div>
+
+              {/* 飞书通知负责人 */}
+              {feishuEnabled && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    通知同事填写版本号（飞书）
+                    {pinnedOpenIds.length > 0 && (
+                      <span className="ml-2 text-xs text-blue-600 font-normal">
+                        {pinnedOpenIds.length} 位模块关联负责人已置顶
+                      </span>
+                    )}
+                  </label>
+                  <FeishuMultiUserPicker
+                    users={feishuUsers}
+                    pinnedOpenIds={pinnedOpenIds}
+                    value={notifyOpenIds}
+                    onChange={(ids) => {
+                      // 记录手动取消勾选的置顶用户
+                      pinnedOpenIds.forEach(id => {
+                        if (notifyOpenIds.includes(id) && !ids.includes(id)) {
+                          manuallyRemovedRef.current.add(id);
+                        }
+                        // 如果重新勾选了，移出手动移除记录
+                        if (!notifyOpenIds.includes(id) && ids.includes(id)) {
+                          manuallyRemovedRef.current.delete(id);
+                        }
+                      });
+                      setNotifyOpenIds(ids);
+                    }}
+                  />
+                </div>
+              )}
             </>
           )}
 

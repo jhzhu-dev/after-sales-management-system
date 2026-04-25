@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   PlusIcon,
   PencilIcon,
@@ -11,8 +12,8 @@ import {
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import { formatDate } from '../utils';
-import { moduleTypeApi, customerApi, sopTemplateApi } from '../services/api';
-import { ModuleType, Customer, SOPTemplate, SOPTemplateItem } from '../types';
+import { moduleTypeApi, customerApi, sopTemplateApi, feishuApi } from '../services/api';
+import { ModuleType, Customer, SOPTemplate, SOPTemplateItem, FeishuUser } from '../types';
 
 // 表单数据接口
 interface ModuleTypeFormData {
@@ -20,10 +21,15 @@ interface ModuleTypeFormData {
   code: string;
   description: string;
   is_active: boolean;
+  feishu_user_open_id: string;
 }
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'module-types' | 'customers' | 'sop-templates'>('module-types');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'module-types' | 'customers' | 'sop-templates'>(() => {
+    const t = searchParams.get('tab');
+    return (t === 'module-types' || t === 'customers' || t === 'sop-templates') ? t : 'module-types';
+  });
   const [moduleTypes, setModuleTypes] = useState<ModuleType[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -35,8 +41,10 @@ export default function Settings() {
     name: '',
     code: '',
     description: '',
-    is_active: true
+    is_active: true,
+    feishu_user_open_id: ''
   });
+  const [feishuUsers, setFeishuUsers] = useState<FeishuUser[]>([]);
 
   // SOP 模板相关状态
   const [sopTemplatesMap, setSopTemplatesMap] = useState<Record<number, SOPTemplate>>({});
@@ -53,6 +61,9 @@ export default function Settings() {
   useEffect(() => {
     if (activeTab === 'module-types') {
       fetchModuleTypes();
+      feishuApi.getUsers().then(res => {
+        if (res.success && res.data) setFeishuUsers(res.data as FeishuUser[]);
+      }).catch(() => {});
     }
     if (activeTab === 'customers') {
       fetchCustomersList();
@@ -78,13 +89,19 @@ export default function Settings() {
   };
 
   const handleOpenModal = (moduleType?: ModuleType) => {
+    // 加载飞书用户列表
+    feishuApi.getUsers().then(res => {
+      if (res.success && res.data) setFeishuUsers(res.data as FeishuUser[]);
+    }).catch(() => {});
+
     if (moduleType) {
       setEditingModuleType(moduleType);
       setModuleTypeForm({
         name: moduleType.name,
         code: moduleType.code,
         description: moduleType.description || '',
-        is_active: moduleType.is_active
+        is_active: moduleType.is_active,
+        feishu_user_open_id: moduleType.feishu_user_open_id || ''
       });
     } else {
       setEditingModuleType(null);
@@ -92,7 +109,8 @@ export default function Settings() {
         name: '',
         code: '',
         description: '',
-        is_active: true
+        is_active: true,
+        feishu_user_open_id: ''
       });
     }
     setShowModuleTypeModal(true);
@@ -105,7 +123,8 @@ export default function Settings() {
       name: '',
       code: '',
       description: '',
-      is_active: true
+      is_active: true,
+      feishu_user_open_id: ''
     });
   };
 
@@ -122,11 +141,9 @@ export default function Settings() {
       if (editingModuleType) {
         // 更新
         await moduleTypeApi.updateModuleType(editingModuleType.id, moduleTypeForm);
-        alert('模块类型更新成功');
       } else {
         // 创建
         await moduleTypeApi.createModuleType(moduleTypeForm);
-        alert('模块类型创建成功');
       }
       handleCloseModal();
       fetchModuleTypes();
@@ -321,9 +338,9 @@ export default function Settings() {
 
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
-            <button onClick={() => setActiveTab('module-types')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'module-types' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>模块类型管理</button>
-            <button onClick={() => setActiveTab('customers')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'customers' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>客户管理</button>
-            <button onClick={() => setActiveTab('sop-templates')} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'sop-templates' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>版本更新检查项模板</button>
+            <button onClick={() => { setActiveTab('module-types'); setSearchParams({ tab: 'module-types' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'module-types' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>模块类型管理</button>
+            <button onClick={() => { setActiveTab('customers'); setSearchParams({ tab: 'customers' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'customers' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>客户管理</button>
+            <button onClick={() => { setActiveTab('sop-templates'); setSearchParams({ tab: 'sop-templates' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'sop-templates' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>版本更新检查项模板</button>
           </nav>
         </div>
 
@@ -357,6 +374,7 @@ export default function Settings() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">代码</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">描述</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关联人员</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
@@ -368,6 +386,21 @@ export default function Settings() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{moduleType.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{moduleType.code}</td>
                         <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{moduleType.description || '-'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {moduleType.feishu_user_open_id
+                            ? (() => {
+                                const cachedName = (moduleType as any).feishu_user_name;
+                                const u = feishuUsers.find(u => u.open_id === moduleType.feishu_user_open_id);
+                                const displayName = u?.name || cachedName;
+                                return displayName ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    <span className="font-medium">{displayName}</span>
+                                    {u?.department && <span className="text-xs text-gray-400">{u.department}</span>}
+                                  </span>
+                                ) : <span className="text-gray-400 text-xs">{moduleType.feishu_user_open_id}</span>;
+                              })()
+                            : <span className="text-gray-300">-</span>}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             moduleType.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -470,6 +503,32 @@ export default function Settings() {
                         />
                         <span className="ml-2 text-sm text-gray-700">启用此模块类型</span>
                       </label>
+                    </div>
+
+                    {/* 飞书关联负责人 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        关联飞书默认负责人
+                        <span className="ml-1 text-xs text-gray-400 font-normal">（新增设备时将自动置顶并勾选）</span>
+                      </label>
+                      {feishuUsers.length === 0 ? (
+                        <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded">
+                          请先在《飞书设置》中同步员工名单，同步后可在此处选择关联负责人
+                        </p>
+                      ) : (
+                        <select
+                          value={moduleTypeForm.feishu_user_open_id}
+                          onChange={(e) => setModuleTypeForm({ ...moduleTypeForm, feishu_user_open_id: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        >
+                          <option value="">不关联（选填）</option>
+                          {feishuUsers.map(u => (
+                            <option key={u.open_id} value={u.open_id}>
+                              {u.name}{u.department ? ' · ' + u.department : ''}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
 
                     {/* 按钮 */}

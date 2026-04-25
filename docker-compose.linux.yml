@@ -78,6 +78,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       LOGIN_USERNAME: ${LOGIN_USERNAME:-elsvision}
       LOGIN_PASSWORD: ${LOGIN_PASSWORD:-elsvisiongo666}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
       - ./uploads:/app/uploads
       - ./ssl:/app/ssl:ro          # SSL 证书（只读挂载，有证书则自动启用 HTTPS）

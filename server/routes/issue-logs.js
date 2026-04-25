@@ -141,6 +141,30 @@ router.get('/:issueId', async (req, res) => {
       [issueId]
     );
 
+    // 刷新每条记录的附件 OSS 签名 URL（避免过期）
+    if (ossService.enabled) {
+      for (const log of logs) {
+        if (!log.attachments) continue;
+        try {
+          const atts = typeof log.attachments === 'string'
+            ? JSON.parse(log.attachments)
+            : log.attachments;
+          if (!Array.isArray(atts)) continue;
+          const refreshed = await Promise.all(atts.map(async att => {
+            const ossPath = att.ossPath || (ossService.isOSSPath(att.url) ? att.url : null);
+            if (ossPath) {
+              try {
+                const freshUrl = await ossService.getSignedUrl(ossPath, 3600 * 24 * 7, att.name);
+                return { ...att, ossPath, url: freshUrl };
+              } catch (_) { return att; }
+            }
+            return att;
+          }));
+          log.attachments = refreshed;
+        } catch (_) {}
+      }
+    }
+
     res.json({
       success: true,
       data: logs

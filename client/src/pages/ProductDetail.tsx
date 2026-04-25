@@ -163,7 +163,6 @@ const ProductDetail: React.FC = () => {
                     is_required: isRequired
                 });
             }
-            alert('模块配置添加成功');
             setShowModuleForm(false);
             setSelectedModuleTypes([]);
             fetchModules();
@@ -184,7 +183,6 @@ const ProductDetail: React.FC = () => {
 
         try {
             await productModuleApi.deleteProductModule(parseInt(id!), moduleId);
-            alert('模块配置删除成功');
             fetchModules();
         } catch (err: any) {
             console.error('删除模块配置失败:', err);

@@ -14,10 +14,11 @@ interface AttachmentViewerProps {
   onClose: () => void;
 }
 
-function getFileType(name: string): 'image' | 'pdf' | 'other' {
+function getFileType(name: string): 'image' | 'pdf' | 'video' | 'other' {
   const ext = name.split('.').pop()?.toLowerCase() || '';
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) return 'image';
   if (ext === 'pdf') return 'pdf';
+  if (['mp4', 'webm', 'ogg', 'mov', 'avi', 'm4v'].includes(ext)) return 'video';
   return 'other';
 }
 
@@ -31,7 +32,7 @@ function formatFileSize(bytes?: number) {
 const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachments, initialIndex, onClose }) => {
   const [index, setIndex] = React.useState(initialIndex);
   const att = attachments[index];
-  const fileType = getFileType(att.name);
+  const fileType: 'image' | 'pdf' | 'video' | 'other' = getFileType(att.name);
 
   // Close on Escape, navigate with arrow keys
   useEffect(() => {
@@ -111,6 +112,17 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachments, initia
               className="w-full rounded border"
               style={{ height: 'calc(90vh - 120px)' }}
             />
+          )}
+          {fileType === 'video' && (
+            <video
+              key={att.url}
+              src={att.url}
+              controls
+              className="max-w-full rounded"
+              style={{ maxHeight: 'calc(90vh - 120px)' }}
+            >
+              您的浏览器不支持视频播放
+            </video>
           )}
           {fileType === 'other' && (
             <div className="text-center py-16">

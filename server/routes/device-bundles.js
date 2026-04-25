@@ -252,7 +252,7 @@ router.post('/', [
 
         await connection.execute(
           `INSERT INTO devices (id, name, nickname, device_code, product_line_id, product_id, customer_id, status, remote_code, password, bundle_id, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             deviceId,
             finalCode,  // 订单号 = 多合一设备订单号
@@ -311,6 +311,29 @@ router.post('/', [
         data: { id: bundleId, bundle_code: finalCode, name, customer_id, description, device_count: totalCount }
       });
     });
+
+    // ── 飞书通知（异步，不阻塞响应）──
+    const notifyItems = new_devices.filter(nd => Array.isArray(nd.notify_open_ids) && nd.notify_open_ids.length > 0);
+    if (notifyItems.length > 0) {
+      const feishuService = require('../services/feishu-service');
+      notifyItems.forEach(nd => {
+        query(
+          `SELECT d.*, pl.name as product_line_name, p.model as product_model, c.name as customer_name
+           FROM devices d
+           LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+           LEFT JOIN products p ON d.product_id = p.id
+           LEFT JOIN customers c ON d.customer_id = c.id
+           WHERE d.id = ?`,
+          [nd.id]
+        ).then(rows => {
+          if (rows[0]) {
+            nd.notify_open_ids.forEach(openId => {
+              feishuService.sendDeviceNotification(rows[0], openId);
+            });
+          }
+        }).catch(() => {});
+      });
+    }
   } catch (error) {
     console.error('创建多合一设备失败:', error);
     res.status(500).json({ success: false, error: '创建多合一设备失败' });

@@ -15,7 +15,7 @@ type ViewMode = 'devices' | 'bundles';
 
 export default function Devices() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const v = searchParams.get('view');
     return v === 'bundles' ? 'bundles' : 'devices';
@@ -810,13 +810,13 @@ export default function Devices() {
             <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">设备管理</h1>
             <div className="flex rounded-md border border-gray-300 overflow-hidden">
               <button
-                onClick={() => setViewMode('devices')}
+                onClick={() => { setViewMode('devices'); setSearchParams(p => { p.set('view', 'devices'); return p; }, { replace: true }); }}
                 className={`px-3 py-1.5 text-sm font-medium ${viewMode === 'devices' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
               >
                 单台设备列表
               </button>
               <button
-                onClick={() => setViewMode('bundles')}
+                onClick={() => { setViewMode('bundles'); setSearchParams(p => { p.set('view', 'bundles'); return p; }, { replace: true }); }}
                 className={`px-3 py-1.5 text-sm font-medium ${viewMode === 'bundles' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
               >
                 多合一设备列表
