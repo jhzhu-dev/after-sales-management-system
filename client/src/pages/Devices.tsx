@@ -899,9 +899,10 @@ export default function Devices() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">全部状态</option>
-                <option value="正常">正常</option>
-                <option value="异常">异常</option>
-                <option value="维护中">维护中</option>
+                <option value="生产中">生产中</option>
+                <option value="使用中(正常)">使用中(正常)</option>
+                <option value="使用中(异常)">使用中(异常)</option>
+                <option value="已停用">已停用</option>
               </select>
             </div>
             <div className="flex items-end">

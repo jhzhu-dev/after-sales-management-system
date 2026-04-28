@@ -762,9 +762,10 @@ const DeviceDetail: React.FC = () => {
   // 获取状态颜色
   const getStatusColor = (status: string) => {
     switch (status) {
-      case '正常': return 'bg-green-100 text-green-800';
-      case '异常': return 'bg-red-100 text-red-800';
-      case '维护中': return 'bg-yellow-100 text-yellow-800';
+      case '生产中': return 'bg-blue-100 text-blue-800';
+      case '使用中(正常)': return 'bg-green-100 text-green-800';
+      case '使用中(异常)': return 'bg-red-100 text-red-800';
+      case '已停用': return 'bg-gray-100 text-gray-500';
       case 'open': return 'bg-red-100 text-red-800';
       case 'in_progress': return 'bg-yellow-100 text-yellow-800';
       case 'closed': return 'bg-green-100 text-green-800';
@@ -775,13 +776,16 @@ const DeviceDetail: React.FC = () => {
   // 获取状态图标
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case '正常':
+      case '生产中':
+        return <ClockIcon className="h-5 w-5 text-blue-500" />;
+      case '使用中(正常)':
       case 'closed':
         return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
-      case '异常':
+      case '使用中(异常)':
       case 'open':
         return <XCircleIcon className="h-5 w-5 text-red-500" />;
-      case '维护中':
+      case '已停用':
+        return <ExclamationTriangleIcon className="h-5 w-5 text-gray-400" />;
       case 'in_progress':
         return <ClockIcon className="h-5 w-5 text-yellow-500" />;
       default:

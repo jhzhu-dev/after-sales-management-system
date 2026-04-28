@@ -205,7 +205,7 @@ router.post('/', [
   body('name').optional({ nullable: true }).isString().withMessage('订单号必须是字符串'),
   body('product_line_id').notEmpty().isInt().withMessage('产品线ID必须是整数'),
   body('customer_id').optional({ nullable: true }).isInt().withMessage('客户ID必须是整数'),
-  body('status').optional({ nullable: true }).isIn(['正常', '异常', '维护中']).withMessage('状态必须是：正常、异常或维护中'),
+  body('status').optional({ nullable: true }).isIn(['生产中', '使用中(正常)', '使用中(异常)', '已停用']).withMessage('状态必须是：生产中、使用中(正常)、使用中(异常)或已停用'),
   body('remote_code').optional({ nullable: true }).isString().withMessage('远程码必须是字符串'),
   body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串')
 ], async (req, res) => {
@@ -221,7 +221,7 @@ router.post('/', [
       });
     }
 
-    const { id, name, device_code, product_line_id, product_id, customer_id, status = '正常', remote_code, password, notes } = req.body;
+    const { id, name, device_code, product_line_id, product_id, customer_id, status = '使用中(正常)', remote_code, password, notes } = req.body;
 
     // 如果提供了ID，使用用户提供的ID，否则自动生成
     let deviceId = id;
@@ -317,7 +317,7 @@ router.put('/:id', [
   body('name').optional({ nullable: true, checkFalsy: true }),  // 订单号允许为空/null
   body('product_line_id').optional().isInt().withMessage('产品线ID必须是整数'),
   body('customer_id').optional({ nullable: true }).isInt().withMessage('客户ID必须是整数'),
-  body('status').optional({ nullable: true }).isIn(['正常', '异常', '维护中']).withMessage('状态必须是：正常、异常或维护中'),
+  body('status').optional({ nullable: true }).isIn(['生产中', '使用中(正常)', '使用中(异常)', '已停用']).withMessage('状态必须是：生产中、使用中(正常)、使用中(异常)或已停用'),
   body('remote_code').optional({ nullable: true }).isString().withMessage('远程码必须是字符串'),
   body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串')
 ], async (req, res) => {

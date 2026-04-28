@@ -30,7 +30,7 @@ export interface Device {
   customer_id?: number;
   customer_name?: string;
   customer_short_name?: string;
-  status: '正常' | '异常' | '维护中';
+  status: '生产中' | '使用中(正常)' | '使用中(异常)' | '已停用';
   created_at: string;
   updated_at: string;
   remote_code?: string;
@@ -201,7 +201,7 @@ export interface DeviceFormData {
   product_line_id: string | number;
   product_id?: number | null;
   customer_id?: number | null;
-  status: '正常' | '异常' | '维护中';
+  status: '生产中' | '使用中(正常)' | '使用中(异常)' | '已停用';
   remote_code?: string | null;
   password?: string | null;
   notes?: string | null;
@@ -289,9 +289,10 @@ export const MODULE_CATEGORY_MAP: Record<string, string> = {
 
 // 状态映射
 export const STATUS_MAP: Record<string, string> = {
-  '正常': '正常',
-  '异常': '异常',
-  '维护中': '维护中',
+  '生产中': '生产中',
+  '使用中(正常)': '使用中(正常)',
+  '使用中(异常)': '使用中(异常)',
+  '已停用': '已停用',
   'open': '待处理',
   'in_progress': '处理中',
   'closed': '已解决'

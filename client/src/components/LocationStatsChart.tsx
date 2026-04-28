@@ -39,13 +39,13 @@ const LocationStatsChart: React.FC<LocationStatsChartProps> = React.memo(({ data
               总数: <span className="font-medium">{payload[0].payload.total}</span>
             </p>
             <p className="text-sm text-green-600">
-              正常: <span className="font-medium">{payload[0].payload.normal}</span>
+              使用中(正常): <span className="font-medium">{payload[0].payload.normal}</span>
             </p>
             <p className="text-sm text-red-600">
-              异常: <span className="font-medium">{payload[0].payload.abnormal}</span>
+              使用中(异常): <span className="font-medium">{payload[0].payload.abnormal}</span>
             </p>
-            <p className="text-sm text-yellow-600">
-              维护中: <span className="font-medium">{payload[0].payload.maintenance}</span>
+            <p className="text-sm text-gray-500">
+              生产中/已停用: <span className="font-medium">{payload[0].payload.maintenance}</span>
             </p>
           </div>
         </div>
@@ -73,9 +73,9 @@ const LocationStatsChart: React.FC<LocationStatsChartProps> = React.memo(({ data
           <YAxis />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
-          <Bar dataKey="normal" name="正常" fill="#10B981" stackId="a" />
-          <Bar dataKey="abnormal" name="异常" fill="#EF4444" stackId="a" />
-          <Bar dataKey="maintenance" name="维护中" fill="#F59E0B" stackId="a" />
+          <Bar dataKey="normal" name="使用中(正常)" fill="#10B981" stackId="a" />
+          <Bar dataKey="abnormal" name="使用中(异常)" fill="#EF4444" stackId="a" />
+          <Bar dataKey="maintenance" name="生产中/已停用" fill="#9CA3AF" stackId="a" />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>

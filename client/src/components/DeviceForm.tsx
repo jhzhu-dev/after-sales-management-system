@@ -18,7 +18,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
     product_line_id: '',
     product_id: undefined,
     customer_id: undefined,
-    status: '正常',
+    status: '使用中(正常)',
     remote_code: '',
     password: '',
     notes: ''
@@ -62,7 +62,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         product_line_id: device.product_line_id || '',
         product_id: device.product_id || undefined,
         customer_id: device.customer_id || undefined,
-        status: device.status as '正常' | '异常' | '维护中',
+        status: device.status as '生产中' | '使用中(正常)' | '使用中(异常)' | '已停用',
         remote_code: device.remote_code || '',
         password: device.password || '',
         notes: device.notes || ''
@@ -736,9 +736,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
               onChange={(e) => handleChange('status', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="正常">正常</option>
-              <option value="异常">异常</option>
-              <option value="维护中">维护中</option>
+              <option value="生产中">生产中</option>
+              <option value="使用中(正常)">使用中(正常)</option>
+              <option value="使用中(异常)">使用中(异常)</option>
+              <option value="已停用">已停用</option>
             </select>
           </div>
 

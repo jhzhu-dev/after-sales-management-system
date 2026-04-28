@@ -148,7 +148,7 @@ async function createTables() {
         name VARCHAR(255) NULL,
         product_line_id INT NOT NULL,
         customer_id INT,
-        status ENUM('正常', '异常', '维护中') DEFAULT '正常',
+        status ENUM('生产中','使用中(正常)','使用中(异常)','已停用') DEFAULT '使用中(正常)',
         remote_code VARCHAR(100),
         password VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -896,6 +896,24 @@ async function createTables() {
       }
     } catch (err) {
       console.warn('⚠️ feishu_config.chat_id 迁移警告:', err.message);
+    }
+
+    // 设备状态迁移：正常/异常/维护中 → 生产中/使用中(正常)/使用中(异常)/已停用
+    try {
+      const [statusCol] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'status'");
+      const colType = statusCol[0] ? statusCol[0].Type : '';
+      if (colType.includes('正常') && !colType.includes('使用中(正常)')) {
+        // Step 1: 扩展 ENUM，同时包含新旧值，避免约束冲突
+        await pool.execute("ALTER TABLE devices MODIFY COLUMN status ENUM('正常','异常','维护中','生产中','使用中(正常)','使用中(异常)','已停用') DEFAULT '使用中(正常)'");
+        // Step 2: 数据迁移
+        await pool.execute("UPDATE devices SET status = '使用中(正常)' WHERE status = '正常'");
+        await pool.execute("UPDATE devices SET status = '使用中(异常)' WHERE status IN ('异常', '维护中')");
+        // Step 3: 收窄为最终 ENUM
+        await pool.execute("ALTER TABLE devices MODIFY COLUMN status ENUM('生产中','使用中(正常)','使用中(异常)','已停用') DEFAULT '使用中(正常)'");
+        console.log('✅ devices.status ENUM 迁移成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ devices.status ENUM 迁移警告:', err.message);
     }
 
   } catch (error) {

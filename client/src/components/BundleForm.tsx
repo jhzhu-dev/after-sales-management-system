@@ -49,7 +49,7 @@ function emptyDeviceRow(): NewDeviceRow {
     notes: '',
     product_line_id: '',
     product_id: '',
-    status: '正常',
+    status: '使用中(正常)',
     module_type_ids: [],
     products: [],
     moduleTypes: [],
@@ -474,9 +474,10 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-0.5">状态</label>
                         <select value={row.status} onChange={e => updateNewDeviceRow(row.key, 'status', e.target.value)} className={selectCls}>
-                          <option value="正常">正常</option>
-                          <option value="异常">异常</option>
-                          <option value="维护中">维护中</option>
+                          <option value="生产中">生产中</option>
+                          <option value="使用中(正常)">使用中(正常)</option>
+                          <option value="使用中(异常)">使用中(异常)</option>
+                          <option value="已停用">已停用</option>
                         </select>
                       </div>
                     </div>
@@ -594,7 +595,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                               {d.product_name && <span> · {d.product_name}</span>}
                             </div>
                           </div>
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${d.status === '正常' ? 'bg-green-100 text-green-700' : d.status === '异常' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{d.status}</span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${d.status === '使用中(正常)' ? 'bg-green-100 text-green-700' : d.status === '使用中(异常)' ? 'bg-red-100 text-red-700' : d.status === '生产中' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>{d.status}</span>
                         </div>
                       ))}
                     </div>

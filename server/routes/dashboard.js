@@ -79,9 +79,9 @@ router.get('/stats', async (req, res) => {
       SELECT 
         COALESCE(pl.name, '未指定') as product_line,
         COUNT(*) as total,
-        SUM(CASE WHEN d.status = '正常' THEN 1 ELSE 0 END) as normal,
-        SUM(CASE WHEN d.status = '异常' THEN 1 ELSE 0 END) as abnormal,
-        SUM(CASE WHEN d.status = '维护中' THEN 1 ELSE 0 END) as maintenance
+        SUM(CASE WHEN d.status = '使用中(正常)' THEN 1 ELSE 0 END) as normal,
+        SUM(CASE WHEN d.status = '使用中(异常)' THEN 1 ELSE 0 END) as abnormal,
+        SUM(CASE WHEN d.status IN ('生产中', '已停用') THEN 1 ELSE 0 END) as maintenance
       FROM devices d
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       GROUP BY d.product_line_id, pl.name
@@ -301,9 +301,9 @@ router.get('/performance', async (req, res) => {
     // 设备正常运行时间
     const uptimeQuery = `
       SELECT 
-        COUNT(CASE WHEN status = '正常' THEN 1 END) as normal_devices,
+        COUNT(CASE WHEN status = '使用中(正常)' THEN 1 END) as normal_devices,
         COUNT(*) as total_devices,
-        ROUND(COUNT(CASE WHEN status = '正常' THEN 1 END) * 100.0 / COUNT(*), 2) as uptime_percentage
+        ROUND(COUNT(CASE WHEN status = '使用中(正常)' THEN 1 END) * 100.0 / COUNT(*), 2) as uptime_percentage
       FROM devices
     `;
     
