@@ -205,12 +205,14 @@ router.post('/', [
   body('name').optional({ nullable: true }).isString().withMessage('订单号必须是字符串'),
   body('product_line_id').notEmpty().isInt().withMessage('产品线ID必须是整数'),
   body('customer_id').optional({ nullable: true }).isInt().withMessage('客户ID必须是整数'),
-  body('status').optional({ nullable: true }).isIn(['生产中', '使用中(正常)', '使用中(异常)', '已停用']).withMessage('状态必须是：生产中、使用中(正常)、使用中(异常)或已停用'),
+  body('status').optional({ nullable: true }).isIn(['生产中', '使用中(正常)', '使用中(异常)', '已停用', '正常']).withMessage('状态必须是：生产中、使用中(正常)、使用中(异常)或已停用'),
   body('remote_code').optional({ nullable: true }).isString().withMessage('远程码必须是字符串'),
   body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串')
 ], async (req, res) => {
   try {
     console.log('收到创建设备请求:', req.body);
+    // 兼容旧前端：将单独的"正常"状态规范化为"使用中(正常)"
+    if (req.body.status === '正常') req.body.status = '使用中(正常)';
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.log('验证失败:', errors.array());
@@ -317,11 +319,13 @@ router.put('/:id', [
   body('name').optional({ nullable: true, checkFalsy: true }),  // 订单号允许为空/null
   body('product_line_id').optional().isInt().withMessage('产品线ID必须是整数'),
   body('customer_id').optional({ nullable: true }).isInt().withMessage('客户ID必须是整数'),
-  body('status').optional({ nullable: true }).isIn(['生产中', '使用中(正常)', '使用中(异常)', '已停用']).withMessage('状态必须是：生产中、使用中(正常)、使用中(异常)或已停用'),
+  body('status').optional({ nullable: true }).isIn(['生产中', '使用中(正常)', '使用中(异常)', '已停用', '正常']).withMessage('状态必须是：生产中、使用中(正常)、使用中(异常)或已停用'),
   body('remote_code').optional({ nullable: true }).isString().withMessage('远程码必须是字符串'),
   body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串')
 ], async (req, res) => {
   try {
+    // 兼容旧前端：将单独的"正常"状态规范化为"使用中(正常)"
+    if (req.body.status === '正常') req.body.status = '使用中(正常)';
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({

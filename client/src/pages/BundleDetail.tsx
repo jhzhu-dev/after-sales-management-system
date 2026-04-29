@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeftIcon,
   PencilIcon,
-  PlusIcon,
   TrashIcon,
   EyeIcon,
   PrinterIcon,
@@ -17,7 +16,7 @@ import {
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
-import { DeviceBundle, Device } from '../types';
+import { DeviceBundle } from '../types';
 import { bundleApi } from '../services/api';
 import api from '../services/api';
 import Layout from '../components/Layout';
@@ -46,7 +45,9 @@ const BundleDetail: React.FC = () => {
   const [docUploadBy, setDocUploadBy] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [docDragOver, setDocDragOver] = useState(false);
-  const [bgUpload, setBgUpload] = useState<{ fileCount: number; progress: number; done: boolean; error: string | null; statusText?: string; failedFiles?: string[] } | null>(null);
+  const [bgUpload, setBgUpload] = useState<{ fileCount: number; progress: number; done: boolean; error: string | null; statusText?: string; failedFiles?: string[]; skippedCount?: number } | null>(null);
+  const [docSelectMode, setDocSelectMode] = useState(false);
+  const [selectedDocIds, setSelectedDocIds] = useState<Set<number>>(new Set());
   const [previewDoc, setPreviewDoc] = useState<{
     url: string; title: string; type: string;
     docId: number; originalName: string;
@@ -137,14 +138,49 @@ const BundleDetail: React.FC = () => {
     setDocUploadCategory('');
     setDocUploadNewCategory('');
     setDocUploadBy('');
-    setBgUpload({ fileCount: filesToUpload.length, progress: 0, done: false, error: null, statusText: '正在上传...' });
+    setBgUpload({ fileCount: filesToUpload.length, progress: 0, done: false, error: null, statusText: '正在检查已存在文件...' });
 
     try {
+      // ── Phase A: 去重检查 ──────────────────────────────────────
+      const existsFlags: boolean[] = new Array(filesToUpload.length).fill(false);
+      try {
+        const CHECK_BATCH = 500;
+        for (let ci = 0; ci < filesToUpload.length; ci += CHECK_BATCH) {
+          const batch = filesToUpload.slice(ci, ci + CHECK_BATCH);
+          const { data: checkResult } = await api.post('/device-documents/check-exists', {
+            bundle_id: bundleId,
+            category,
+            files: batch.map(f => ({
+              relativePath: (f as any).webkitRelativePath || f.name,
+              originalName: f.name,
+            })),
+          });
+          if (checkResult.success && Array.isArray(checkResult.exists)) {
+            checkResult.exists.forEach((e: boolean, j: number) => { existsFlags[ci + j] = e; });
+          }
+        }
+      } catch (checkErr) {
+        console.warn('去重检查失败，将继续上传全部文件:', checkErr);
+      }
+
+      const toUpload = filesToUpload.filter((_, i) => !existsFlags[i]);
+      const skippedCount = filesToUpload.length - toUpload.length;
+
+      if (toUpload.length === 0) {
+        setBgUpload(prev => prev ? { ...prev, done: true, progress: 100, skippedCount, statusText: undefined } : prev);
+        await fetchDocuments();
+        setTimeout(() => setBgUpload(null), 3500);
+        return;
+      }
+
+      setBgUpload(prev => prev ? { ...prev, skippedCount, statusText: '正在上传...' } : prev);
+
+      // ── Phase B: 3批并行上传，每批最多50文件 ──────────────────
       const BATCH_SIZE = 50;
       const PARALLEL_BATCHES = 3;
       const batches: File[][] = [];
-      for (let bi = 0; bi < filesToUpload.length; bi += BATCH_SIZE) {
-        batches.push(filesToUpload.slice(bi, bi + BATCH_SIZE));
+      for (let bi = 0; bi < toUpload.length; bi += BATCH_SIZE) {
+        batches.push(toUpload.slice(bi, bi + BATCH_SIZE));
       }
 
       let completedBatches = 0;
@@ -185,6 +221,7 @@ const BundleDetail: React.FC = () => {
         setBgUpload(prev => prev ? { ...prev, progress } : prev);
       }
 
+      // ── Phase C: 完成 ─────────────────────────────────────────
       const hasFailed = failedFiles.length > 0;
       setBgUpload(prev => prev ? {
         ...prev,
@@ -263,6 +300,83 @@ const BundleDetail: React.FC = () => {
   const handleDownloadDoc = (doc: any) => {
     const token = localStorage.getItem('auth_token');
     window.open(`/api/device-documents/${doc.id}/download?token=${token}`, '_blank');
+  };
+
+  const handleDownloadCategory = (cat: string) => {
+    const token = localStorage.getItem('auth_token');
+    const a = document.createElement('a');
+    a.href = `/api/device-documents/download-category?bundle_id=${bundleId}&category=${encodeURIComponent(cat)}&token=${token}`;
+    a.download = `${cat}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const toggleDocSelect = (docId: number) => {
+    setSelectedDocIds(prev => {
+      const next = new Set(prev);
+      if (next.has(docId)) next.delete(docId);
+      else next.add(docId);
+      return next;
+    });
+  };
+
+  const toggleSelectAllDocs = () => {
+    if (selectedDocIds.size === documents.length) {
+      setSelectedDocIds(new Set());
+    } else {
+      setSelectedDocIds(new Set(documents.map((d: any) => d.id)));
+    }
+  };
+
+  const handleBatchDeleteDocs = async () => {
+    if (selectedDocIds.size === 0) return;
+    if (!window.confirm(`确定要删除选中的 ${selectedDocIds.size} 个文件吗？`)) return;
+    try {
+      const { data: result } = await api.post('/device-documents/batch-delete', { ids: Array.from(selectedDocIds) });
+      if (result.success) {
+        setSelectedDocIds(new Set());
+        setDocSelectMode(false);
+        await fetchDocuments();
+      } else {
+        alert(result.error || '批量删除失败');
+      }
+    } catch (error: any) {
+      console.error('批量删除失败:', error);
+      alert(error?.response?.data?.error || '批量删除失败');
+    }
+  };
+
+  const handleBatchDownloadDocs = async () => {
+    if (selectedDocIds.size === 0) return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/device-documents/batch-download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ids: Array.from(selectedDocIds) }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        alert(err.error || '批量下载失败');
+        return;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '批量下载.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('批量下载失败:', error);
+      alert('批量下载失败');
+    }
   };
 
   const toggleCategory = (cat: string) => {
@@ -517,86 +631,208 @@ const BundleDetail: React.FC = () => {
 
             {/* 出厂资料 Tab */}
             {activeTab === 'documents' && (
-              <div>
-                <div className="flex justify-between items-center mb-4 no-print">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center no-print">
                   <h3 className="text-base font-medium text-gray-900">多合一设备出厂资料</h3>
-                  <button
-                    onClick={() => setShowDocUploadModal(true)}
-                    className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
-                  >
-                    <ArrowUpTrayIcon className="h-4 w-4 mr-1" />
-                    上传资料
-                  </button>
-                </div>
-
-                {documents.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <DocumentIcon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                    <p>暂无出厂资料</p>
+                  <div className="flex items-center gap-2">
+                    {documents.length > 0 && (
+                      <button
+                        onClick={() => { const entering = !docSelectMode; setDocSelectMode(entering); setSelectedDocIds(new Set()); if (entering) setExpandedCategories(new Set(docCategories)); }}
+                        className={`flex items-center gap-1 px-3 py-2 rounded-md transition-colors text-sm ${
+                          docSelectMode ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {docSelectMode ? '取消选择' : '批量管理'}
+                      </button>
+                    )}
                     <button
                       onClick={() => setShowDocUploadModal(true)}
-                      className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
+                      className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition-colors text-sm"
                     >
-                      上传第一份资料
+                      <ArrowUpTrayIcon className="h-4 w-4" />
+                      上传资料
+                    </button>
+                  </div>
+                </div>
+
+                {docSelectMode && (
+                  <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={selectedDocIds.size === documents.length && documents.length > 0}
+                        onChange={toggleSelectAllDocs}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      全选
+                    </label>
+                    <span className="text-sm text-gray-500">已选 {selectedDocIds.size} / {documents.length}</span>
+                    <div className="ml-auto flex gap-2">
+                      <button
+                        onClick={handleBatchDownloadDocs}
+                        disabled={selectedDocIds.size === 0}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <DocumentArrowDownIcon className="h-4 w-4" />
+                        批量下载
+                      </button>
+                      <button
+                        onClick={handleBatchDeleteDocs}
+                        disabled={selectedDocIds.size === 0}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                        批量删除
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {documents.length === 0 ? (
+                  <div className="text-center py-16">
+                    <FolderIcon className="mx-auto h-12 w-12 text-gray-300" />
+                    <p className="mt-2 text-sm text-gray-500">暂无出厂资料</p>
+                    <button
+                      onClick={() => setShowDocUploadModal(true)}
+                      className="mt-3 text-sm text-green-600 hover:text-green-700 font-medium"
+                    >
+                      上传第一个文件
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {Object.entries(groupedDocs).map(([cat, docs]) => (
-                      <div key={cat} className="border rounded-lg">
-                        <button
-                          onClick={() => toggleCategory(cat)}
-                          className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-t-lg"
-                        >
-                          <div className="flex items-center gap-2">
-                            {expandedCategories.has(cat) ? (
-                              <ChevronDownIcon className="h-4 w-4 text-gray-500" />
-                            ) : (
-                              <ChevronRightIcon className="h-4 w-4 text-gray-500" />
+                  <div className="space-y-4 3xl:space-y-6">
+                    {docCategories.map(cat => {
+                      const docs = (groupedDocs[cat] || []) as any[];
+                      if (docs.length === 0) return null;
+                      const isExpanded = expandedCategories.has(cat);
+                      const catSelectedCount = docs.filter((d: any) => selectedDocIds.has(d.id)).length;
+                      const catAllSelected = catSelectedCount === docs.length && docs.length > 0;
+                      const catSomeSelected = catSelectedCount > 0 && catSelectedCount < docs.length;
+                      return (
+                        <div key={cat} className={`bg-gray-50 rounded-xl border overflow-hidden ${catAllSelected ? 'border-blue-400' : catSomeSelected ? 'border-blue-200' : 'border-gray-200'}`}>
+                          <div className="flex items-center">
+                            {docSelectMode && (
+                              <label className="flex items-center pl-3 cursor-pointer flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  ref={(el) => { if (el) el.indeterminate = catSomeSelected; }}
+                                  checked={catAllSelected}
+                                  onChange={() => {
+                                    setSelectedDocIds(prev => {
+                                      const next = new Set(prev);
+                                      if (catAllSelected || catSomeSelected) {
+                                        docs.forEach((d: any) => next.delete(d.id));
+                                      } else {
+                                        docs.forEach((d: any) => next.add(d.id));
+                                      }
+                                      return next;
+                                    });
+                                  }}
+                                  className="w-4 h-4 text-blue-600 rounded"
+                                />
+                              </label>
                             )}
-                            <FolderIcon className="h-4 w-4 text-yellow-500" />
-                            <span className="font-medium text-gray-900">{cat}</span>
-                            <span className="text-xs text-gray-400">({(docs as any[]).length} 个文件)</span>
+                            <button
+                              onClick={() => toggleCategory(cat)}
+                              className="flex-1 flex items-center justify-between px-4 py-3 hover:bg-gray-100 transition-colors text-left"
+                            >
+                              <span className="font-semibold text-gray-900 flex items-center">
+                                <FolderIcon className="h-5 w-5 mr-2 text-green-500" />
+                                {cat} ({docs.length})
+                                {docSelectMode && catSelectedCount > 0 && (
+                                  <span className="ml-2 text-xs font-normal text-blue-600">已选 {catSelectedCount}</span>
+                                )}
+                              </span>
+                              {isExpanded
+                                ? <ChevronDownIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                : <ChevronRightIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              }
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDownloadCategory(cat); }}
+                              className="flex items-center gap-1 px-3 py-3 text-blue-600 hover:bg-blue-50 transition-colors text-xs font-medium flex-shrink-0 border-l border-gray-200"
+                              title={`下载 ${cat} 下所有文件`}
+                            >
+                              <DocumentArrowDownIcon className="h-4 w-4" />
+                              下载全部
+                            </button>
                           </div>
-                        </button>
-                        {expandedCategories.has(cat) && (
-                          <div className="divide-y">
-                            {(docs as any[]).map((doc: any, docIdx: number) => (
-                              <div key={doc.id} className="flex items-center justify-between px-4 py-2 hover:bg-gray-50">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <DocumentIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                  <span className="text-sm text-gray-900 truncate">{doc.original_name}</span>
-                                  {doc.uploaded_by && <span className="text-xs text-gray-400">by {doc.uploaded_by}</span>}
-                                </div>
-                                <div className="flex items-center gap-1 flex-shrink-0">
-                                  <button
-                                    onClick={() => handlePreviewDoc(doc, docs as any[], docIdx)}
-                                    className="p-1 text-blue-600 hover:text-blue-800"
-                                    title="预览"
-                                  >
-                                    <EyeIcon className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDownloadDoc(doc)}
-                                    className="p-1 text-green-600 hover:text-green-800"
-                                    title="下载"
-                                  >
-                                    <DocumentArrowDownIcon className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteDoc(doc.id)}
-                                    className="p-1 text-red-600 hover:text-red-800"
-                                    title="删除"
-                                  >
-                                    <TrashIcon className="h-4 w-4" />
-                                  </button>
-                                </div>
+                          {isExpanded && (
+                            <div className="px-4 pb-4">
+                              <div className="space-y-2 pt-2">
+                                {docs.map((doc: any, docIdx: number) => {
+                                  const ext = (doc.original_name || '').split('.').pop()?.toLowerCase() || '';
+                                  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
+                                  const isPdf = ext === 'pdf';
+                                  const canPreview = isImage || isPdf;
+                                  return (
+                                    <div key={doc.id} className={`bg-white p-3 rounded-lg shadow-sm border flex items-center justify-between transition-colors ${selectedDocIds.has(doc.id) ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-green-200'}`}>
+                                      {docSelectMode && (
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedDocIds.has(doc.id)}
+                                          onChange={() => toggleDocSelect(doc.id)}
+                                          className="w-4 h-4 text-blue-600 rounded flex-shrink-0 mr-2"
+                                        />
+                                      )}
+                                      <div
+                                        className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                                        onClick={() => docSelectMode ? toggleDocSelect(doc.id) : handlePreviewDoc(doc, docs, docIdx)}
+                                      >
+                                        {isImage ? (
+                                          <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                            <img
+                                              src={`/api/device-documents/${doc.id}/download`}
+                                              alt={doc.title}
+                                              className="w-10 h-10 object-cover rounded"
+                                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                            />
+                                          </div>
+                                        ) : (
+                                          <DocumentIcon className="h-8 w-8 text-gray-400 flex-shrink-0" />
+                                        )}
+                                        <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                                          <span className="text-sm font-medium text-gray-900 truncate">
+                                            {doc.title || doc.original_name}
+                                          </span>
+                                          {canPreview && <span className="text-xs text-green-500 font-normal flex-shrink-0">可预览</span>}
+                                          {doc.file_size ? <span className="text-xs text-gray-400 flex-shrink-0">{formatFileSize(doc.file_size)}</span> : null}
+                                          {doc.created_at && <span className="text-xs text-gray-400 flex-shrink-0">{new Date(doc.created_at).toLocaleDateString()}</span>}
+                                          {doc.uploaded_by && <span className="text-xs text-gray-400 flex-shrink-0">上传人: {doc.uploaded_by}</span>}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1 flex-shrink-0 ml-4">
+                                        <button
+                                          onClick={() => handlePreviewDoc(doc, docs, docIdx)}
+                                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                                          title="阅览"
+                                        >
+                                          <EyeIcon className="h-5 w-5" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDownloadDoc(doc)}
+                                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                          title="下载"
+                                        >
+                                          <DocumentArrowDownIcon className="h-5 w-5" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteDoc(doc.id)}
+                                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                          title="删除"
+                                        >
+                                          <TrashIcon className="h-5 w-5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

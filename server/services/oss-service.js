@@ -131,10 +131,16 @@ class OSSService {
 
       const [, bucket, objectName] = ossPathMatch;
 
-      // 构建 Content-Disposition，携带原始文件名（RFC 5987 编码，正确支持中文）
-      const disposition = fileName
-        ? `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`
-        : 'attachment';
+      // 构建 Content-Disposition，携带原始文件名
+      // 同时包含 filename（ASCII 降级，浏览器兼容性好）和 filename*（RFC 5987，正确支持中文）
+      // OSS 会将此值 URL 编码后追加到签名 URL 的 response-content-disposition 参数中
+      let disposition = 'attachment';
+      if (fileName) {
+        // ASCII 安全的降级名称（去掉非 ASCII 字符）用于 filename=
+        const asciiName = fileName.replace(/[^\x20-\x7E]/g, '_');
+        const rfc5987Name = encodeURIComponent(fileName);
+        disposition = `attachment; filename="${asciiName}"; filename*=UTF-8''${rfc5987Name}`;
+      }
 
       // 生成签名URL
       const url = this.client.signatureUrl(objectName, {

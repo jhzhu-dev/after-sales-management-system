@@ -174,10 +174,22 @@ async function runConcurrent(items, concurrency, fn) {
 // 上传前检查文件是否已存在（按 OSS 路径对比），用于前端去重跳过
 router.post('/check-exists', async (req, res) => {
     try {
-        const { device_id, category, files } = req.body;
-        if (!device_id || !category || !Array.isArray(files) || files.length === 0) {
+        const { device_id, bundle_id, category, files } = req.body;
+        if ((!device_id && !bundle_id) || !category || !Array.isArray(files) || files.length === 0) {
             return res.status(400).json({ success: false, error: '参数不完整' });
         }
+
+        // bundle_id 模式：按 original_name 去重（兼容本地存储和 OSS）
+        if (bundle_id && !device_id) {
+            const existingRows = await query(
+                'SELECT original_name FROM device_documents WHERE bundle_id = ? AND category = ?',
+                [bundle_id, category]
+            );
+            const existingNames = new Set(existingRows.map(r => r.original_name));
+            const exists = files.map(f => existingNames.has(f.originalName));
+            return res.json({ success: true, exists });
+        }
+
         if (!ossService.enabled) {
             // OSS 未启用，无法按路径去重，全部允许上传
             return res.json({ success: true, exists: files.map(() => false) });

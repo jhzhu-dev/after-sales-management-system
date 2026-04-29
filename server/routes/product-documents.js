@@ -113,7 +113,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         if (ossService.enabled) {
             try {
                 // 使用新规范路径: Product Line Information/{产品线}/{型号-产品名}/{doc_type}/{文件名}
-                const fileName = path.basename(req.file.originalname || req.file.filename);
+                // 注意：必须使用已解码的 originalName（latin1→utf8），不能用 req.file.originalname（原始 latin1 字节会导致 OSS 路径乱码）
+                const fileName = originalName;
                 const ossKey = ossService.buildPathByType('product-docs', {
                     productLine: product.product_line_name || product.product_line_code,
                     productModel: product.model,
