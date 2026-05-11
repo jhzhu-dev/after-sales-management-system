@@ -328,6 +328,13 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
 
   const handlePrint = async () => {
     if (activeTab === 'issues') {
+      if (selectedIssues.length > 0) {
+        // 有勾选：只打印选中的问题
+        const selected = issues.filter(issue => selectedIssues.includes(issue.id));
+        setPrintAllIssues(selected);
+        return;
+      }
+      // 无勾选：打印全部（从 API 获取完整数据）
       try {
         const resp = await issueApi.getIssues({ ...filters, page: 1, limit: 9999 });
         if (resp.success) {
@@ -366,18 +373,30 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
   ];
 
   const handleExportIssues = async () => {
+    const severityMap: Record<string, string> = { low: '低', medium: '中', high: '高' };
+    const statusMap: Record<string, string> = { open: '待处理', in_progress: '处理中', closed: '已解决' };
+    const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
+    if (selectedIssues.length > 0) {
+      // 有勾选：直接从内存过滤，无需 API
+      const rows = issues.filter(i => selectedIssues.includes(i.id)).map((issue: any) => ({
+        ...issue,
+        severity_label: severityMap[issue.severity] || issue.severity,
+        status_label: statusMap[issue.status] || issue.status,
+        created_at: issue.created_at ? new Date(issue.created_at).toLocaleDateString('zh-CN') : '',
+      }));
+      exportToExcel(rows, ISSUE_EXPORT_COLUMNS, `故障管理_${timestamp}`);
+      return;
+    }
+    // 无勾选：导出全部（从 API 获取完整数据）
     try {
       const resp = await issueApi.getIssues({ ...filters, page: 1, limit: 9999 });
       if (!resp.success) return;
-      const severityMap: Record<string, string> = { low: '低', medium: '中', high: '高' };
-      const statusMap: Record<string, string> = { open: '待处理', in_progress: '处理中', closed: '已解决' };
       const rows = resp.data.map((issue: any) => ({
         ...issue,
         severity_label: severityMap[issue.severity] || issue.severity,
         status_label: statusMap[issue.status] || issue.status,
         created_at: issue.created_at ? new Date(issue.created_at).toLocaleDateString('zh-CN') : '',
       }));
-      const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
       exportToExcel(rows, ISSUE_EXPORT_COLUMNS, `故障管理_${timestamp}`);
     } catch (e) {
       console.error('导出失败:', e);
@@ -478,20 +497,24 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     {
       key: 'select' as keyof Issue,
       title: (
-        <input
-          type="checkbox"
-          checked={selectedIssues.length === issues.length && issues.length > 0}
-          onChange={handleSelectAll}
-          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
+        <div onClick={e => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedIssues.length === issues.length && issues.length > 0}
+            onChange={handleSelectAll}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
       ),
       render: (value: any, record: Issue) => (
-        <input
-          type="checkbox"
-          checked={selectedIssues.includes(record.id)}
-          onChange={() => handleSelectIssue(record.id)}
-          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
+        <div onClick={e => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedIssues.includes(record.id)}
+            onChange={() => handleSelectIssue(record.id)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
       ),
       width: '50px'
     },

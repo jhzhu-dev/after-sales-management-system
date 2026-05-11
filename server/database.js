@@ -477,6 +477,18 @@ async function createTables() {
         console.log('🔄 正在为 devices 表添加 password 字段...');
         await pool.execute("ALTER TABLE devices ADD COLUMN password VARCHAR(100) AFTER remote_code");
       }
+
+      const [merchantCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'merchant_id'");
+      if (merchantCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加 merchant_id 字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN merchant_id VARCHAR(100) NULL AFTER password");
+      }
+
+      const [merchantPwdCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'merchant_password'");
+      if (merchantPwdCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加 merchant_password 字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN merchant_password VARCHAR(100) NULL AFTER merchant_id");
+      }
       console.log('✅ devices 表字段更新成功');
 
       // 客户关联和位置字段迁移
@@ -915,6 +927,21 @@ async function createTables() {
     } catch (err) {
       console.warn('⚠️ devices.status ENUM 迁移警告:', err.message);
     }
+
+    // feishu_notifications 表：记录每条飞书通知消息，保存 message_id 和被 @ 的人
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS feishu_notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        message_id VARCHAR(100) NOT NULL COMMENT '飞书消息 ID，用于后续 PATCH 更新',
+        type ENUM('device','issue','upgrade') NOT NULL COMMENT '通知类型',
+        ref_id VARCHAR(100) NOT NULL COMMENT '关联记录 ID（设备序列号 / 问题 ID / 升级 ID）',
+        notify_open_ids JSON COMMENT '被 @ 的飞书用户 open_id 列表',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_ref (type, ref_id),
+        INDEX idx_message (message_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log('✅ feishu_notifications 表就绪');
 
   } catch (error) {
     console.error('❌ 创建表结构失败:', error.message);

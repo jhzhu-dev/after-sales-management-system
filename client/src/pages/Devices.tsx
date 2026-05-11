@@ -57,6 +57,10 @@ export default function Devices() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [visibleCount, setVisibleCount] = useState<number>(() => Math.max(20, parseInt(searchParams.get('visible') || '20')));
   const [visibleBundleCount, setVisibleBundleCount] = useState(20);
+  const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
+  const [selectedBundles, setSelectedBundles] = useState<number[]>([]);
+  const [printDevices, setPrintDevices] = useState<Device[] | null>(null);
+  const [printBundles, setPrintBundles] = useState<DeviceBundle[] | null>(null);
 
   const fetchAllDevices = async () => {
     try {
@@ -359,7 +363,43 @@ export default function Devices() {
     setShowDeviceForm(true);
   };
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    if (viewMode === 'devices' && selectedDevices.length > 0) {
+      setPrintDevices(filteredDevices.filter(d => selectedDevices.includes(d.id)));
+      setTimeout(() => { window.print(); setPrintDevices(null); }, 100);
+      return;
+    }
+    if (viewMode === 'bundles' && selectedBundles.length > 0) {
+      setPrintBundles(filteredBundles.filter(b => selectedBundles.includes(b.id)));
+      setTimeout(() => { window.print(); setPrintBundles(null); }, 100);
+      return;
+    }
+    window.print();
+  };
+
+  const handleSelectDevice = (id: string) => {
+    setSelectedDevices(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleSelectAllDevices = () => {
+    if (selectedDevices.length === filteredDevices.length) {
+      setSelectedDevices([]);
+    } else {
+      setSelectedDevices(filteredDevices.map(d => d.id));
+    }
+  };
+
+  const handleSelectBundle = (id: number) => {
+    setSelectedBundles(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleSelectAllBundles = () => {
+    if (selectedBundles.length === filteredBundles.length) {
+      setSelectedBundles([]);
+    } else {
+      setSelectedBundles(filteredBundles.map(b => b.id));
+    }
+  };
 
   const handleBundleSort = (field: string) => {
     let newOrder: 'asc' | 'desc' = 'asc';
@@ -436,7 +476,10 @@ export default function Devices() {
   const handleExport = () => {
     const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
     const filename = `设备管理_${timestamp}`;
-    exportToExcel(allFilteredDevices as any[], DEVICE_EXPORT_COLUMNS, filename);
+    const data = selectedDevices.length > 0
+      ? allFilteredDevices.filter(d => selectedDevices.includes(d.id))
+      : allFilteredDevices;
+    exportToExcel(data as any[], DEVICE_EXPORT_COLUMNS, filename);
   };
 
   // 多合一设备导出
@@ -467,7 +510,10 @@ export default function Devices() {
   const handleBundleExport = () => {
     const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
     const filename = `多合一设备_${timestamp}`;
-    exportToExcel(allFilteredBundles as any[], BUNDLE_EXPORT_COLUMNS, filename);
+    const data = selectedBundles.length > 0
+      ? allFilteredBundles.filter(b => selectedBundles.includes(b.id))
+      : allFilteredBundles;
+    exportToExcel(data as any[], BUNDLE_EXPORT_COLUMNS, filename);
   };
 
   const handleDeviceSubmit = async (data: DeviceFormData) => {
@@ -549,6 +595,30 @@ export default function Devices() {
   };
 
   const columns = [
+    {
+      key: 'select' as keyof Device,
+      title: (
+        <div onClick={e => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedDevices.length === filteredDevices.length && filteredDevices.length > 0}
+            onChange={handleSelectAllDevices}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      render: (value: any, record: Device) => (
+        <div onClick={e => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedDevices.includes(record.id)}
+            onChange={() => handleSelectDevice(record.id)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      width: '50px'
+    },
     {
       key: 'id' as keyof Device,
       title: <SortableHeader field="id" title="生产序列号" />,
@@ -708,6 +778,30 @@ export default function Devices() {
   };
 
   const bundleColumns = [
+    {
+      key: 'select' as keyof DeviceBundle,
+      title: (
+        <div onClick={e => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedBundles.length === filteredBundles.length && filteredBundles.length > 0}
+            onChange={handleSelectAllBundles}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      render: (value: any, record: DeviceBundle) => (
+        <div onClick={e => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedBundles.includes(record.id)}
+            onChange={() => handleSelectBundle(record.id)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      width: '50px'
+    },
     {
       key: 'bundle_code' as keyof DeviceBundle,
       title: <BundleSortableHeader field="bundle_code" title="多合一设备订单号" />,
@@ -952,7 +1046,7 @@ export default function Devices() {
               </tr>
             </thead>
             <tbody>
-              {allFilteredDevices.map((d, i) => (
+              {(printDevices ?? allFilteredDevices).map((d, i) => (
                 <tr key={d.id} style={{borderBottom:'0.5pt solid #e5e7eb', backgroundColor: i%2===0?'white':'#f9fafb'}}>
                   <td style={{padding:'3pt 6pt', fontFamily:'monospace'}}>{d.id}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.device_code || '-'}</td>
@@ -1034,7 +1128,7 @@ export default function Devices() {
               </tr>
             </thead>
             <tbody>
-              {allFilteredBundles.map((b, i) => (
+              {(printBundles ?? allFilteredBundles).map((b, i) => (
                 <tr key={b.id} style={{borderBottom:'0.5pt solid #e5e7eb', backgroundColor: i%2===0?'white':'#f9fafb'}}>
                   <td style={{padding:'3pt 6pt', fontFamily:'monospace'}}>{b.bundle_code}</td>
                   <td style={{padding:'3pt 6pt'}}>{b.name || '-'}</td>

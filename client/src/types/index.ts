@@ -35,6 +35,8 @@ export interface Device {
   updated_at: string;
   remote_code?: string;
   password?: string;
+  merchant_id?: string | null;
+  merchant_password?: string | null;
   issue_count?: number;
   open_issues?: number;
   bundle_id?: number | null;
@@ -204,6 +206,8 @@ export interface DeviceFormData {
   status: '生产中' | '使用中(正常)' | '使用中(异常)' | '已停用';
   remote_code?: string | null;
   password?: string | null;
+  merchant_id?: string | null;
+  merchant_password?: string | null;
   notes?: string | null;
   selectedModuleTypeIds?: number[];
   // 飞书通知字段（仅前端用，不入库）
@@ -523,6 +527,8 @@ export interface DeviceBundle {
   remote_code?: string | null;
   open_issues?: number;
   password?: string | null;
+  merchant_id?: string | null;
+  merchant_password?: string | null;
   devices?: Device[];
   stats?: {
     total_modules: number;
@@ -554,4 +560,6 @@ export interface DeviceBundleFormData {
   new_devices?: NewBundleDevice[];
   remote_code?: string;
   password?: string;
+  merchant_id?: string;
+  merchant_password?: string;
 }

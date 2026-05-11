@@ -79,6 +79,7 @@ services:
       LOGIN_USERNAME: ${LOGIN_USERNAME:-elsvision}
       LOGIN_PASSWORD: ${LOGIN_PASSWORD:-elsvisiongo666}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SYSTEM_BASE_URL: ${SYSTEM_BASE_URL:-http://192.168.0.181:5000}
     volumes:
       - ./uploads:/app/uploads
       - ./ssl:/app/ssl:ro          # SSL 证书（只读挂载，有证书则自动启用 HTTPS）

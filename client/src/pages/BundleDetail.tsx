@@ -454,18 +454,17 @@ const BundleDetail: React.FC = () => {
         {/* 顶部导航 */}
         <div className="flex items-center justify-between no-print">
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/devices?view=bundles')} className="text-gray-600 hover:text-gray-900">
-              <ArrowLeftIcon className="h-5 w-5" />
+            <button onClick={() => navigate('/devices?view=bundles')} className="flex items-center text-gray-600 hover:text-gray-900 transition-colors no-print">
+              <ArrowLeftIcon className="h-5 w-5 mr-2" />
+              返回设备列表
             </button>
             <div>
-              <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">
-                多合一设备: {bundle.bundle_code}
-                {bundle.name && <span className="text-base font-normal text-gray-500 ml-2">{bundle.name}</span>}
+              <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">
+                {bundle.name || bundle.bundle_code}
               </h1>
-              <div className="text-sm text-gray-500 mt-0.5">
-                客户: {bundle.customer_name || '-'}
-                {bundle.customer_short_name && <span className="ml-1">({bundle.customer_short_name})</span>}
-              </div>
+              {bundle.name && (
+                <div className="text-sm text-gray-500 mt-0.5">订单号: {bundle.bundle_code}</div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -496,7 +495,8 @@ const BundleDetail: React.FC = () => {
         {/* 基本信息卡片 */}
         <div className="bg-white rounded-lg shadow p-4 3xl:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">基本信息</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* 行1: 多合一设备订单号 | 客户 | 设备数量 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">多合一设备订单号</label>
               <p className="text-lg font-mono">{bundle.bundle_code}</p>
@@ -516,36 +516,79 @@ const BundleDetail: React.FC = () => {
                 </span>
               </p>
             </div>
+            {/* 行2: 设备状态汇总（2列）| 备注 */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">设备状态汇总</label>
+              <div className="flex flex-wrap gap-2 mt-0.5">
+                {bundle.devices && bundle.devices.length > 0 ? (() => {
+                  const counts: Record<string, number> = {};
+                  bundle.devices!.forEach((d: any) => { counts[d.status] = (counts[d.status] || 0) + 1; });
+                  return Object.entries(counts).map(([status, count]) => (
+                    <span key={status} className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+                      {status} × {count}
+                    </span>
+                  ));
+                })() : <span className="text-gray-400 text-sm">暂无设备</span>}
+              </div>
+            </div>
+            <div title={bundle.description || ''}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+              <p className="text-gray-600 truncate" title={bundle.description || ''}>{bundle.description || '-'}</p>
+            </div>
+            {/* 倒数第三行: 远程码 | 远程密码 | （空） */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">远程码</label>
+              <p className="text-lg">
+                {bundle.remote_code ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-mono font-medium bg-white text-blue-600 border border-blue-200">
+                    {bundle.remote_code.includes(' ') ? bundle.remote_code : bundle.remote_code.replace(/(\d{3})(?=\d)/g, '$1 ')}
+                  </span>
+                ) : '-'}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">远程密码</label>
+              <p className="text-lg">
+                {bundle.password ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-mono font-medium bg-gray-50 text-gray-700 border border-gray-200">
+                    {bundle.password}
+                  </span>
+                ) : '-'}
+              </p>
+            </div>
+            <div />
+            {/* 倒数第二行: 商户号 | 商户密码 | （空） */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">商户号</label>
+              <p className="text-lg">
+                {bundle.merchant_id ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-mono font-medium bg-gray-50 text-gray-700 border border-gray-200">
+                    {bundle.merchant_id}
+                  </span>
+                ) : '-'}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">商户密码</label>
+              <p className="text-lg">
+                {bundle.merchant_password ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-mono font-medium bg-gray-50 text-gray-700 border border-gray-200">
+                    {bundle.merchant_password}
+                  </span>
+                ) : '-'}
+              </p>
+            </div>
+            <div />
+            {/* 倒数第一行: 创建时间 | 更新时间 | （空） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">创建时间</label>
               <p className="text-lg">{formatDate(bundle.created_at, 'yyyy-MM-dd')}</p>
             </div>
-            {bundle.remote_code && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">远程码</label>
-                <p className="text-lg">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-mono font-medium bg-white text-blue-600 border border-blue-200">
-                    {bundle.remote_code.includes(' ') ? bundle.remote_code : bundle.remote_code.replace(/(\d{3})(?=\d)/g, '$1 ')}
-                  </span>
-                </p>
-              </div>
-            )}
-            {bundle.password && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">密码</label>
-                <p className="text-lg">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-mono font-medium bg-gray-50 text-gray-700 border border-gray-200">
-                    {bundle.password}
-                  </span>
-                </p>
-              </div>
-            )}
-            {bundle.description && (
-              <div className="md:col-span-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-                <p className="text-gray-600">{bundle.description}</p>
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">更新时间</label>
+              <p className="text-lg">{formatDate(bundle.updated_at, 'yyyy-MM-dd')}</p>
+            </div>
+            <div />
           </div>
         </div>
 
@@ -592,6 +635,8 @@ const BundleDetail: React.FC = () => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">订单号</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">简称</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">产品名称</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">商户号</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">商户密码</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">待解决问题</th>
                       </tr>
@@ -607,6 +652,8 @@ const BundleDetail: React.FC = () => {
                           <td className="px-4 py-3 text-sm text-gray-900">{device.name || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{device.nickname || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{device.product_name || '-'}</td>
+                          <td className="px-4 py-3 text-sm font-mono text-gray-700">{bundle.merchant_id || '-'}</td>
+                          <td className="px-4 py-3 text-sm font-mono text-gray-700">{bundle.merchant_password || '-'}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(device.status)}`}>
                               {device.status}

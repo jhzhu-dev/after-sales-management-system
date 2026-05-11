@@ -291,7 +291,7 @@ router.post('/', [
   body('release_id').optional().isInt().withMessage('发布记录ID格式不正确'),
   body('version_type').isIn(['factory', 'update']).withMessage('版本类型无效'),
   body('release_date').optional().isISO8601().withMessage('发布日期格式无效'),
-  body('description').notEmpty().withMessage('更新说明不能为空（强制登记）'),
+  body('description').optional({ nullable: true, checkFalsy: true }).isString().withMessage('版本变更备注格式不正确'),
   body('updated_by').notEmpty().withMessage('更新执行人不能为空（强制登记）')
 ], async (req, res) => {
   try {
@@ -309,10 +309,7 @@ router.post('/', [
 
     let { module_id, version_number, release_id, version_type, release_date, description, updated_by, checklist } = req.body;
 
-    // 强制说明字符长度检查
-    if (description && description.trim().length < 5) {
-      return res.status(400).json({ success: false, error: '更新说明过短，请提供更详细的执行记录（至少5个字符）' });
-    }
+
 
     // 检查模块是否存在
     const [module] = await query('SELECT id, type_id FROM modules WHERE id = ?', [module_id]);

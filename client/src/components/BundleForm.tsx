@@ -489,7 +489,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                       <textarea
                         value={row.notes}
                         onChange={e => updateNewDeviceRow(row.key, 'notes', e.target.value)}
-                        placeholder="备注（选填）"
+                        placeholder="备注"
                         rows={2}
                         className={`${inputCls} resize-none`}
                       />

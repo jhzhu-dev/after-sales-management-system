@@ -62,6 +62,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       LOGIN_USERNAME: ${LOGIN_USERNAME:-elsvision}
       LOGIN_PASSWORD: ${LOGIN_PASSWORD:-elsvisiongo666}
+      SYSTEM_BASE_URL: ${SYSTEM_BASE_URL:-http://192.168.0.181:5000}
     volumes:
       - ./uploads:/app/uploads
     ports:

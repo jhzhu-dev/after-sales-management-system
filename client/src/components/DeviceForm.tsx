@@ -21,6 +21,8 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
     status: '使用中(正常)',
     remote_code: '',
     password: '',
+    merchant_id: '',
+    merchant_password: '',
     notes: ''
   });
 
@@ -65,6 +67,8 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         status: device.status as '生产中' | '使用中(正常)' | '使用中(异常)' | '已停用',
         remote_code: device.remote_code || '',
         password: device.password || '',
+        merchant_id: (device as any).merchant_id || '',
+        merchant_password: (device as any).merchant_password || '',
         notes: device.notes || ''
       });
       if (device.product_line_id) {
@@ -332,6 +336,8 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         status: formData.status,
         remote_code: formData.remote_code?.trim() || null,
         password: formData.password?.trim() || null,
+        merchant_id: formData.merchant_id?.trim() || null,
+        merchant_password: formData.merchant_password?.trim() || null,
         notes: formData.notes?.trim() || null,
         product_line_id: device.product_line_id as number,
         // 传递 id 供父组件判断是否修改了生产序列号
@@ -368,9 +374,9 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 flex-shrink-0">
+          <h2 className="text-lg font-semibold text-gray-900">
             {device ? '编辑设备' : '新增设备'}
           </h2>
           <button
@@ -381,49 +387,229 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="px-5 py-3 overflow-y-auto flex-1 space-y-3">
           {/* 编辑模式：可编辑字段 */}
           {device && (
             <>
-              {/* 订单号 */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                {/* 订单号 */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">订单号</label>
+                  <input
+                    type="text"
+                    value={formData.name ?? ''}
+                    onChange={(e) => handleChange('name', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="请输入订单号"
+                  />
+                </div>
+
+                {/* 设备编码 */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">设备编码</label>
+                  <input
+                    type="text"
+                    value={formData.device_code || ''}
+                    onChange={(e) => handleChange('device_code', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="请输入设备编码"
+                  />
+                </div>
+
+                {/* 生产序列号 */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">生产序列号</label>
+                  <input
+                    type="text"
+                    value={formData.id || ''}
+                    onChange={(e) => handleChange('id', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="请输入生产序列号"
+                  />
+                </div>
+
+                {/* 客户 */}
+                <div className="relative">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">客户</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e) => {
+                        setCustomerSearch(e.target.value);
+                        setShowCustomerDropdown(true);
+                        if (!e.target.value) setFormData(prev => ({ ...prev, customer_id: undefined }));
+                      }}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      placeholder="搜索客户名称或简称"
+                    />
+                    {formData.customer_id && (
+                      <button type="button" onClick={handleClearCustomer} className="absolute right-2 top-2 text-gray-400 hover:text-gray-600">
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  {showCustomerDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {filteredCustomers.map(c => (
+                        <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)}
+                          className={`w-full text-left px-3 py-2 hover:bg-blue-50 text-sm ${formData.customer_id === c.id ? 'bg-blue-50 text-blue-700' : ''}`}>
+                          <span className="font-medium">{c.name}</span>
+                          <span className="text-gray-400 ml-2">({c.short_name})</span>
+                        </button>
+                      ))}
+                      {filteredCustomers.length === 0 && <div className="px-3 py-2 text-sm text-gray-500">无匹配客户</div>}
+                    </div>
+                  )}
+                  {showCustomerDropdown && <div className="fixed inset-0 z-0" onClick={() => setShowCustomerDropdown(false)} />}
+                </div>
+
+                {/* 产品线 / 产品型号 只读展示 */}
+                <div className="col-span-2 bg-gray-50 rounded-lg px-4 py-2 space-y-1 text-sm">
+                  {device.product_line_name && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">产品线</span>
+                      <span className="font-medium text-gray-900">{device.product_line_name}</span>
+                    </div>
+                  )}
+                  {device.product_name && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">产品型号</span>
+                      <span className="font-medium text-gray-900">{device.product_name}{device.product_model ? ` (${device.product_model})` : ''}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 状态 */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">状态 <span className="text-red-500">*</span></label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => handleChange('status', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="生产中">生产中</option>
+                    <option value="使用中(正常)">使用中(正常)</option>
+                    <option value="使用中(异常)">使用中(异常)</option>
+                    <option value="已停用">已停用</option>
+                  </select>
+                </div>
+
+                {/* 远程码 */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">远程码</label>
+                  <input
+                    type="text"
+                    value={formData.remote_code || ''}
+                    onChange={(e) => handleChange('remote_code', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="请输入远程码"
+                  />
+                </div>
+
+                {/* 远程密码 */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">远程密码</label>
+                  <input
+                    type="password"
+                    value={formData.password || ''}
+                    onChange={(e) => handleChange('password', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="请输入密码"
+                  />
+                </div>
+
+                {/* 商户号 */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">商户号</label>
+                  <input type="text" value={formData.merchant_id || ''} onChange={(e) => handleChange('merchant_id', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="请输入商户号" />
+                </div>
+
+                {/* 商户密码 */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">商户密码</label>
+                  <input type="text" value={formData.merchant_password || ''} onChange={(e) => handleChange('merchant_password', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="请输入商户密码" />
+                </div>
+
+                {/* 备注 */}
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">备注</label>
+                  <textarea
+                    value={formData.notes || ''}
+                    onChange={(e) => handleChange('notes', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="请输入备注"
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* 新增模式：3列网格布局 */}
+          {!device && (
+            <div className="grid grid-cols-3 gap-x-3 gap-y-2">
+              {/* Row 1: 订单号 | 设备编码 | 生产序列号 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">订单号</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">订单号</label>
                 <input
                   type="text"
                   value={formData.name ?? ''}
                   onChange={(e) => handleChange('name', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   placeholder="请输入订单号"
                 />
               </div>
-
-              {/* 设备编码 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">设备编码</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">设备编码</label>
                 <input
                   type="text"
                   value={formData.device_code || ''}
                   onChange={(e) => handleChange('device_code', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="请输入设备编码"
                 />
               </div>
-
-              {/* 生产序列号 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">生产序列号</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">生产序列号</label>
                 <input
                   type="text"
                   value={formData.id || ''}
                   onChange={(e) => handleChange('id', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="请输入生产序列号"
                 />
               </div>
 
-              {/* 客户 */}
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-1">客户</label>
+              {/* Row 2: 远程码 | 商户号 | 商户密码 */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">远程码</label>
+                <input
+                  type="text"
+                  value={formData.remote_code || ''}
+                  onChange={(e) => handleChange('remote_code', e.target.value)}
+                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
+                  placeholder="请输入远程码"
+                />
+                {errors.identity && <p className="text-red-500 text-xs mt-1 col-span-3">{errors.identity}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">商户号</label>
+                <input type="text" value={formData.merchant_id || ''} onChange={(e) => handleChange('merchant_id', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="请输入商户号" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">商户密码</label>
+                <input type="text" value={formData.merchant_password || ''} onChange={(e) => handleChange('merchant_password', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="请输入商户密码" />
+              </div>
+
+              {/* Row 3: 客户(col-span-2) | 状态 */}
+              <div className="col-span-2 relative">
+                <label className="block text-xs font-medium text-gray-700 mb-1">客户 <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <input
                     type="text"
@@ -434,139 +620,16 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                       if (!e.target.value) setFormData(prev => ({ ...prev, customer_id: undefined }));
                     }}
                     onFocus={() => setShowCustomerDropdown(true)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${errors.customer_id ? 'border-red-500' : 'border-gray-300'}`}
                     placeholder="搜索客户名称或简称"
                   />
                   {formData.customer_id && (
-                    <button type="button" onClick={handleClearCustomer} className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600">
+                    <button type="button" onClick={handleClearCustomer} className="absolute right-2 top-2 text-gray-400 hover:text-gray-600">
                       <XMarkIcon className="h-4 w-4" />
                     </button>
                   )}
                 </div>
-                {showCustomerDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                    {filteredCustomers.map(c => (
-                      <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)}
-                        className={`w-full text-left px-3 py-2 hover:bg-blue-50 text-sm ${formData.customer_id === c.id ? 'bg-blue-50 text-blue-700' : ''}`}>
-                        <span className="font-medium">{c.name}</span>
-                        <span className="text-gray-400 ml-2">({c.short_name})</span>
-                      </button>
-                    ))}
-                    {filteredCustomers.length === 0 && <div className="px-3 py-2 text-sm text-gray-500">无匹配客户</div>}
-                  </div>
-                )}
-                {showCustomerDropdown && <div className="fixed inset-0 z-0" onClick={() => setShowCustomerDropdown(false)} />}
-              </div>
-
-              {/* 产品线 / 产品型号 只读展示 */}
-              <div className="bg-gray-50 rounded-lg px-4 py-3 space-y-2 text-sm">
-                {device.product_line_name && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">产品线</span>
-                    <span className="font-medium text-gray-900">{device.product_line_name}</span>
-                  </div>
-                )}
-                {device.product_name && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">产品型号</span>
-                    <span className="font-medium text-gray-900">{device.product_name}{device.product_model ? ` (${device.product_model})` : ''}</span>
-                  </div>
-                )}
-              </div>
-
-
-            </>
-          )}
-
-          {/* 新增模式：1. 订单号（非必填） */}
-          {!device && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                订单号
-              </label>
-              <input
-                type="text"
-                value={formData.name ?? ''}
-                onChange={(e) => handleChange('name', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="请输入订单号（选填）"
-              />
-            </div>
-          )}
-
-          {/* 新增模式：以下字段填写规则 */}
-          {!device && (
-            <>
-              {/* 2-4. 设备编码 / 生产序列号 / 远程码（三选一必填） */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  设备编码
-                </label>
-                <input
-                  type="text"
-                  value={formData.device_code || ''}
-                  onChange={(e) => handleChange('device_code', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
-                  placeholder="请输入设备编码"
-                />
-              </div>
-
-              {/* 3. 生产序列号 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  生产序列号
-                </label>
-                <input
-                  type="text"
-                  value={formData.id || ''}
-                  onChange={(e) => handleChange('id', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
-                  placeholder="请输入生产序列号"
-                />
-              </div>
-
-              {/* 4. 远程码（新增模式也可填写） */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  远程码
-                </label>
-                <input
-                  type="text"
-                  value={formData.remote_code || ''}
-                  onChange={(e) => handleChange('remote_code', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
-                  placeholder="请输入远程码"
-                />
-                {errors.identity && <p className="text-red-500 text-sm mt-1">{errors.identity}</p>}
-              </div>
-
-              {/* 4. 客户 */}
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  客户 <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={customerSearch}
-                    onChange={(e) => {
-                      setCustomerSearch(e.target.value);
-                      setShowCustomerDropdown(true);
-                      if (!e.target.value) {
-                        setFormData(prev => ({ ...prev, customer_id: undefined }));
-                      }
-                    }}
-                    onFocus={() => setShowCustomerDropdown(true)}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.customer_id ? 'border-red-500' : 'border-gray-300'}`}
-                    placeholder="搜索客户名称或简称"
-                  />
-                  {formData.customer_id && (
-                    <button type="button" onClick={handleClearCustomer} className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600">
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                {errors.customer_id && <p className="text-red-500 text-sm mt-1">{errors.customer_id}</p>}
+                {errors.customer_id && <p className="text-red-500 text-xs mt-1">{errors.customer_id}</p>}
                 {showCustomerDropdown && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                     {filteredCustomers.map(c => (
@@ -585,117 +648,111 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 )}
                 {showCustomerDropdown && <div className="fixed inset-0 z-0" onClick={() => setShowCustomerDropdown(false)} />}
               </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">状态 <span className="text-red-500">*</span></label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => handleChange('status', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                >
+                  <option value="生产中">生产中</option>
+                  <option value="使用中(正常)">使用中(正常)</option>
+                  <option value="使用中(异常)">使用中(异常)</option>
+                  <option value="已停用">已停用</option>
+                </select>
+              </div>
 
               {/* 新建客户内联表单 */}
               {showNewCustomerForm && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                <div className="col-span-3 bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
                   <p className="text-sm font-medium text-green-800">新建客户</p>
-                  <input type="text" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)}
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500" placeholder="客户名称" />
-                  <input type="text" value={newCustomerShortName} onChange={(e) => setNewCustomerShortName(e.target.value)}
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500" placeholder="英文简称（唯一）" />
-                  <div className="flex justify-end gap-2">
+                  <div className="flex gap-2">
+                    <input type="text" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)}
+                      className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500" placeholder="客户名称" />
+                    <input type="text" value={newCustomerShortName} onChange={(e) => setNewCustomerShortName(e.target.value)}
+                      className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500" placeholder="英文简称（唯一）" />
                     <button type="button" onClick={() => setShowNewCustomerForm(false)} className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded">取消</button>
                     <button type="button" onClick={handleCreateCustomer} className="px-3 py-1 text-xs text-white bg-green-600 hover:bg-green-700 rounded">创建</button>
                   </div>
                 </div>
               )}
 
-              {/* 5. 产品线 */}
+              {/* Row 4: 产品线 | 产品型号 | 备注 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  产品线 <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">产品线 <span className="text-red-500">*</span></label>
                 <select
                   value={formData.product_line_id}
                   onChange={(e) => handleChange('product_line_id', e.target.value ? parseInt(e.target.value) : '')}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.product_line_id ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${errors.product_line_id ? 'border-red-500' : 'border-gray-300'}`}
                 >
                   <option value="">请选择产品线</option>
                   {productLines.map((pl) => (
                     <option key={pl.id} value={pl.id}>{pl.name}</option>
                   ))}
                 </select>
-                {errors.product_line_id && <p className="text-red-500 text-sm mt-1">{errors.product_line_id}</p>}
+                {errors.product_line_id && <p className="text-red-500 text-xs mt-1">{errors.product_line_id}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">产品型号</label>
+                <select
+                  value={formData.product_id || ''}
+                  onChange={(e) => handleChange('product_id', e.target.value ? parseInt(e.target.value) : undefined)}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  disabled={products.length === 0}
+                >
+                  <option value="">{products.length === 0 ? '请先选产品线' : '请选择产品型号'}</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}{p.model ? ` (${p.model})` : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">备注</label>
+                <input
+                  type="text"
+                  value={formData.notes || ''}
+                  onChange={(e) => handleChange('notes', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  placeholder="请输入备注"
+                />
               </div>
 
-              {/* 6. 产品型号 - 选择产品线后显示 */}
-              {products.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    产品型号 <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.product_id || ''}
-                    onChange={(e) => handleChange('product_id', e.target.value ? parseInt(e.target.value) : undefined)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">请选择产品型号</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}{p.model ? ` (${p.model})` : ''}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-
-
-              {/* 7. 选配模块 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">选配模块</label>
+              {/* 选配模块 */}
+              <div className="col-span-3">
+                <label className="block text-xs font-medium text-gray-700 mb-1">选配模块</label>
                 {!formData.product_id ? (
                   <p className="text-xs text-gray-400 border border-gray-200 rounded-md p-3">请先选择产品型号以加载可选模块</p>
                 ) : moduleTypes.length === 0 ? (
                   <p className="text-xs text-gray-400 border border-gray-200 rounded-md p-3">该产品暂无配置模块</p>
                 ) : (
-                  <div className="border border-gray-200 rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                  <div className="border border-gray-200 rounded-md p-2 max-h-32 overflow-y-auto grid grid-cols-3 gap-1">
                     {moduleTypes.map((mt) => (
-                      <label key={mt.id} className={`flex items-center gap-2 rounded px-1 ${
+                      <label key={mt.id} className={`flex items-center gap-2 rounded px-1 py-0.5 ${
                         mt.is_required ? 'bg-blue-50 cursor-default' : 'cursor-pointer hover:bg-gray-50'
                       }`}>
                         <input type="checkbox" checked={selectedModuleTypeIds.includes(mt.id)}
                           onChange={() => !mt.is_required && handleModuleTypeToggle(mt.id)}
                           disabled={mt.is_required}
                           className={`rounded border-gray-300 ${mt.is_required ? 'text-blue-600 opacity-70' : 'text-blue-600'}`} />
-                        <span className={`text-sm ${mt.is_required ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{mt.name}</span>
-                        <span className="text-xs text-gray-400">({mt.code})</span>
+                        <span className={`text-xs ${mt.is_required ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{mt.name}</span>
                         {mt.is_required ? (
-                          <span className="ml-auto text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">必选</span>
+                          <span className="ml-auto text-xs text-blue-600 bg-blue-100 px-1 rounded">必</span>
                         ) : (
-                          <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">可选</span>
+                          <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-1 rounded">选</span>
                         )}
                       </label>
                     ))}
                   </div>
                 )}
-                {moduleTypes.length > 0 && (
-                  <div className="mt-1 space-y-0.5">
-                    {moduleTypes.filter(m => !m.is_required).length > 0 && (
-                      <p className="text-xs text-amber-600">ℹ 有 {moduleTypes.filter(m => !m.is_required).length} 个可选模块，请根据需要勾选</p>
-                    )}
-                    {selectedModuleTypeIds.length > 0 && (
-                      <p className="text-xs text-blue-600">已选 {selectedModuleTypeIds.length} 个模块，创建设备时自动添加</p>
-                    )}
-                  </div>
+                {moduleTypes.length > 0 && selectedModuleTypeIds.length > 0 && (
+                  <p className="text-xs text-blue-600 mt-0.5">已选 {selectedModuleTypeIds.length} 个模块</p>
                 )}
               </div>
 
-              {/* 备注 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-                <textarea
-                  value={formData.notes || ''}
-                  onChange={(e) => handleChange('notes', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="请输入备注（选填）"
-                  rows={2}
-                />
-              </div>
-
-              {/* 飞书通知负责人 */}
+              {/* 飞书通知 */}
               {feishuEnabled && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                <div className="col-span-3">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     通知同事填写版本号（飞书）
                     {pinnedOpenIds.length > 0 && (
                       <span className="ml-2 text-xs text-blue-600 font-normal">
@@ -708,12 +765,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                     pinnedOpenIds={pinnedOpenIds}
                     value={notifyOpenIds}
                     onChange={(ids) => {
-                      // 记录手动取消勾选的置顶用户
                       pinnedOpenIds.forEach(id => {
                         if (notifyOpenIds.includes(id) && !ids.includes(id)) {
                           manuallyRemovedRef.current.add(id);
                         }
-                        // 如果重新勾选了，移出手动移除记录
                         if (!notifyOpenIds.includes(id) && ids.includes(id)) {
                           manuallyRemovedRef.current.delete(id);
                         }
@@ -723,63 +778,9 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   />
                 </div>
               )}
-            </>
+            </div>
           )}
 
-          {/* 状态（新增和编辑都显示） */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              状态 <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) => handleChange('status', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="生产中">生产中</option>
-              <option value="使用中(正常)">使用中(正常)</option>
-              <option value="使用中(异常)">使用中(异常)</option>
-              <option value="已停用">已停用</option>
-            </select>
-          </div>
-
-          {/* 远程码和密码仅编辑模式显示 */}
-          {device && (
-            <>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">远程码</label>
-            <input
-              type="text"
-              value={formData.remote_code || ''}
-              onChange={(e) => handleChange('remote_code', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="请输入远程码"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">密码</label>
-            <input
-              type="password"
-              value={formData.password || ''}
-              onChange={(e) => handleChange('password', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="请输入密码"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-            <textarea
-              value={formData.notes || ''}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="请输入备注（选填）"
-              rows={2}
-            />
-          </div>
-            </>
-          )}
 
           <div className="flex justify-end space-x-3 pt-4">
             <button

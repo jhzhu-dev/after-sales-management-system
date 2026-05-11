@@ -840,8 +840,10 @@ const DeviceDetail: React.FC = () => {
               {searchParams.get('from') === 'bundle' ? '返回多合一设备' : '返回设备列表'}
             </button>
             <div>
-              <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">{device.name}</h1>
-              <p className="text-gray-600 mt-1">设备详细信息</p>
+              <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">{device.nickname || device.name}</h1>
+              {device.nickname && device.name && (
+                <p className="text-gray-500 text-sm mt-0.5">订单号: {device.name}</p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 no-print">
@@ -866,6 +868,7 @@ const DeviceDetail: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-4 3xl:p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">基本信息</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 3xl:gap-6 print:grid-cols-2 print:gap-4">
+            {/* 行1: 生产序列号 | 设备编码 | 客户 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">生产序列号</label>
               <p className="text-lg font-mono print:text-base">{device.id}</p>
@@ -885,6 +888,7 @@ const DeviceDetail: React.FC = () => {
                 ) : '-'}
               </p>
             </div>
+            {/* 行2: 产品线 | 状态 | 多合一设备 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">产品线 / 产品型号</label>
               <p className="text-lg print:text-base">
@@ -895,11 +899,38 @@ const DeviceDetail: React.FC = () => {
               </p>
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+              <div className="flex items-center space-x-2">
+                {getStatusIcon(device.status)}
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(device.status)}`}>
+                  {device.status}
+                </span>
+              </div>
+            </div>
+            {/* 行2第三列: 备注 */}
+            <div title={device.notes || ''}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+              <p className="text-base text-gray-700 truncate print:text-base" title={device.notes || ''}>{device.notes || '-'}</p>
+            </div>
+            {/* 多合一设备（有值时独占一行首列） */}
+            {device.bundle_id && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">多合一设备</label>
+                <p className="text-lg print:text-base">
+                  <Link to={`/bundles/${device.bundle_id_val || device.bundle_id}`} className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-purple-100 text-purple-800 hover:bg-purple-200">
+                    {device.bundle_code || `多合一#${device.bundle_id}`}
+                    {device.bundle_name && <span className="ml-1 text-purple-600">({device.bundle_name})</span>}
+                  </Link>
+                </p>
+              </div>
+            )}
+            {/* 倒数第三行: 远程码 | 远程密码 | （空） */}
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">远程码</label>
               <p className="text-lg font-mono text-blue-600 print:text-base">{device.remote_code || '-'}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">密码</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">远程密码</label>
               <div className="flex items-center space-x-2">
                 <p className="text-lg font-mono text-gray-600 print:text-base">
                   {device.password ? (showPassword ? device.password : '••••••••') : '-'}
@@ -919,6 +950,18 @@ const DeviceDetail: React.FC = () => {
                 )}
               </div>
             </div>
+            <div />
+            {/* 倒数第二行: 商户号 | 商户密码 | （空） */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">商户号</label>
+              <p className="text-lg font-mono text-gray-600 print:text-base">{device.merchant_id || '-'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">商户密码</label>
+              <p className="text-lg font-mono text-gray-600 print:text-base">{device.merchant_password || '-'}</p>
+            </div>
+            <div />
+            {/* 倒数第一行: 创建时间 | 更新时间 | （空） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">创建时间</label>
               <p className="text-lg print:text-base">{new Date(device.created_at).toLocaleDateString()}</p>
@@ -927,30 +970,7 @@ const DeviceDetail: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">更新时间</label>
               <p className="text-lg print:text-base">{new Date(device.updated_at).toLocaleDateString()}</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-              <div className="flex items-center space-x-2">
-                {getStatusIcon(device.status)}
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(device.status)}`}>
-                  {device.status}
-                </span>
-              </div>
-            </div>
-            {device.bundle_id && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">多合一设备</label>
-                <p className="text-lg print:text-base">
-                  <Link to={`/bundles/${device.bundle_id_val || device.bundle_id}`} className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-purple-100 text-purple-800 hover:bg-purple-200">
-                    {device.bundle_code || `多合一#${device.bundle_id}`}
-                    {device.bundle_name && <span className="ml-1 text-purple-600">({device.bundle_name})</span>}
-                  </Link>
-                </p>
-              </div>
-            )}
-            <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-              <p className="text-base text-gray-700 whitespace-pre-wrap print:text-base">{device.notes || '-'}</p>
-            </div>
+            <div />
           </div>
         </div>
 
@@ -1552,12 +1572,11 @@ const DeviceDetail: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">变更记录说明 (强制 - 至少5字)</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">版本变更备注</label>
                 <textarea
                   id="versionDescription"
-                  required
                   rows={4}
-                  placeholder="由于发生了[什么]，我们对该模块执行了[什么]操作，以实现[什么]..."
+                  placeholder="可选：填写版本变更的相关备注说明..."
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                 />
               </div>
@@ -1598,11 +1617,6 @@ const DeviceDetail: React.FC = () => {
 
                     if (!updated_by) {
                       alert('请填写更新执行人');
-                      return;
-                    }
-
-                    if (!description || description.length < 5) {
-                      alert('说明过短，请提供更详细的执行记录');
                       return;
                     }
 
