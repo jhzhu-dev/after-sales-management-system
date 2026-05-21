@@ -594,4 +594,16 @@ export const feishuApi = {
     api.post('/feishu/test-message').then(res => res.data),
 };
 
+// 问题归属分类管理 API
+export const issueClassificationApi = {
+  getAll: (): Promise<ApiResponse<any[]>> =>
+    api.get('/issue-classifications').then(res => res.data),
+  create: (data: { name: string; sort_order?: number }): Promise<ApiResponse<any>> =>
+    api.post('/issue-classifications', data).then(res => res.data),
+  update: (id: number, data: { name?: string; sort_order?: number }): Promise<ApiResponse<any>> =>
+    api.put(`/issue-classifications/${id}`, data).then(res => res.data),
+  delete: (id: number): Promise<ApiResponse<any>> =>
+    api.delete(`/issue-classifications/${id}`).then(res => res.data),
+};
+
 export default api;

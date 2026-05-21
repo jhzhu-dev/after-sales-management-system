@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { PlusIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon, ChatBubbleLeftRightIcon, ArrowPathIcon, MagnifyingGlassIcon, PrinterIcon, BookOpenIcon } from '@heroicons/react/24/outline';
-import { issueApi, customerApi, moduleTypeApi, productLineApi, moduleVersionApi } from '../services/api';
-import { Issue, FilterOptions, IssueFormData } from '../types';
+import { issueApi, customerApi, moduleTypeApi, productLineApi, moduleVersionApi, issueClassificationApi } from '../services/api';
+import { Issue, FilterOptions, IssueFormData, IssueClassification } from '../types';
 import Layout from '../components/Layout';
 import KnowledgeBase from '../components/KnowledgeBase';
 import DataTable from '../components/DataTable';
@@ -46,13 +46,25 @@ export default function Issues() {
     severity: '',
     module: '',
     device_type: '',
-    customer: ''
+    customer: '',
+    classification_id: ''
   });
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedIssues, setSelectedIssues] = useState<number[]>([]);
   const [showIssueForm, setShowIssueForm] = useState(false);
   const [moduleTypes, setModuleTypes] = useState<Array<{id: number, name: string}>>([]);
+
+  // 从实际问题数据中派生模块选项（含自定义模块名）
+  const allModuleOptions = useMemo(() => {
+    const seen = new Set<string>();
+    allIssues.forEach(issue => {
+      const name = issue.module_category || (issue as any).custom_module_name;
+      if (name) seen.add(name);
+    });
+    return Array.from(seen).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+  }, [allIssues]);
+
 const [productLines, setProductLines] = useState<Array<{id: number, name: string}>>([]);
 
   // 版本演进 State
@@ -68,6 +80,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
   const [customers, setCustomers] = useState<any[]>([]);
   const [printAllIssues, setPrintAllIssues] = useState<Issue[] | null>(null);
   const [expandedUpgradeId, setExpandedUpgradeId] = useState<string | null>(null);
+  const [classifications, setClassifications] = useState<IssueClassification[]>([]);
 
   const isBrowserSafeAttachmentUrl = (url?: string) => {
     if (!url) return false;
@@ -104,9 +117,10 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     }
     if (filters.status) filtered = filtered.filter(i => i.status === filters.status);
     if (filters.severity) filtered = filtered.filter(i => i.severity === filters.severity);
-    if (filters.module) filtered = filtered.filter(i => i.module_category === filters.module);
+    if (filters.module) filtered = filtered.filter(i => i.module_category === filters.module || (i as any).custom_module_name === filters.module);
     if (filters.device_type) filtered = filtered.filter(i => (i as any).device_type === filters.device_type);
     if (filters.customer) filtered = filtered.filter(i => i.customer_name === filters.customer);
+    if (filters.classification_id) filtered = filtered.filter(i => String(i.classification_id) === filters.classification_id);
     if (sortField) {
       filtered.sort((a, b) => {
         const aValue = a[sortField as keyof Issue];
@@ -165,6 +179,9 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     fetchModuleTypes();
     fetchProductLines();
     fetchCustomers();
+    issueClassificationApi.getAll().then(res => {
+      if (res.success && res.data) setClassifications(res.data as IssueClassification[]);
+    }).catch(() => {});
   }, []);
 
   const fetchCustomers = async () => {
@@ -563,6 +580,16 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         <div className="text-gray-900">{value || (issue as any).custom_module_name || '-'}</div>
       ),
       width: '80px'
+    },
+    {
+      key: 'classification_name' as keyof Issue,
+      title: '分类',
+      width: '80px',
+      render: (_: any, record: Issue) => (
+        record.classification_name
+          ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">{record.classification_name}</span>
+          : <span className="text-gray-300">-</span>
+      )
     },
     {
       key: 'description' as keyof Issue,
@@ -1109,9 +1136,9 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">全部模块</option>
-                {moduleTypes.map((moduleType) => (
-                  <option key={moduleType.id} value={moduleType.name}>
-                    {moduleType.name}
+                {allModuleOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
                   </option>
                 ))}
               </select>
@@ -1149,9 +1176,24 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 <option value="closed">已解决</option>
               </select>
             </div>
+            {classifications.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">分类</label>
+                <select
+                  value={filters.classification_id || ''}
+                  onChange={(e) => handleFilterChange('classification_id', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">全部分类</option>
+                  {classifications.map(c => (
+                    <option key={c.id} value={String(c.id)}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex items-end">
               <button
-                onClick={() => { setVisibleIssueCount(20); setFilters({ page: 1, limit: 10, search: '', status: '', severity: '', module: '', device_type: '', customer: '' }); }}
+                onClick={() => { setVisibleIssueCount(20); setFilters({ page: 1, limit: 10, search: '', status: '', severity: '', module: '', device_type: '', customer: '', classification_id: '' }); }}
                 className="w-full px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 重置筛选

@@ -52,6 +52,9 @@ const deviceBundleRoutes = require('./routes/device-bundles');
 // 飞书通知集成
 const feishuRoutes = require('./routes/feishu');
 
+// 问题归属分类管理路由
+const issueClassificationRoutes = require('./routes/issue-classifications');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -191,6 +194,9 @@ app.use('/api/device-bundles', deviceBundleRoutes);
 
 // 飞书管理路由（需要登录）
 app.use('/api/feishu', authenticate, feishuRoutes);
+
+// 问题归属分类路由
+app.use('/api/issue-classifications', issueClassificationRoutes);
 
 
 // 所有非API路由都返回前端应用

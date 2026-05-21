@@ -111,6 +111,24 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+    // 问题归属分类配置表（可动态管理）
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS issue_classification_types (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        sort_order INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_name (name)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    // 预置种子数据（幂等，重复执行无副作用）
+    await pool.execute(`
+      INSERT IGNORE INTO issue_classification_types (name, sort_order) VALUES
+        ('运营问题', 1),
+        ('出厂问题', 2),
+        ('设备问题', 3)
+    `);
+
     // ==================== Phase 2: 依赖基础表的表 ====================
     
     // 产品管理表 - 依赖 product_lines
@@ -942,6 +960,22 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     console.log('✅ feishu_notifications 表就绪');
+
+    // issues 表新增 classification_id 列（问题归属分类）
+    try {
+      const [classifCols] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'classification_id'");
+      if (classifCols.length === 0) {
+        await pool.execute("ALTER TABLE issues ADD COLUMN classification_id INT NULL AFTER category");
+        try {
+          await pool.execute("ALTER TABLE issues ADD CONSTRAINT fk_issue_classification FOREIGN KEY (classification_id) REFERENCES issue_classification_types(id) ON DELETE SET NULL");
+        } catch (e) {
+          console.warn('⚠️ 添加 classification_id 外键警告:', e.message);
+        }
+        console.log('✅ issues.classification_id 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ issues.classification_id 迁移警告:', err.message);
+    }
 
   } catch (error) {
     console.error('❌ 创建表结构失败:', error.message);

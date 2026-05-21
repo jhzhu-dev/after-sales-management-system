@@ -12,8 +12,8 @@ import {
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import { formatDate } from '../utils';
-import { moduleTypeApi, customerApi, sopTemplateApi, feishuApi } from '../services/api';
-import { ModuleType, Customer, SOPTemplate, SOPTemplateItem, FeishuUser } from '../types';
+import { moduleTypeApi, customerApi, sopTemplateApi, feishuApi, issueClassificationApi } from '../services/api';
+import { ModuleType, Customer, SOPTemplate, SOPTemplateItem, FeishuUser, IssueClassification } from '../types';
 
 // 表单数据接口
 interface ModuleTypeFormData {
@@ -26,9 +26,9 @@ interface ModuleTypeFormData {
 
 export default function Settings() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'module-types' | 'customers' | 'sop-templates'>(() => {
+  const [activeTab, setActiveTab] = useState<'module-types' | 'customers' | 'sop-templates' | 'issue-classifications'>(() => {
     const t = searchParams.get('tab');
-    return (t === 'module-types' || t === 'customers' || t === 'sop-templates') ? t : 'module-types';
+    return (t === 'module-types' || t === 'customers' || t === 'sop-templates' || t === 'issue-classifications') ? t : 'module-types';
   });
   const [moduleTypes, setModuleTypes] = useState<ModuleType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -58,6 +58,12 @@ export default function Settings() {
   const [customerForm, setCustomerForm] = useState({ name: '', short_name: '' });
   const [customerSearch, setCustomerSearch] = useState('');
 
+  // 问题分类相关状态
+  const [classificationList, setClassificationList] = useState<IssueClassification[]>([]);
+  const [showClassificationModal, setShowClassificationModal] = useState(false);
+  const [editingClassification, setEditingClassification] = useState<IssueClassification | null>(null);
+  const [classificationForm, setClassificationForm] = useState({ name: '', sort_order: 0 });
+
   useEffect(() => {
     if (activeTab === 'module-types') {
       fetchModuleTypes();
@@ -71,6 +77,9 @@ export default function Settings() {
     if (activeTab === 'sop-templates') {
       fetchModuleTypes();
       fetchSopTemplates();
+    }
+    if (activeTab === 'issue-classifications') {
+      fetchClassifications();
     }
   }, [activeTab]);
 
@@ -328,6 +337,66 @@ export default function Settings() {
     c.short_name.toLowerCase().includes(customerSearch.toLowerCase())
   );
 
+  const fetchClassifications = async () => {
+    try {
+      setLoading(true);
+      const res = await issueClassificationApi.getAll();
+      if (res.success && res.data) setClassificationList(res.data as IssueClassification[]);
+    } catch (error) {
+      console.error('获取问题分类失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenClassificationModal = (c?: IssueClassification) => {
+    setEditingClassification(c || null);
+    setClassificationForm(c ? { name: c.name, sort_order: c.sort_order } : { name: '', sort_order: 0 });
+    setShowClassificationModal(true);
+  };
+
+  const handleCloseClassificationModal = () => {
+    setShowClassificationModal(false);
+    setEditingClassification(null);
+    setClassificationForm({ name: '', sort_order: 0 });
+  };
+
+  const handleClassificationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!classificationForm.name.trim()) return;
+    try {
+      setSubmitting(true);
+      const data = { name: classificationForm.name.trim(), sort_order: classificationForm.sort_order };
+      const res = editingClassification
+        ? await issueClassificationApi.update(editingClassification.id, data)
+        : await issueClassificationApi.create(data);
+      if (res.success) {
+        handleCloseClassificationModal();
+        fetchClassifications();
+      } else {
+        alert((res as any).error || '操作失败');
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.error || '操作失败');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteClassification = async (c: IssueClassification) => {
+    if (!window.confirm(`确定删除分类"${c.name}"吗？`)) return;
+    try {
+      const res = await issueClassificationApi.delete(c.id);
+      if (res.success) {
+        fetchClassifications();
+      } else {
+        alert((res as any).error || '删除失败');
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.error || '删除失败');
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-4 3xl:space-y-6">
@@ -341,6 +410,7 @@ export default function Settings() {
             <button onClick={() => { setActiveTab('module-types'); setSearchParams({ tab: 'module-types' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'module-types' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>模块类型管理</button>
             <button onClick={() => { setActiveTab('customers'); setSearchParams({ tab: 'customers' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'customers' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>客户管理</button>
             <button onClick={() => { setActiveTab('sop-templates'); setSearchParams({ tab: 'sop-templates' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'sop-templates' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>版本更新检查项模板</button>
+            <button onClick={() => { setActiveTab('issue-classifications'); setSearchParams({ tab: 'issue-classifications' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'issue-classifications' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>问题分类管理</button>
           </nav>
         </div>
 
@@ -841,6 +911,138 @@ export default function Settings() {
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {submitting ? '提交中...' : editingCustomer ? '更新' : '创建'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== 问题分类管理 Tab ===== */}
+        {activeTab === 'issue-classifications' && (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">问题分类管理</h2>
+                <p className="text-sm text-gray-500 mt-1">管理问题记录的归属分类，初始内置：运营问题、出厂问题、设备问题</p>
+              </div>
+              <button
+                onClick={() => handleOpenClassificationModal()}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <PlusIcon className="h-5 w-5" />
+                新增分类
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : classificationList.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <TagIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">暂无分类</p>
+              </div>
+            ) : (
+              <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分类名称</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">排序</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {classificationList.map((c) => (
+                      <tr key={c.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-blue-100 text-blue-700">{c.name}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.sort_order}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {c.created_at ? new Date(c.created_at).toLocaleDateString('zh-CN') : '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                          <button
+                            onClick={() => handleOpenClassificationModal(c)}
+                            className="text-blue-600 hover:text-blue-900 inline-flex items-center"
+                          >
+                            <PencilIcon className="h-4 w-4 mr-1" />
+                            编辑
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClassification(c)}
+                            className="text-red-600 hover:text-red-900 inline-flex items-center"
+                          >
+                            <TrashIcon className="h-4 w-4 mr-1" />
+                            删除
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* 分类表单弹窗 */}
+            {showClassificationModal && (
+              <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-900">
+                      {editingClassification ? '编辑分类' : '新增分类'}
+                    </h3>
+                    <button onClick={handleCloseClassificationModal} className="text-gray-400 hover:text-gray-600">
+                      <XMarkIcon className="h-6 w-6" />
+                    </button>
+                  </div>
+                  <form onSubmit={handleClassificationSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        分类名称 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={100}
+                        value={classificationForm.name}
+                        onChange={(e) => setClassificationForm({ ...classificationForm, name: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="例如：运营问题"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">排序值</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={classificationForm.sort_order}
+                        onChange={(e) => setClassificationForm({ ...classificationForm, sort_order: parseInt(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">数值越小越靠前</p>
+                    </div>
+                    <div className="flex justify-end space-x-3 mt-6">
+                      <button
+                        type="button"
+                        onClick={handleCloseClassificationModal}
+                        disabled={submitting}
+                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        取消
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {submitting ? '提交中...' : editingClassification ? '更新' : '创建'}
                       </button>
                     </div>
                   </form>

@@ -305,6 +305,14 @@ export default function IssueDetail() {
                   <p className="text-base font-semibold text-gray-900 print:text-sm">{issue.module_category || (issue as any).custom_module_name}</p>
                 </div>
               )}
+              {issue.classification_name && (
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">问题分类</p>
+                  <p className="text-base font-semibold print:text-sm">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-medium bg-purple-100 text-purple-700">{issue.classification_name}</span>
+                  </p>
+                </div>
+              )}
               <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">登记人</p>
                 <p className="text-base font-semibold text-gray-900 print:text-sm">{issue.assignee || '未分配'}</p>

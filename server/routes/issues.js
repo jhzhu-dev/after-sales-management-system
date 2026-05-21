@@ -113,6 +113,7 @@ router.get('/', async (req, res) => {
       status,
       severity,
       category,
+      classification_id,
       module,
       device_type,
       customer,
@@ -159,6 +160,11 @@ router.get('/', async (req, res) => {
       params.push(category);
     }
 
+    if (classification_id) {
+      whereConditions.push('i.classification_id = ?');
+      params.push(classification_id);
+    }
+
     if (module) {
       whereConditions.push('mt.name = ?');
       params.push(module);
@@ -189,14 +195,16 @@ router.get('/', async (req, res) => {
        LEFT JOIN products p ON d.product_id = p.id
        LEFT JOIN customers c ON d.customer_id = c.id
        INNER JOIN modules m ON i.module_id = m.id
-       INNER JOIN module_types mt ON m.type_id = mt.id` :
+       INNER JOIN module_types mt ON m.type_id = mt.id
+       LEFT JOIN issue_classification_types ict ON i.classification_id = ict.id` :
       `FROM issues i
        LEFT JOIN devices d ON i.device_id = d.id
        LEFT JOIN product_lines pl ON d.product_line_id = pl.id
        LEFT JOIN products p ON d.product_id = p.id
        LEFT JOIN customers c ON d.customer_id = c.id
        LEFT JOIN modules m ON i.module_id = m.id
-       LEFT JOIN module_types mt ON m.type_id = mt.id`;
+       LEFT JOIN module_types mt ON m.type_id = mt.id
+       LEFT JOIN issue_classification_types ict ON i.classification_id = ict.id`;
 
     const issuesQuery = `
       SELECT 
@@ -207,7 +215,8 @@ router.get('/', async (req, res) => {
         p.name as product_name,
         c.name as customer_name,
         c.short_name as customer_short_name,
-        mt.name as module_category
+        mt.name as module_category,
+        ict.name as classification_name
       ${joinClause}
       ${whereClause}
       ORDER BY ${validSortBy === 'device_name' ? 'd.name' : validSortBy === 'device_id' ? 'i.device_id' : 'i.' + validSortBy} ${validSortOrder}
@@ -224,14 +233,16 @@ router.get('/', async (req, res) => {
        LEFT JOIN products p ON d.product_id = p.id
        LEFT JOIN customers c ON d.customer_id = c.id
        INNER JOIN modules m ON i.module_id = m.id
-       INNER JOIN module_types mt ON m.type_id = mt.id` :
+       INNER JOIN module_types mt ON m.type_id = mt.id
+       LEFT JOIN issue_classification_types ict ON i.classification_id = ict.id` :
       `FROM issues i
        LEFT JOIN devices d ON i.device_id = d.id
        LEFT JOIN product_lines pl ON d.product_line_id = pl.id
        LEFT JOIN products p ON d.product_id = p.id
        LEFT JOIN customers c ON d.customer_id = c.id
        LEFT JOIN modules m ON i.module_id = m.id
-       LEFT JOIN module_types mt ON m.type_id = mt.id`;
+       LEFT JOIN module_types mt ON m.type_id = mt.id
+       LEFT JOIN issue_classification_types ict ON i.classification_id = ict.id`;
 
     const countQuery = `
       SELECT COUNT(*) as total
@@ -271,13 +282,15 @@ router.get('/:id', async (req, res) => {
         pl.name as device_type,
         c.name as customer_name,
         c.short_name as customer_short_name,
-        mt.name as module_category
+        mt.name as module_category,
+        ict.name as classification_name
       FROM issues i
       LEFT JOIN devices d ON i.device_id = d.id
       LEFT JOIN product_lines pl ON d.product_line_id = pl.id
       LEFT JOIN customers c ON d.customer_id = c.id
       LEFT JOIN modules m ON i.module_id = m.id
       LEFT JOIN module_types mt ON m.type_id = mt.id
+      LEFT JOIN issue_classification_types ict ON i.classification_id = ict.id
       WHERE i.id = ?
     `;
 
@@ -385,6 +398,7 @@ router.post('/', [
       severity = 'medium',
       status = 'open',
       category = '其他',
+      classification_id,
       assignee,
       contact_person,
       contact_phone,
@@ -417,10 +431,10 @@ router.post('/', [
 
     const insertQuery = `
       INSERT INTO issues (
-        id, device_id, module_id, custom_module_name, category, description, severity, status, 
+        id, device_id, module_id, custom_module_name, category, classification_id, description, severity, status, 
         assignee, contact_person, contact_phone, is_visit_required, visit_at, attachments
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     // 生成 issue ID：ISS + 提交时间 年月日时分秒（北京时间）
@@ -438,7 +452,7 @@ router.post('/', [
     const attachmentsJson = attachments ? JSON.stringify(attachments) : null;
 
     await query(insertQuery, [
-      issueId, device_id, processedModuleId, processedCustomModuleName, category, description, severity, status,
+      issueId, device_id, processedModuleId, processedCustomModuleName, category, classification_id || null, description, severity, status,
       assignee, contact_person, contact_phone, is_visit_required, visit_at || null, attachmentsJson
     ]);
 
@@ -565,7 +579,7 @@ router.put('/:id', [
     // 读取更新前的旧值用于变更检测
     const oldIssue = (await query('SELECT status, assignee, assignee_open_id FROM issues WHERE id = ?', [id]))[0];
 
-    const allowedFields = ['description', 'severity', 'status', 'category', 'assignee', 'assignee_open_id', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'attachments', 'resolution_description', 'resolved_at', 'module_id', 'custom_module_name'];
+    const allowedFields = ['description', 'severity', 'status', 'category', 'classification_id', 'assignee', 'assignee_open_id', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'attachments', 'resolution_description', 'resolved_at', 'module_id', 'custom_module_name'];
     const updateFields = [];
     const updateValues = [];
 

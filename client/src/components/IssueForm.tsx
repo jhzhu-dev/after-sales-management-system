@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import { Issue, IssueFormData, FeishuUser } from '../types';
-import { deviceApi, moduleApi, feishuApi } from '../services/api';
+import { Issue, IssueFormData, FeishuUser, IssueClassification } from '../types';
+import { deviceApi, moduleApi, feishuApi, issueClassificationApi } from '../services/api';
 import api from '../services/api';
 import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 
@@ -44,6 +44,9 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
   const [notifyOpenIds, setNotifyOpenIds] = useState<string[]>([]);
   const [pinnedOpenIds, setPinnedOpenIds] = useState<string[]>([]);
 
+  // 问题分类
+  const [classifications, setClassifications] = useState<IssueClassification[]>([]);
+
   // 设备模糊搜索状态
   const [deviceSearch, setDeviceSearch] = useState('');
   const [deviceDropdownOpen, setDeviceDropdownOpen] = useState(false);
@@ -65,6 +68,10 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
 
   useEffect(() => {
     fetchDevices('');
+    // 加载问题分类列表
+    issueClassificationApi.getAll().then(res => {
+      if (res.success && res.data) setClassifications(res.data as IssueClassification[]);
+    }).catch(() => {});
     // 加载飞书用户列表
     feishuApi.getUsers().then(res => {
       if (res.success && res.data && res.data.length > 0) {
@@ -81,6 +88,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
         description: issue.description || '',
         severity: issue.severity || 'medium',
         status: issue.status || 'open',
+        classification_id: issue.classification_id || undefined,
         assignee: issue.assignee || '',
         notes: issue.resolution_description || ''
       });
@@ -474,6 +482,29 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               <p className="mt-1 text-sm text-red-600">{errors.status}</p>
             )}
           </div>
+
+          {/* 问题分类 */}
+          {classifications.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                问题分类
+              </label>
+              <select
+                name="classification_id"
+                value={formData.classification_id ?? ''}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  classification_id: e.target.value ? parseInt(e.target.value) : undefined
+                }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">不设置</option>
+                {classifications.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* 登记人 */}
           <div>

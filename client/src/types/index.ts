@@ -81,11 +81,21 @@ export interface VersionRelease {
   products?: { id: number; name: string; model: string; product_line_id?: number; product_line_name?: string }[];
 }
 
+// 问题归属分类配置类型
+export interface IssueClassification {
+  id: number;
+  name: string;
+  sort_order: number;
+  created_at: string;
+}
+
 // 问题类型
 export interface Issue {
   id: number;
   device_id: string;
-  module_id?: number;  custom_module_name?: string;  category: '硬件故障' | '软件Bug' | '操作咨询' | '安装调试' | '其他';
+  module_id?: number;  custom_module_name?: string;  category: '硬件故障' | '软件Bug' | '操作咋询' | '安装调试' | '其他';
+  classification_id?: number;
+  classification_name?: string;
   description: string;
   severity: 'low' | 'medium' | 'high';
   status: 'open' | 'in_progress' | 'closed';
@@ -235,8 +245,7 @@ export interface VersionFormData {
 
 export interface IssueFormData {
   device_id: string;
-  module_id?: string;  custom_module_name?: string;  category?: '硬件故障' | '软件Bug' | '操作咨询' | '安装调试' | '其他';
-  description: string;
+  module_id?: string;  custom_module_name?: string;  category?: '硬件故障' | '软件Bug' | '操作咨询' | '安装调试' | '其他';  classification_id?: number;  description: string;
   severity: 'low' | 'medium' | 'high';
   status: 'open' | 'in_progress' | 'closed';
   assignee?: string;  assignee_open_id?: string;
@@ -276,6 +285,7 @@ export interface FilterOptions {
   device_id?: string;
   module_id?: string;
   category?: string;
+  classification_id?: string;
   version_type?: string;
   customer_id?: string;
   customer?: string;
