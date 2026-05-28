@@ -173,10 +173,10 @@ router.post('/', [
     // 生成多合一设备订单号：优先用提交的 bundle_code（订单号），否则自动生成 T- 前缀
     let finalCode = bundle_code && bundle_code.trim() ? bundle_code.trim() : `T-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
-    // 检查编号唯一性
-    const existing = await query('SELECT id FROM device_bundles WHERE bundle_code = ?', [finalCode]);
+    // 检查编号唯一性（同一订单号 + 同一客户 不可重复）
+    const existing = await query('SELECT id FROM device_bundles WHERE bundle_code = ? AND customer_id = ?', [finalCode, customer_id]);
     if (existing.length > 0) {
-      return res.status(400).json({ success: false, error: `多合一设备订单号 "${finalCode}" 已存在` });
+      return res.status(400).json({ success: false, error: `该客户下多合一设备订单号 "${finalCode}" 已存在` });
     }
 
     // 校验已有设备存在且属于同一客户

@@ -25,6 +25,7 @@ interface DataTableProps<T> {
   compact?: boolean;
   onLoadMore?: () => void;
   scrollable?: boolean;
+  fixedLayout?: boolean;
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -37,7 +38,8 @@ export default function DataTable<T extends Record<string, any>>({
   className,
   compact = false,
   onLoadMore,
-  scrollable = false
+  scrollable = false,
+  fixedLayout = false
 }: DataTableProps<T>) {
   const [sortConfig, setSortConfig] = useState<{
     key: keyof T | null;
@@ -49,12 +51,13 @@ export default function DataTable<T extends Record<string, any>>({
   const onLoadMoreRef = useRef(onLoadMore);
   useLayoutEffect(() => { onLoadMoreRef.current = onLoadMore; });
   const hasLoadMore = !!onLoadMore;
-  // IO uses viewport (root:null) so it fires correctly even when content fits without scrolling
+  // IO observes within the scrollable container so it fires when the sentinel scrolls into view
   useEffect(() => {
-    if (!hasLoadMore || !sentinelRef.current) return;
+    if (!hasLoadMore || !sentinelRef.current || !scrollRef.current) return;
+    const root = scrollRef.current;
     const observer = new IntersectionObserver(
       (entries) => { if (entries[0].isIntersecting) onLoadMoreRef.current?.(); },
-      { root: null, threshold: 0, rootMargin: '50px' }
+      { root, threshold: 0, rootMargin: '50px' }
     );
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
@@ -113,7 +116,7 @@ export default function DataTable<T extends Record<string, any>>({
   return (
     <div className={cn('bg-white rounded-lg shadow', className)}>
       <div ref={scrollRef} className={(scrollable || onLoadMore) ? 'overflow-auto' : 'overflow-x-auto'} style={(scrollable || onLoadMore) ? { maxHeight: 'calc(100vh - 240px)' } : undefined}>
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200" style={fixedLayout ? { tableLayout: 'fixed' } : undefined}>
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               {columns.map((column) => (
@@ -176,7 +179,7 @@ export default function DataTable<T extends Record<string, any>>({
                   <td key={String(column.key)} className={cn(
                     'whitespace-nowrap text-sm text-gray-900',
                     compact ? 'px-3 py-2.5' : 'px-4 py-3 3xl:px-6 3xl:py-4'
-                  )}>
+                  )} style={fixedLayout ? { overflow: 'hidden', maxWidth: 0 } : undefined}>
                     {column.render
                       ? column.render(record[column.key], record)
                       : record[column.key]}

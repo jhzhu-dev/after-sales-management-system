@@ -629,7 +629,8 @@ export default function Devices() {
         >
           {value}
         </Link>
-      )
+      ),
+      width: '180px'
     },
     {
       key: 'name' as keyof Device,
@@ -643,7 +644,8 @@ export default function Devices() {
             <div className="text-xs text-blue-600 font-medium">{record.nickname}</div>
           )}
         </div>
-      )
+      ),
+      width: '240px'
     },
     {
       key: 'product_name' as keyof Device,
@@ -652,7 +654,8 @@ export default function Devices() {
         <span className="text-sm text-gray-900">
           {record.product_name || '-'}
         </span>
-      )
+      ),
+      width: '280px'
     },
     {
       key: 'customer_name' as keyof Device,
@@ -664,7 +667,8 @@ export default function Devices() {
             <div className="text-xs text-gray-400">{record.customer_short_name}</div>
           )}
         </div>
-      )
+      ),
+      width: '150px'
     },
     {
       key: 'remote_code' as keyof Device,
@@ -673,14 +677,16 @@ export default function Devices() {
         if (!value) return <span className="text-gray-300">—</span>;
         const display = value.includes(' ') ? value : value.replace(/(\d{3})(?=\d)/g, '$1 ');
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-white text-blue-600 border border-blue-200">{display}</span>;
-      }
+      },
+      width: '130px'
     },
     {
       key: 'mechanical_version' as keyof Device,
       title: '机械版本',
       render: (value: string) => value
         ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">{value}</span>
-        : <span className="text-gray-300">—</span>
+        : <span className="text-gray-300">—</span>,
+      width: '90px'
     },
     {
       key: 'module_versioned' as keyof Device,
@@ -703,7 +709,8 @@ export default function Devices() {
             <ExclamationTriangleIcon className="h-3.5 w-3.5" />{done}/{total}
           </span>
         );
-      }
+      },
+      width: '95px'
     },
     {
       key: 'status' as keyof Device,
@@ -712,7 +719,8 @@ export default function Devices() {
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
           {value}
         </span>
-      )
+      ),
+      width: '120px'
     },
     {
       key: 'open_issues' as keyof Device,
@@ -721,14 +729,16 @@ export default function Devices() {
         <div className={`text-sm font-medium ${value > 0 ? 'text-red-600' : 'text-gray-500'}`}>
           {value || 0}
         </div>
-      )
+      ),
+      width: '90px'
     },
     {
       key: 'created_at' as keyof Device,
       title: <SortableHeader field="created_at" title="创建时间" />,
       render: (value: string) => (
         <div className="text-gray-500">{formatDate(value, 'yyyy-MM-dd')}</div>
-      )
+      ),
+      width: '110px'
     },
     {
       key: 'actions' as keyof Device,
@@ -757,7 +767,8 @@ export default function Devices() {
             <TrashIcon className="h-4 w-4" />
           </button>
         </div>
-      )
+      ),
+      width: '80px'
     }
   ];
 
@@ -809,12 +820,14 @@ export default function Devices() {
         <Link to={`/bundles/${record.id}`} className="text-blue-600 hover:text-blue-800 font-medium font-mono">
           {value}
         </Link>
-      )
+      ),
+      width: '230px'
     },
     {
       key: 'name' as keyof DeviceBundle,
       title: <BundleSortableHeader field="name" title="多合一名称" />,
-      render: (value: string) => <span className="text-gray-900">{value || '-'}</span>
+      render: (value: string) => <span className="text-gray-900">{value || '-'}</span>,
+      width: '200px'
     },
     {
       key: 'customer_name' as keyof DeviceBundle,
@@ -824,7 +837,8 @@ export default function Devices() {
           <div className="font-medium text-gray-900">{value || '-'}</div>
           {record.customer_short_name && <div className="text-xs text-gray-400">{record.customer_short_name}</div>}
         </div>
-      )
+      ),
+      width: '150px'
     },
     {
       key: 'device_count' as keyof DeviceBundle,
@@ -833,7 +847,8 @@ export default function Devices() {
         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
           {value || 0} 台
         </span>
-      )
+      ),
+      width: '80px'
     },
     {
       key: 'remote_code' as keyof DeviceBundle,
@@ -842,24 +857,28 @@ export default function Devices() {
         if (!value) return <span className="text-gray-300">—</span>;
         const display = value.includes(' ') ? value : value.replace(/(\d{3})(?=\d)/g, '$1 ');
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-white text-blue-600 border border-blue-200">{display}</span>;
-      }
+      },
+      width: '130px'
     },
     {
       key: 'document_count' as keyof DeviceBundle,
       title: <BundleSortableHeader field="document_count" title="资料数量" />,
-      render: (value: number) => <span className="text-sm text-gray-600">{value || 0}</span>
+      render: (value: number) => <span className="text-sm text-gray-600">{value || 0}</span>,
+      width: '80px'
     },
     {
       key: 'open_issues' as keyof DeviceBundle,
       title: <BundleSortableHeader field="open_issues" title="待解决问题" />,
       render: (value: number) => value ? (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{value}</span>
-      ) : <span className="text-sm text-gray-400">0</span>
+      ) : <span className="text-sm text-gray-400">0</span>,
+      width: '90px'
     },
     {
       key: 'created_at' as keyof DeviceBundle,
       title: <BundleSortableHeader field="created_at" title="创建时间" />,
-      render: (value: string) => <div className="text-gray-500">{formatDate(value, 'yyyy-MM-dd')}</div>
+      render: (value: string) => <div className="text-gray-500">{formatDate(value, 'yyyy-MM-dd')}</div>,
+      width: '110px'
     },
     {
       key: 'actions' as keyof DeviceBundle,
@@ -876,7 +895,8 @@ export default function Devices() {
             <TrashIcon className="h-4 w-4" />
           </button>
         </div>
-      )
+      ),
+      width: '80px'
     }
   ];
 
@@ -1019,6 +1039,7 @@ export default function Devices() {
           onRowClick={handleRowClick}
           onLoadMore={visibleCount < filteredDevices.length ? () => setVisibleCount(prev => prev + 20) : undefined}
           scrollable
+          fixedLayout
           className="print:hidden"
         />
         {!loading && filteredDevices.length > 0 && (
@@ -1103,6 +1124,7 @@ export default function Devices() {
           }}
           onLoadMore={visibleBundleCount < filteredBundles.length ? () => setVisibleBundleCount(prev => prev + 20) : undefined}
           scrollable
+          fixedLayout
           className="print:hidden"
         />
         {!loading && filteredBundles.length > 0 && (
