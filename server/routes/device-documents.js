@@ -374,11 +374,15 @@ router.post('/batch-download', async (req, res) => {
             if (!res.headersSent) res.status(500).end();
         });
         archive.pipe(res);
-        // 按分类放入子目录
+        // 按分类放入子目录，并还原子文件夹层级（title 存储了去掉顶层目录后的相对路径，不含扩展名）
         const usedNames = new Map();
         for (const doc of documents) {
             const dir = doc.category ? doc.category.replace(/[<>:"/\\|?*]/g, '_') + '/' : '';
-            let baseName = doc.original_name || doc.title || `file_${doc.id}`;
+            const ext = doc.original_name ? path.extname(doc.original_name) : '';
+            const titleBase = (doc.title || '').trim();
+            let baseName = titleBase
+                ? (titleBase.endsWith(ext) ? titleBase : titleBase + ext)
+                : (doc.original_name || `file_${doc.id}`);
             const nameKey = dir + baseName;
             const count = (usedNames.get(nameKey) || 0) + 1;
             usedNames.set(nameKey, count);
@@ -435,7 +439,12 @@ router.get('/download-category', async (req, res) => {
         });
         archive.pipe(res);
         for (const doc of documents) {
-            const entryName = doc.original_name || doc.title || `file_${doc.id}`;
+            // 还原子文件夹层级：title 存储去掉顶层目录后的相对路径（不含扩展名），original_name 存储带扩展名的原始文件名
+            const ext = doc.original_name ? path.extname(doc.original_name) : '';
+            const titleBase = (doc.title || '').trim();
+            const entryName = titleBase
+                ? (titleBase.endsWith(ext) ? titleBase : titleBase + ext)
+                : (doc.original_name || `file_${doc.id}`);
             if (ossService.isOSSPath(doc.file_path)) {
                 try {
                     const ossPathMatch = doc.file_path.match(/^\/\/[^\/]+\/(.+)$|^oss:\/\/[^\/]+\/(.+)$/);
