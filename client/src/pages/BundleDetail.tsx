@@ -109,14 +109,19 @@ const BundleDetail: React.FC = () => {
 
   const handleRemoveDevice = async (deviceId: string) => {
     if (!bundle) return;
-    if (bundle.devices && bundle.devices.length <= 2) {
-      alert('多合一设备至少需要保留2台设备');
-      return;
-    }
-    if (window.confirm('确定要从多合一设备中移除该设备吗？')) {
+    const isLast = bundle.devices && bundle.devices.length === 1;
+    const confirmMsg = isLast
+      ? '移出最后一台设备后，该多合一组合会整体移除，是否继续？'
+      : '确定要从多合一设备中移除该设备吗？';
+    if (window.confirm(confirmMsg)) {
       try {
         await bundleApi.removeDevice(bundleId, deviceId);
-        await fetchBundle();
+        if (isLast) {
+          await bundleApi.deleteBundle(bundleId);
+          navigate('/devices?view=bundles');
+        } else {
+          await fetchBundle();
+        }
       } catch (error) {
         console.error('移除设备失败:', error);
         alert('移除设备失败');
@@ -306,7 +311,9 @@ const BundleDetail: React.FC = () => {
     const token = localStorage.getItem('auth_token');
     const a = document.createElement('a');
     a.href = `/api/device-documents/download-category?bundle_id=${bundleId}&category=${encodeURIComponent(cat)}&token=${token}`;
-    a.download = `${cat}.zip`;
+    const bundleName = (bundle?.name || bundle?.bundle_code || `多合一_${bundleId}`).replace(/[\\/:*?"<>|]/g, '_');
+    const safeCat = (cat || '分类').replace(/[\\/:*?"<>|]/g, '_');
+    a.download = `${bundleName}_${safeCat}.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -368,7 +375,8 @@ const BundleDetail: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = '批量下载.zip';
+      const bundleName = (bundle?.name || bundle?.bundle_code || `多合一_${bundleId}`).replace(/[\\/:*?"<>|]/g, '_');
+      a.download = `${bundleName}_出厂资料.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -639,6 +647,7 @@ const BundleDetail: React.FC = () => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">商户密码</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">待解决问题</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase no-print">操作</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -664,10 +673,18 @@ const BundleDetail: React.FC = () => {
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{device.open_issues}</span>
                             ) : <span className="text-sm text-gray-400">0</span>}
                           </td>
+                          <td className="px-4 py-3 no-print" onClick={e => e.stopPropagation()}>
+                            <button
+                              onClick={() => handleRemoveDevice(device.id)}
+                              className="text-xs text-red-500 hover:text-red-700 border border-red-300 hover:border-red-500 rounded px-2 py-1 transition-colors"
+                            >
+                              移出
+                            </button>
+                          </td>
                         </tr>
                       )) : (
                         <tr>
-                          <td colSpan={7} className="px-4 py-8 text-center text-gray-500">暂无成员设备</td>
+                          <td colSpan={9} className="px-4 py-8 text-center text-gray-500">暂无成员设备</td>
                         </tr>
                       )}
                     </tbody>

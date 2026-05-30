@@ -32,13 +32,25 @@ router.get('/', async (req, res) => {
         b.*,
         c.name as customer_name,
         c.short_name as customer_short_name,
+        CASE
+          WHEN COUNT(DISTINCT d.id) = 0 THEN '生产中'
+          WHEN SUM(CASE WHEN d.status = '使用中(异常)' THEN 1 ELSE 0 END) > 0 THEN '使用中(异常)'
+          WHEN SUM(CASE WHEN d.status = '生产中' THEN 1 ELSE 0 END) > 0 THEN '生产中'
+          WHEN COUNT(DISTINCT d.id) = SUM(CASE WHEN d.status = '已停用' THEN 1 ELSE 0 END) THEN '已停用'
+          ELSE '使用中(正常)'
+        END as bundle_status,
         COUNT(DISTINCT d.id) as device_count,
         (SELECT COUNT(*) FROM device_documents dd WHERE dd.bundle_id = b.id) as document_count,
         (SELECT d2.remote_code FROM devices d2 WHERE d2.bundle_id = b.id AND d2.remote_code IS NOT NULL LIMIT 1) as remote_code,
-        (SELECT COUNT(*) FROM issues i WHERE i.device_id IN (SELECT d3.id FROM devices d3 WHERE d3.bundle_id = b.id) AND i.status = 'open') as open_issues
+        (SELECT COUNT(*) FROM issues i WHERE i.device_id IN (SELECT d3.id FROM devices d3 WHERE d3.bundle_id = b.id) AND i.status = 'open') as open_issues,
+        GROUP_CONCAT(DISTINCT d.id ORDER BY d.id SEPARATOR ',') as device_ids,
+        GROUP_CONCAT(DISTINCT d.name ORDER BY d.id SEPARATOR ',') as device_names,
+        GROUP_CONCAT(DISTINCT d.nickname ORDER BY d.id SEPARATOR ',') as device_nicknames,
+        GROUP_CONCAT(p.name ORDER BY d.id SEPARATOR ',') as device_product_names
       FROM device_bundles b
       LEFT JOIN customers c ON b.customer_id = c.id
       LEFT JOIN devices d ON d.bundle_id = b.id
+      LEFT JOIN products p ON d.product_id = p.id
       ${whereClause}
       GROUP BY b.id
       ORDER BY b.created_at DESC

@@ -45,7 +45,15 @@ export default function Devices() {
     type: searchParams.get('type') || '',
     status: searchParams.get('status') || ''
   }));
-  const [bundleFilters, setBundleFilters] = useState({ page: 1, limit: 10, search: '' });
+  const [deviceCustomerFilter, setDeviceCustomerFilter] = useState<string>('');
+  const [deviceIssueFilter, setDeviceIssueFilter] = useState<string>('');
+  const [bundleFilters, setBundleFilters] = useState({
+    page: 1,
+    limit: 10,
+    customerId: '',
+    status: '',
+    issueStatus: ''
+  });
   const [sortField, setSortField] = useState<string>(searchParams.get('sortField') || '');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>((searchParams.get('sortOrder') as 'asc' | 'desc') || 'asc');
   const [bundleSortField, setBundleSortField] = useState<string>('');
@@ -61,6 +69,7 @@ export default function Devices() {
   const [selectedBundles, setSelectedBundles] = useState<number[]>([]);
   const [printDevices, setPrintDevices] = useState<Device[] | null>(null);
   const [printBundles, setPrintBundles] = useState<DeviceBundle[] | null>(null);
+  const [globalSearch, setGlobalSearch] = useState<string>(() => searchParams.get('q') || '');
 
   const fetchAllDevices = async () => {
     try {
@@ -94,14 +103,17 @@ export default function Devices() {
 
   const applyBundleFilters = useCallback(() => {
     let filtered = [...allBundles];
-    if (bundleFilters.search) {
-      const s = bundleFilters.search.toLowerCase();
-      filtered = filtered.filter(b =>
-        (b.bundle_code && b.bundle_code.toLowerCase().includes(s)) ||
-        (b.name && b.name.toLowerCase().includes(s)) ||
-        (b.customer_name && b.customer_name.toLowerCase().includes(s)) ||
-        (b.customer_short_name && b.customer_short_name.toLowerCase().includes(s))
-      );
+    if (bundleFilters.customerId) {
+      filtered = filtered.filter(b => String((b as any).customer_id || '') === bundleFilters.customerId);
+    }
+    if (bundleFilters.status) {
+      filtered = filtered.filter(b => String((b as any).bundle_status || '') === bundleFilters.status);
+    }
+    if (bundleFilters.issueStatus === 'has') {
+      filtered = filtered.filter(b => Number((b as any).open_issues || 0) > 0);
+    }
+    if (bundleFilters.issueStatus === 'none') {
+      filtered = filtered.filter(b => Number((b as any).open_issues || 0) === 0);
     }
     if (bundleSortField) {
       filtered.sort((a, b) => {
@@ -127,23 +139,22 @@ export default function Devices() {
     // 单台设备列表：排除已绑定多合一的设备
     filtered = filtered.filter(d => !d.bundle_id);
 
-    // 搜索过滤
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(device =>
-        (device.name && device.name.toLowerCase().includes(searchLower)) ||
-        (device.id && device.id.toLowerCase().includes(searchLower)) ||
-        (device.product_name && device.product_name.toLowerCase().includes(searchLower)) ||
-        (device.customer_name && device.customer_name.toLowerCase().includes(searchLower)) ||
-        (device.customer_short_name && device.customer_short_name.toLowerCase().includes(searchLower)) ||
-        (device.remote_code && device.remote_code.toLowerCase().includes(searchLower)) ||
-        false
-      );
-    }
-
     // 产品线过滤
     if (filters.type) {
       filtered = filtered.filter(device => device.product_line_name === filters.type);
+    }
+
+    // 客户过滤
+    if (deviceCustomerFilter) {
+      filtered = filtered.filter(device => String(device.customer_id || '') === deviceCustomerFilter);
+    }
+
+    // 待解决问题过滤
+    if (deviceIssueFilter === 'has') {
+      filtered = filtered.filter(device => Number(device.open_issues || 0) > 0);
+    }
+    if (deviceIssueFilter === 'none') {
+      filtered = filtered.filter(device => Number(device.open_issues || 0) === 0);
     }
 
     // 状态过滤
@@ -180,7 +191,7 @@ export default function Devices() {
       total: filtered.length,
       pages: 1
     });
-  }, [allDevices, filters, sortField, sortOrder]);
+  }, [allDevices, filters, deviceCustomerFilter, deviceIssueFilter, sortField, sortOrder]);
 
   // 初始数据获取
   useEffect(() => {
@@ -293,10 +304,56 @@ export default function Devices() {
     }
   };
 
-  const handleSearch = (search: string) => {
+  const handleGlobalSearch = (q: string) => {
+    setGlobalSearch(q);
     setVisibleCount(20);
-    setFilters(prev => ({ ...prev, search, page: 1 }));
+    setSearchParams(p => { if (q) p.set('q', q); else p.delete('q'); return p; }, { replace: true });
   };
+
+  // 全局搜索结果：包含所有设备（含多合一成员）
+  const globalSearchResults = (() => {
+    if (!globalSearch.trim()) return [];
+    const s = globalSearch.trim().toLowerCase();
+    let result = allDevices.filter(d =>
+      (d.id && d.id.toLowerCase().includes(s)) ||
+      (d.name && d.name.toLowerCase().includes(s)) ||
+      ((d as any).nickname && (d as any).nickname.toLowerCase().includes(s)) ||
+      (d.product_name && d.product_name.toLowerCase().includes(s)) ||
+      (d.customer_name && d.customer_name.toLowerCase().includes(s)) ||
+      (d.customer_short_name && d.customer_short_name.toLowerCase().includes(s)) ||
+      (d.remote_code && d.remote_code.toLowerCase().includes(s)) ||
+      ((d as any).bundle_code && (d as any).bundle_code.toLowerCase().includes(s)) ||
+      ((d as any).bundle_name && (d as any).bundle_name.toLowerCase().includes(s))
+    );
+    if (filters.type) result = result.filter(d => d.product_line_name === filters.type);
+    if (deviceCustomerFilter) result = result.filter(d => String(d.customer_id || '') === deviceCustomerFilter);
+    if (deviceIssueFilter === 'has') result = result.filter(d => Number(d.open_issues || 0) > 0);
+    if (deviceIssueFilter === 'none') result = result.filter(d => Number(d.open_issues || 0) === 0);
+    if (filters.status) result = result.filter(d => d.status === filters.status);
+    return result;
+  })();
+
+  const deviceCustomerOptions = Array.from(
+    new Map(
+      allDevices
+        .filter(d => !d.bundle_id && d.customer_id)
+        .map(d => [String(d.customer_id), {
+          id: String(d.customer_id),
+          name: d.customer_name || d.customer_short_name || `客户#${d.customer_id}`
+        }])
+    ).values()
+  ).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+
+  const bundleCustomerOptions = Array.from(
+    new Map(
+      allBundles
+        .filter(b => (b as any).customer_id)
+        .map(b => [String((b as any).customer_id), {
+          id: String((b as any).customer_id),
+          name: b.customer_name || b.customer_short_name || `客户#${(b as any).customer_id}`
+        }])
+    ).values()
+  ).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
 
   const handleFilterChange = (key: string, value: string) => {
     setVisibleCount(20);
@@ -443,18 +500,10 @@ export default function Devices() {
   // 打印用：全量过滤结果（不切分页）
   const allFilteredDevices = (() => {
     let filtered = [...allDevices].filter(d => !d.bundle_id);
-    if (filters.search) {
-      const s = filters.search.toLowerCase();
-      filtered = filtered.filter(d =>
-        (d.name && d.name.toLowerCase().includes(s)) ||
-        (d.id && d.id.toLowerCase().includes(s)) ||
-        (d.customer_name && d.customer_name.toLowerCase().includes(s)) ||
-        (d.customer_short_name && d.customer_short_name.toLowerCase().includes(s)) ||
-        (d.remote_code && d.remote_code.toLowerCase().includes(s)) ||
-        false
-      );
-    }
     if (filters.type) filtered = filtered.filter(d => d.product_line_name === filters.type);
+    if (deviceCustomerFilter) filtered = filtered.filter(d => String(d.customer_id || '') === deviceCustomerFilter);
+    if (deviceIssueFilter === 'has') filtered = filtered.filter(d => Number(d.open_issues || 0) > 0);
+    if (deviceIssueFilter === 'none') filtered = filtered.filter(d => Number(d.open_issues || 0) === 0);
     if (filters.status) filtered = filtered.filter(d => d.status === filters.status);
     return filtered;
   })();
@@ -495,15 +544,10 @@ export default function Devices() {
 
   const allFilteredBundles = (() => {
     let filtered = [...allBundles];
-    if (bundleFilters.search) {
-      const s = bundleFilters.search.toLowerCase();
-      filtered = filtered.filter(b =>
-        (b.bundle_code && b.bundle_code.toLowerCase().includes(s)) ||
-        (b.name && b.name.toLowerCase().includes(s)) ||
-        (b.customer_name && b.customer_name.toLowerCase().includes(s)) ||
-        (b.customer_short_name && b.customer_short_name.toLowerCase().includes(s))
-      );
-    }
+    if (bundleFilters.customerId) filtered = filtered.filter(b => String((b as any).customer_id || '') === bundleFilters.customerId);
+    if (bundleFilters.status) filtered = filtered.filter(b => String((b as any).bundle_status || '') === bundleFilters.status);
+    if (bundleFilters.issueStatus === 'has') filtered = filtered.filter(b => Number((b as any).open_issues || 0) > 0);
+    if (bundleFilters.issueStatus === 'none') filtered = filtered.filter(b => Number((b as any).open_issues || 0) === 0);
     return filtered;
   })();
 
@@ -788,6 +832,27 @@ export default function Devices() {
     );
   };
 
+  const getBundleDeviceTypeTooltip = (bundle: DeviceBundle): string => {
+    const raw = (bundle as any).device_product_names as string | undefined;
+    if (!raw) {
+      return `共 ${bundle.device_count || 0} 台\n暂无设备类型信息`;
+    }
+    const counter = new Map<string, number>();
+    raw
+      .split(',')
+      .map(name => name.trim())
+      .filter(Boolean)
+      .forEach((name) => {
+        counter.set(name, (counter.get(name) || 0) + 1);
+      });
+
+    const lines = Array.from(counter.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => `${name} x ${count}`);
+
+    return `共 ${bundle.device_count || 0} 台\n${lines.join('\n')}`;
+  };
+
   const bundleColumns = [
     {
       key: 'select' as keyof DeviceBundle,
@@ -843,8 +908,11 @@ export default function Devices() {
     {
       key: 'device_count' as keyof DeviceBundle,
       title: <BundleSortableHeader field="device_count" title="设备数量" />,
-      render: (value: number) => (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+      render: (value: number, record: DeviceBundle) => (
+        <span
+          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 cursor-help"
+          title={getBundleDeviceTypeTooltip(record)}
+        >
           {value || 0} 台
         </span>
       ),
@@ -911,9 +979,10 @@ export default function Devices() {
           </div>
           <h1 style={{fontSize: '13pt', fontWeight: 'bold', margin: '0 0 3pt 0', color: '#111827'}}>设备管理</h1>
           <div className="print-flex-row" style={{marginTop: '2pt'}}>
-            {filters.search && <span style={{fontSize: '8pt', color: '#6b7280'}}>搜索：{filters.search}</span>}
+            {globalSearch && <span style={{fontSize: '8pt', color: '#6b7280'}}>搜索：{globalSearch}</span>}
             {filters.type && <span style={{fontSize: '8pt', color: '#6b7280'}}>产品线：{filters.type}</span>}
             {filters.status && <span style={{fontSize: '8pt', color: '#6b7280'}}>状态：{filters.status}</span>}
+            {deviceCustomerFilter && <span style={{fontSize: '8pt', color: '#6b7280'}}>客户筛选已启用</span>}
             <span style={{fontSize: '8pt', color: '#6b7280'}}>共 {allFilteredDevices.length} 条记录</span>
           </div>
         </div>
@@ -922,6 +991,8 @@ export default function Devices() {
         <div className="flex justify-between items-center no-print">
           <div className="flex items-center gap-4">
             <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">设备管理</h1>
+            {/* Tab 切换（无全局搜索词时显示） */}
+            {!globalSearch && (
             <div className="flex rounded-md border border-gray-300 overflow-hidden">
               <button
                 onClick={() => { setViewMode('devices'); setSearchParams(p => { p.set('view', 'devices'); return p; }, { replace: true }); }}
@@ -936,7 +1007,8 @@ export default function Devices() {
                 多合一设备列表
               </button>
             </div>
-            {viewMode === 'devices' ? (
+            )}
+            {!globalSearch && (viewMode === 'devices' ? (
               <button
                 onClick={() => handleAddDevice()}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -952,9 +1024,28 @@ export default function Devices() {
                 <PlusIcon className="h-5 w-5 mr-2" />
                 新建多合一设备
               </button>
-            )}
+            ))}
           </div>
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <span className="absolute -top-2 left-2 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-blue-700 bg-blue-100 rounded border border-blue-200">
+                全局搜索
+              </span>
+              <input
+                type="text"
+                placeholder="全局搜索设备..."
+                value={globalSearch}
+                onChange={e => handleGlobalSearch(e.target.value)}
+                className="w-72 pl-4 pr-8 py-2.5 text-sm font-medium text-blue-900 placeholder:text-blue-400 bg-blue-50 border-2 border-blue-200 rounded-lg shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500"
+              />
+              {globalSearch && (
+                <button
+                  onClick={() => handleGlobalSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 hover:text-blue-700 text-lg leading-none"
+                  title="清除搜索"
+                >×</button>
+              )}
+            </div>
             <ExportButton
               onExport={viewMode === 'devices' ? handleExport : handleBundleExport}
             />
@@ -968,24 +1059,120 @@ export default function Devices() {
           </div>
         </div>
 
+        {/* === 全局搜索结果 === */}
+        {globalSearch && (
+        <>
+          {/* 产品线 + 状态筛选器（全局搜索时也可用） */}
+          <div className="bg-white rounded-lg shadow p-4 no-print">
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">产品线</label>
+                <select
+                  value={filters.type || ''}
+                  onChange={(e) => handleFilterChange('type', e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">全部产品线</option>
+                  {productLines.map(pl => <option key={pl.id} value={pl.name}>{pl.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+                <select
+                  value={filters.status || ''}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">全部状态</option>
+                  <option value="生产中">生产中</option>
+                  <option value="使用中(正常)">使用中(正常)</option>
+                  <option value="使用中(异常)">使用中(异常)</option>
+                  <option value="已停用">已停用</option>
+                </select>
+              </div>
+              <button
+                onClick={() => { handleFilterChange('type', ''); handleFilterChange('status', ''); }}
+                className="px-4 py-2 border border-gray-300 text-sm rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >重置筛选</button>
+              <span className="text-sm text-gray-500 ml-auto">共找到 {globalSearchResults.length} 台设备</span>
+            </div>
+          </div>
+
+          {/* 全局搜索结果表 */}
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">生产序列号</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">订单号 / 简称</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">产品名称</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">客户</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">远程码</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">所属多合一</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {globalSearchResults.length === 0 ? (
+                    <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">没有找到匹配的设备</td></tr>
+                  ) : globalSearchResults.slice(0, visibleCount).map(d => (
+                    <tr
+                      key={d.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => { sessionStorage.setItem('devices_highlight', d.id); navigate(`/devices/${d.id}`); }}
+                    >
+                      <td className="px-4 py-3 font-mono text-blue-600 font-medium whitespace-nowrap">{d.id}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-900">{d.name || '-'}</div>
+                        {(d as any).nickname && <div className="text-xs text-gray-400">{(d as any).nickname}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{d.product_name || '-'}</td>
+                      <td className="px-4 py-3">
+                        <div>{d.customer_name || '-'}</div>
+                        {d.customer_short_name && <div className="text-xs text-gray-400">{d.customer_short_name}</div>}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-gray-600 whitespace-nowrap">
+                        {d.remote_code ? d.remote_code.replace(/(\d{3})(?=\d)/g, '$1 ') : '-'}
+                      </td>
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        {(d as any).bundle_code ? (
+                          <Link
+                            to={`/bundles/${(d as any).bundle_id_val || d.bundle_id}`}
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 hover:bg-purple-200"
+                          >
+                            {(d as any).bundle_code}
+                          </Link>
+                        ) : <span className="text-gray-300">-</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(d.status)}`}>
+                          {d.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {globalSearchResults.length > visibleCount && (
+              <div className="text-center py-3 border-t border-gray-100">
+                <button
+                  onClick={() => setVisibleCount(prev => prev + 20)}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >加载更多（已显示 {visibleCount} / {globalSearchResults.length}）</button>
+              </div>
+            )}
+          </div>
+        </>
+        )}
+
         {/* --- 单台设备列表 --- */}
-        {viewMode === 'devices' && (
+        {!globalSearch && viewMode === 'devices' && (
         <>
         {/* 筛选器 */}
         <div className="bg-white rounded-lg shadow p-4 3xl:p-6 no-print">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                搜索
-              </label>
-              <input
-                type="text"
-                placeholder="搜索订单号、序列号、产品名称、远程码或简称"
-                value={filters.search || ''}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 产品线
@@ -1000,6 +1187,19 @@ export default function Devices() {
                   <option key={productLine.id} value={productLine.name}>
                     {productLine.name}
                   </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">客户</label>
+              <select
+                value={deviceCustomerFilter}
+                onChange={(e) => { setVisibleCount(20); setDeviceCustomerFilter(e.target.value); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">全部客户</option>
+                {deviceCustomerOptions.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </div>
@@ -1019,10 +1219,27 @@ export default function Devices() {
                 <option value="已停用">已停用</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">待解决问题</label>
+              <select
+                value={deviceIssueFilter}
+                onChange={(e) => { setVisibleCount(20); setDeviceIssueFilter(e.target.value); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">全部</option>
+                <option value="has">有待解决问题</option>
+                <option value="none">无待解决问题</option>
+              </select>
+            </div>
             <div className="flex items-end">
               <button
-                onClick={() => { setFilters({ page: 1, limit: 20, search: '', type: '', status: '' } as any); setVisibleCount(20); }}
-                className="w-full px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                onClick={() => {
+                  setFilters(prev => ({ ...prev, page: 1, limit: 20, search: '', type: '', status: '' }));
+                  setDeviceCustomerFilter('');
+                  setDeviceIssueFilter('');
+                  setVisibleCount(20);
+                }}
+                className="w-full h-10 px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 重置筛选
               </button>
@@ -1086,24 +1303,56 @@ export default function Devices() {
         )}
 
         {/* --- 多合一设备列表 --- */}
-        {viewMode === 'bundles' && (
+        {!globalSearch && viewMode === 'bundles' && (
         <>
         {/* 多合一设备筛选器 */}
         <div className="bg-white rounded-lg shadow p-4 3xl:p-6 no-print">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">搜索</label>
-              <input
-                type="text"
-                placeholder="搜索多合一设备订单号、名称或客户"
-                value={bundleFilters.search}
-                onChange={(e) => setBundleFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
+              <label className="block text-sm font-medium text-gray-700 mb-1">客户</label>
+              <select
+                value={bundleFilters.customerId}
+                onChange={(e) => setBundleFilters(prev => ({ ...prev, customerId: e.target.value, page: 1 }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              >
+                <option value="">全部客户</option>
+                {bundleCustomerOptions.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+              <select
+                value={bundleFilters.status}
+                onChange={(e) => setBundleFilters(prev => ({ ...prev, status: e.target.value, page: 1 }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">全部</option>
+                <option value="生产中">生产中</option>
+                <option value="使用中(正常)">使用中(正常)</option>
+                <option value="使用中(异常)">使用中(异常)</option>
+                <option value="已停用">已停用</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">待解决问题</label>
+              <select
+                value={bundleFilters.issueStatus}
+                onChange={(e) => setBundleFilters(prev => ({ ...prev, issueStatus: e.target.value, page: 1 }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">全部</option>
+                <option value="has">有待解决问题</option>
+                <option value="none">无待解决问题</option>
+              </select>
             </div>
             <div className="flex items-end">
               <button
-                onClick={() => { setBundleFilters({ page: 1, limit: 10, search: '' }); setVisibleBundleCount(20); }}
+                onClick={() => {
+                  setBundleFilters({ page: 1, limit: 10, customerId: '', status: '', issueStatus: '' });
+                  setVisibleBundleCount(20);
+                }}
                 className="w-full px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 重置筛选

@@ -366,8 +366,26 @@ router.post('/batch-download', async (req, res) => {
         if (documents.length === 0) {
             return res.status(404).json({ success: false, error: '未找到要下载的文档' });
         }
+
+        let zipName = '批量下载.zip';
+        const deviceIdSet = new Set(documents.map(d => d.device_id).filter(Boolean));
+        const bundleIdSet = new Set(documents.map(d => d.bundle_id).filter(Boolean));
+        if (deviceIdSet.size === 1) {
+            const [device] = await query('SELECT id, nickname, name FROM devices WHERE id = ?', [documents[0].device_id]);
+            if (device) {
+                const base = (device.nickname || device.name || device.id || '设备').toString().replace(/[<>:"/\\|?*]/g, '_');
+                zipName = `${base}_出厂资料.zip`;
+            }
+        } else if (bundleIdSet.size === 1) {
+            const [bundle] = await query('SELECT id, name, bundle_code FROM device_bundles WHERE id = ?', [documents[0].bundle_id]);
+            if (bundle) {
+                const base = (bundle.name || bundle.bundle_code || `多合一_${bundle.id}`).toString().replace(/[<>:"/\\|?*]/g, '_');
+                zipName = `${base}_出厂资料.zip`;
+            }
+        }
+
         res.setHeader('Content-Type', 'application/zip');
-        res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent('批量下载.zip')}`);
+        res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(zipName)}`);
         const archive = archiver('zip', { zlib: { level: 5 } });
         archive.on('error', err => {
             console.error('批量打包ZIP失败:', err);
@@ -418,20 +436,36 @@ router.post('/batch-download', async (req, res) => {
 // 按分类打包下载（ZIP）
 router.get('/download-category', async (req, res) => {
     try {
-        const { device_id, category } = req.query;
-        if (!device_id || !category) {
-            return res.status(400).json({ success: false, error: 'device_id 和 category 为必填项' });
+        const { device_id, bundle_id, category } = req.query;
+        if (!category || (!device_id && !bundle_id)) {
+            return res.status(400).json({ success: false, error: 'category 和 device_id/bundle_id 为必填项' });
         }
-        const documents = await query(
-            'SELECT * FROM device_documents WHERE device_id = ? AND category = ? ORDER BY title',
-            [device_id, category]
-        );
+
+        let documents = [];
+        let zipBaseName = '资料';
+        if (device_id) {
+            documents = await query(
+                'SELECT * FROM device_documents WHERE device_id = ? AND category = ? ORDER BY title',
+                [device_id, category]
+            );
+            const [device] = await query('SELECT id, nickname, name FROM devices WHERE id = ?', [device_id]);
+            if (device) zipBaseName = (device.nickname || device.name || device.id || '设备').toString();
+        } else {
+            documents = await query(
+                'SELECT * FROM device_documents WHERE bundle_id = ? AND category = ? ORDER BY title',
+                [bundle_id, category]
+            );
+            const [bundle] = await query('SELECT id, name, bundle_code FROM device_bundles WHERE id = ?', [bundle_id]);
+            if (bundle) zipBaseName = (bundle.name || bundle.bundle_code || `多合一_${bundle.id}`).toString();
+        }
+
         if (documents.length === 0) {
             return res.status(404).json({ success: false, error: '该分类下无文件' });
         }
+        const safeBase = zipBaseName.replace(/[<>:"/\\|?*]/g, '_');
         const safeCat = category.replace(/[<>:"/\\|?*]/g, '_');
         res.setHeader('Content-Type', 'application/zip');
-        res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(safeCat + '.zip')}`);
+        res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(`${safeBase}_${safeCat}.zip`)}`);
         const archive = archiver('zip', { zlib: { level: 5 } });
         archive.on('error', err => {
             console.error('打包ZIP失败:', err);

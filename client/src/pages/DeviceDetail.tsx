@@ -23,7 +23,7 @@ import {
   ChevronLeftIcon
 } from '@heroicons/react/24/outline';
 import { Device, Module, Issue, ModuleFormData, DeviceFormData, VersionRelease, DeviceUpgrade, SOPTemplate, ChecklistItem, SOPTemplateItem } from '../types';
-import { deviceApi, moduleApi, issueApi, versionReleaseApi, moduleVersionApi, deviceUpgradeApi, sopTemplateApi, uploadChecklistImage } from '../services/api';
+import { deviceApi, moduleApi, issueApi, versionReleaseApi, moduleVersionApi, deviceUpgradeApi, sopTemplateApi, uploadChecklistImage, bundleApi } from '../services/api';
 import api from '../services/api';
 import Layout from '../components/Layout';
 import ModuleForm from '../components/ModuleForm';
@@ -422,7 +422,8 @@ const DeviceDetail: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = '批量下载.zip';
+      const shortName = (device?.nickname || device?.name || device?.id || '设备').replace(/[\\/:*?"<>|]/g, '_');
+      a.download = `${shortName}_出厂资料.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -438,7 +439,9 @@ const DeviceDetail: React.FC = () => {
     const url = `/api/device-documents/download-category?device_id=${id}&category=${encodeURIComponent(cat)}&token=${token}`;
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${cat}.zip`;
+    const shortName = (device?.nickname || device?.name || device?.id || '设备').replace(/[\\/:*?"<>|]/g, '_');
+    const safeCat = (cat || '分类').replace(/[\\/:*?"<>|]/g, '_');
+    a.download = `${shortName}_${safeCat}.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -795,6 +798,33 @@ const DeviceDetail: React.FC = () => {
     setShowDeviceForm(false);
   };
 
+  const handleLeaveBundle = async () => {
+    if (!device?.bundle_id) return;
+    const bundleId = Number(device.bundle_id);
+    // 判断是否是最后一台（bundle_devices_count 由后端返回；若无则通过 getBundle 查询）
+    let isLast = false;
+    try {
+      const res = await bundleApi.getBundle(bundleId);
+      if (res.success && res.data.devices) {
+        isLast = res.data.devices.length === 1;
+      }
+    } catch (_) {}
+    const confirmMsg = isLast
+      ? '移出最后一台设备后，该多合一组合会整体移除，是否继续？'
+      : '确定要将该设备移出多合一绑定吗？';
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      await bundleApi.removeDevice(bundleId, device.id);
+      if (isLast) {
+        await bundleApi.deleteBundle(bundleId);
+      }
+      await fetchDevice();
+    } catch (error) {
+      console.error('移出多合一失败:', error);
+      alert('操作失败，请重试');
+    }
+  };
+
   // 获取状态颜色
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1048,12 +1078,19 @@ const DeviceDetail: React.FC = () => {
             {device.bundle_id && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">多合一设备</label>
-                <p className="text-lg print:text-base">
+                <div className="flex items-center gap-3">
                   <Link to={`/bundles/${device.bundle_id_val || device.bundle_id}`} className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-purple-100 text-purple-800 hover:bg-purple-200">
                     {device.bundle_code || `多合一#${device.bundle_id}`}
                     {device.bundle_name && <span className="ml-1 text-purple-600">({device.bundle_name})</span>}
                   </Link>
-                </p>
+                  <button
+                    onClick={handleLeaveBundle}
+                    className="no-print inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
+                    title="将该设备移出多合一绑定"
+                  >
+                    移出绑定
+                  </button>
+                </div>
               </div>
             )}
             {/* 倒数第三行: 远程码 | 远程密码 | （空） */}
