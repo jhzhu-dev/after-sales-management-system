@@ -577,9 +577,9 @@ router.put('/:id', [
 
     // 构建更新语句
     // 读取更新前的旧值用于变更检测
-    const oldIssue = (await query('SELECT status, assignee, assignee_open_id FROM issues WHERE id = ?', [id]))[0];
+    const oldIssue = (await query('SELECT status, assignee, assignee_open_id, device_id, module_id FROM issues WHERE id = ?', [id]))[0];
 
-    const allowedFields = ['description', 'severity', 'status', 'category', 'classification_id', 'assignee', 'assignee_open_id', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'attachments', 'resolution_description', 'resolved_at', 'module_id', 'custom_module_name'];
+    const allowedFields = ['description', 'severity', 'status', 'category', 'classification_id', 'assignee', 'assignee_open_id', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'attachments', 'resolution_description', 'resolved_at', 'module_id', 'custom_module_name', 'device_id'];
     const updateFields = [];
     const updateValues = [];
 
@@ -604,6 +604,30 @@ router.put('/:id', [
       }
     });
 
+    // ── 换绑设备校验与处理 ──
+    const newDeviceId = updates.device_id;
+    const deviceChanged = newDeviceId && newDeviceId !== oldIssue.device_id;
+
+    if (deviceChanged) {
+      // 校验目标设备是否存在
+      const targetDevice = await query('SELECT id FROM devices WHERE id = ?', [newDeviceId]);
+      if (targetDevice.length === 0) {
+        return res.status(400).json({ success: false, error: '目标设备不存在' });
+      }
+
+      // 若当前 module_id 不属于新设备，自动清空
+      if (oldIssue.module_id && updates.module_id === undefined) {
+        const moduleCheck = await query('SELECT id FROM modules WHERE id = ? AND device_id = ?', [oldIssue.module_id, newDeviceId]);
+        if (moduleCheck.length === 0) {
+          // module 不属于新设备，追加清空 module_id 和 custom_module_name
+          updateFields.push('module_id = ?');
+          updateValues.push(null);
+          updateFields.push('custom_module_name = ?');
+          updateValues.push(null);
+        }
+      }
+    }
+
     if (updateFields.length === 0) {
       return res.status(400).json({ success: false, error: '没有要更新的字段' });
     }
@@ -617,6 +641,14 @@ router.put('/:id', [
     `;
 
     await query(updateQuery, updateValues);
+
+    // ── 换绑日志 ──
+    if (deviceChanged) {
+      await query(
+        'INSERT INTO issue_logs (issue_id, content, operator) VALUES (?, ?, ?)',
+        [id, `设备换绑：${oldIssue.device_id} → ${newDeviceId}`, 'system']
+      ).catch(() => {});
+    }
 
     // ── 飞书通知（异步）──
     const { notify_assignee, assignee_open_id, notify_open_ids } = req.body;

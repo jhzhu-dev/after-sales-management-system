@@ -1102,21 +1102,8 @@ const DeviceDetail: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">远程密码</label>
               <div className="flex items-center space-x-2">
                 <p className="text-lg font-mono text-gray-600 print:text-base">
-                  {device.password ? (showPassword ? device.password : '••••••••') : '-'}
+                  {device.password || '-'}
                 </p>
-                {device.password && (
-                  <button
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="p-1 text-gray-500 hover:text-gray-700 transition-colors no-print"
-                    title={showPassword ? '隐藏密码' : '显示密码'}
-                  >
-                    {showPassword ? (
-                      <EyeSlashIcon className="h-4 w-4" />
-                    ) : (
-                      <EyeIcon className="h-4 w-4" />
-                    )}
-                  </button>
-                )}
               </div>
             </div>
             <div />

@@ -512,7 +512,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">远程密码</label>
                   <input
-                    type="password"
+                    type="text"
                     value={formData.password || ''}
                     onChange={(e) => handleChange('password', e.target.value)}
                     className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"

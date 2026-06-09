@@ -416,7 +416,7 @@ const BundleDetail: React.FC = () => {
 
   const DEVICE_EXPORT_COLUMNS = [
     { key: 'id', label: '生产序列号' },
-    { key: 'name', label: '订单号' },
+    { key: 'device_code', label: '设备编码' },
     { key: 'product_name', label: '产品名称' },
     { key: 'customer_name', label: '客户' },
     { key: 'status', label: '状态' },
@@ -640,7 +640,7 @@ const BundleDetail: React.FC = () => {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">生产序列号</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">订单号</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">设备编码</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">简称</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">产品名称</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">商户号</th>
@@ -658,7 +658,7 @@ const BundleDetail: React.FC = () => {
                               {device.id}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">{device.name || '-'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{device.device_code || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{device.nickname || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{device.product_name || '-'}</td>
                           <td className="px-4 py-3 text-sm font-mono text-gray-700">{bundle.merchant_id || '-'}</td>
