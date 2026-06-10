@@ -96,9 +96,7 @@ router.get('/:id', async (req, res) => {
         c.name as customer_name,
         c.short_name as customer_short_name,
         (SELECT d2.remote_code FROM devices d2 WHERE d2.bundle_id = b.id AND d2.remote_code IS NOT NULL LIMIT 1) as remote_code,
-        (SELECT d2.password FROM devices d2 WHERE d2.bundle_id = b.id AND d2.password IS NOT NULL LIMIT 1) as password,
-        (SELECT d2.merchant_id FROM devices d2 WHERE d2.bundle_id = b.id AND d2.merchant_id IS NOT NULL LIMIT 1) as merchant_id,
-        (SELECT d2.merchant_password FROM devices d2 WHERE d2.bundle_id = b.id AND d2.merchant_password IS NOT NULL LIMIT 1) as merchant_password
+        (SELECT d2.password FROM devices d2 WHERE d2.bundle_id = b.id AND d2.password IS NOT NULL LIMIT 1) as password
       FROM device_bundles b
       LEFT JOIN customers c ON b.customer_id = c.id
       WHERE b.id = ?
@@ -164,8 +162,6 @@ router.post('/', [
   body('description').optional({ nullable: true }).isString(),
   body('remote_code').optional({ nullable: true }).isString(),
   body('password').optional({ nullable: true }).isString(),
-  body('merchant_id').optional({ nullable: true }).isString(),
-  body('merchant_password').optional({ nullable: true }).isString(),
   body('device_ids').optional().isArray().withMessage('device_ids 必须是数组'),
   body('new_devices').optional().isArray().withMessage('new_devices 必须是数组')
 ], async (req, res) => {
@@ -175,7 +171,7 @@ router.post('/', [
       return res.status(400).json({ success: false, error: '输入数据无效', details: errors.array() });
     }
 
-    const { bundle_code, name, customer_id, description, remote_code, password, merchant_id, merchant_password, device_ids = [], new_devices = [] } = req.body;
+    const { bundle_code, name, customer_id, description, remote_code, password, device_ids = [], new_devices = [] } = req.body;
     const totalCount = device_ids.length + new_devices.length;
 
     if (totalCount < 2 || totalCount > 5) {
@@ -185,10 +181,10 @@ router.post('/', [
     // 生成多合一设备订单号：优先用提交的 bundle_code（订单号），否则自动生成 T- 前缀
     let finalCode = bundle_code && bundle_code.trim() ? bundle_code.trim() : `T-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
-    // 检查编号唯一性（同一订单号 + 同一客户 不可重复）
-    const existing = await query('SELECT id FROM device_bundles WHERE bundle_code = ? AND customer_id = ?', [finalCode, customer_id]);
+    // 检查编号唯一性
+    const existing = await query('SELECT id FROM device_bundles WHERE bundle_code = ?', [finalCode]);
     if (existing.length > 0) {
-      return res.status(400).json({ success: false, error: `该客户下多合一设备订单号 "${finalCode}" 已存在` });
+      return res.status(400).json({ success: false, error: `多合一设备订单号 "${finalCode}" 已存在` });
     }
 
     // 校验已有设备存在且属于同一客户
@@ -267,8 +263,8 @@ router.post('/', [
         }
 
         await connection.execute(
-          `INSERT INTO devices (id, name, nickname, device_code, product_line_id, product_id, customer_id, status, remote_code, password, merchant_id, merchant_password, bundle_id, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO devices (id, name, nickname, device_code, product_line_id, product_id, customer_id, status, remote_code, password, bundle_id, notes)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             deviceId,
             finalCode,  // 订单号 = 多合一设备订单号
@@ -280,8 +276,6 @@ router.post('/', [
             deviceStatus,
             remote_code || null,
             password || null,
-            merchant_id || null,
-            merchant_password || null,
             bundleId,
             nd.notes || null
           ]
@@ -314,14 +308,6 @@ router.post('/', [
         if (password !== undefined && password !== null) {
           updateFields.push('password = ?');
           updateValues.push(password);
-        }
-        if (merchant_id !== undefined && merchant_id !== null) {
-          updateFields.push('merchant_id = ?');
-          updateValues.push(merchant_id);
-        }
-        if (merchant_password !== undefined && merchant_password !== null) {
-          updateFields.push('merchant_password = ?');
-          updateValues.push(merchant_password);
         }
 
         updateValues.push(deviceId);
@@ -371,9 +357,7 @@ router.put('/:id', [
   body('bundle_code').optional({ nullable: true }).isString(),
   body('description').optional({ nullable: true }).isString(),
   body('remote_code').optional({ nullable: true }).isString(),
-  body('password').optional({ nullable: true }).isString(),
-  body('merchant_id').optional({ nullable: true }).isString(),
-  body('merchant_password').optional({ nullable: true }).isString()
+  body('password').optional({ nullable: true }).isString()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -385,8 +369,6 @@ router.put('/:id', [
     const { name, bundle_code, description } = req.body;
     const remote_code = req.body.remote_code !== undefined ? (req.body.remote_code?.trim() || null) : undefined;
     const password = req.body.password !== undefined ? (req.body.password?.trim() || null) : undefined;
-    const merchant_id = req.body.merchant_id !== undefined ? (req.body.merchant_id?.trim() || null) : undefined;
-    const merchant_password = req.body.merchant_password !== undefined ? (req.body.merchant_password?.trim() || null) : undefined;
 
     const existing = await query('SELECT id FROM device_bundles WHERE id = ?', [id]);
     if (existing.length === 0) {
@@ -413,14 +395,12 @@ router.put('/:id', [
       await query(`UPDATE device_bundles SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, updateValues);
     }
 
-    // 更新所有成员设备的共享字段（远程码、密码、商户号、商户密码）
-    if (remote_code !== undefined || password !== undefined || merchant_id !== undefined || merchant_password !== undefined) {
+    // 更新所有成员设备的共享字段（远程码、密码）
+    if (remote_code !== undefined || password !== undefined) {
       const devUpdateFields = [];
       const devUpdateValues = [];
       if (remote_code !== undefined) { devUpdateFields.push('remote_code = ?'); devUpdateValues.push(remote_code || null); }
       if (password !== undefined) { devUpdateFields.push('password = ?'); devUpdateValues.push(password || null); }
-      if (merchant_id !== undefined) { devUpdateFields.push('merchant_id = ?'); devUpdateValues.push(merchant_id || null); }
-      if (merchant_password !== undefined) { devUpdateFields.push('merchant_password = ?'); devUpdateValues.push(merchant_password || null); }
       if (devUpdateFields.length > 0) {
         devUpdateValues.push(id);
         await query(`UPDATE devices SET ${devUpdateFields.join(', ')} WHERE bundle_id = ?`, devUpdateValues);

@@ -49,11 +49,13 @@ router.get('/', async (req, res) => {
       SELECT 
         d.id, d.name, d.nickname, d.device_code, d.product_line_id,
         d.product_id, d.customer_id, d.location,
-        d.status, d.remote_code, d.password, d.merchant_id, d.merchant_password, d.notes, d.bundle_id,
+        d.status, d.remote_code, d.password, d.notes, d.bundle_id,
         d.created_at, d.updated_at,
         pl.name as product_line_name,
-        p.name as product_name, p.model as product_model,
-        c.name as customer_name, c.short_name as customer_short_name,
+        p.name as product_name,
+        p.model as product_model,
+        c.name as customer_name,
+        c.short_name as customer_short_name,
         db.id as bundle_id_val,
         db.bundle_code,
         db.name as bundle_name,
@@ -124,9 +126,9 @@ router.get('/:id', async (req, res) => {
     SELECT
     d.id, d.name, d.nickname, d.device_code, d.product_line_id,
     d.product_id, d.customer_id, d.location,
-    d.status, d.remote_code, d.password, d.merchant_id, d.merchant_password, d.notes, d.bundle_id,
+    d.status, d.remote_code, d.password, d.notes, d.bundle_id,
     d.created_at, d.updated_at,
-      pl.name as product_line_name,
+    pl.name as product_line_name,
       p.name as product_name,
       p.model as product_model,
       c.name as customer_name,
@@ -205,9 +207,7 @@ router.post('/', [
   body('customer_id').optional({ nullable: true }).isInt().withMessage('客户ID必须是整数'),
   body('status').optional({ nullable: true }).isIn(['生产中', '使用中(正常)', '使用中(异常)', '已停用', '正常']).withMessage('状态必须是：生产中、使用中(正常)、使用中(异常)或已停用'),
   body('remote_code').optional({ nullable: true }).isString().withMessage('远程码必须是字符串'),
-  body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串'),
-  body('merchant_id').optional({ nullable: true }).isString().withMessage('商户号必须是字符串'),
-  body('merchant_password').optional({ nullable: true }).isString().withMessage('商户密码必须是字符串')
+  body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串')
 ], async (req, res) => {
   try {
     console.log('收到创建设备请求:', req.body);
@@ -223,7 +223,7 @@ router.post('/', [
       });
     }
 
-    const { id, name, device_code, product_line_id, product_id, customer_id, status = '使用中(正常)', remote_code, password, merchant_id, merchant_password, notes } = req.body;
+    const { id, name, device_code, product_line_id, product_id, customer_id, status = '使用中(正常)', remote_code, password, notes } = req.body;
 
     // 如果提供了ID，使用用户提供的ID，否则自动生成
     let deviceId = id;
@@ -246,8 +246,8 @@ router.post('/', [
     }
 
     const insertQuery = `
-      INSERT INTO devices(id, name, nickname, device_code, product_line_id, product_id, customer_id, status, remote_code, password, merchant_id, merchant_password, notes)
-      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO devices(id, name, nickname, device_code, product_line_id, product_id, customer_id, status, remote_code, password, notes)
+      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     // 自动生成设备俗称：{客户中文名称}{产品简称}{生产序列号末2位数字}号
@@ -280,7 +280,7 @@ router.post('/', [
       console.warn('生成设备俗称失败:', e.message);
     }
 
-    await query(insertQuery, [deviceId, name ?? null, nickname, device_code || null, product_line_id, product_id || null, customer_id || null, status, remote_code || null, password || null, merchant_id || null, merchant_password || null, notes || null]);
+    await query(insertQuery, [deviceId, name ?? null, nickname, device_code || null, product_line_id, product_id || null, customer_id || null, status, remote_code || null, password || null, notes || null]);
 
     // ── 飞书通知（异步，支持多人）──
     const { notify_open_id, notify_open_ids, send_notify } = req.body;
@@ -324,9 +324,7 @@ router.put('/:id', [
   body('customer_id').optional({ nullable: true }).isInt().withMessage('客户ID必须是整数'),
   body('status').optional({ nullable: true }).isIn(['生产中', '使用中(正常)', '使用中(异常)', '已停用', '正常']).withMessage('状态必须是：生产中、使用中(正常)、使用中(异常)或已停用'),
   body('remote_code').optional({ nullable: true }).isString().withMessage('远程码必须是字符串'),
-  body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串'),
-  body('merchant_id').optional({ nullable: true }).isString().withMessage('商户号必须是字符串'),
-  body('merchant_password').optional({ nullable: true }).isString().withMessage('商户密码必须是字符串')
+  body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串')
 ], async (req, res) => {
   try {
     // 兼容旧前端：将单独的"正常"状态规范化为"使用中(正常)"
@@ -370,7 +368,7 @@ router.put('/:id', [
     }
 
     // 只允许更新存在的字段（白名单）
-    const allowedFields = ['name', 'nickname', 'device_code', 'product_line_id', 'product_id', 'customer_id', 'status', 'remote_code', 'password', 'merchant_id', 'merchant_password', 'notes'];
+    const allowedFields = ['name', 'nickname', 'device_code', 'product_line_id', 'product_id', 'customer_id', 'status', 'remote_code', 'password', 'notes'];
     const filteredUpdates = {};
     Object.keys(updates).forEach(key => {
       if (allowedFields.includes(key) && updates[key] !== undefined) {

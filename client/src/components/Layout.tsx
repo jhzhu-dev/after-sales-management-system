@@ -7,7 +7,8 @@ import {
   Cog6ToothIcon,
   CubeIcon,
   WrenchScrewdriverIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  LinkIcon,
 } from '@heroicons/react/24/outline';
 import { cn } from '../utils';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +21,7 @@ const navigation = [
   { name: '仪表盘', href: '/', icon: HomeIcon },
   { name: '设备管理', href: '/devices', icon: DevicePhoneMobileIcon },
   { name: '运维中心', href: '/issues', icon: ChartBarIcon },
+  { name: '系统对接', href: '/integrations', icon: LinkIcon },
   { name: '产品线管理', href: '/product-lines', icon: CubeIcon },
   { name: '版本库中心', href: '/releases', icon: WrenchScrewdriverIcon },
   { name: '系统设置', href: '/settings', icon: Cog6ToothIcon },
@@ -47,7 +49,9 @@ export default function Layout({ children }: LayoutProps) {
         <nav className="mt-4 3xl:mt-8 px-3 3xl:px-4">
           <ul className="space-y-1 3xl:space-y-2">
             {navigation.filter(item => item.adminOnly ? user?.role === 'admin' : true).map((item) => {
-              const isActive = location.pathname === item.href;
+              const isActive = item.href === '/'
+                ? location.pathname === '/'
+                : location.pathname === item.href || location.pathname.startsWith(item.href + '/');
               return (
                 <li key={item.name}>
                   <Link

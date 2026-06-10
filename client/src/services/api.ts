@@ -572,6 +572,43 @@ export const bundleApi = {
     api.delete(`/device-bundles/${bundleId}/devices/${deviceId}`).then(res => res.data),
 };
 
+// ─── 系统对接 API ─────────────────────────────────────────────────────────────
+export const integrationApi = {
+  getList: (params?: { status?: string; customer_id?: number; search?: string }): Promise<any> =>
+    api.get('/integrations', { params }).then(res => res.data),
+
+  getOne: (id: number): Promise<any> =>
+    api.get(`/integrations/${id}`).then(res => res.data),
+
+  create: (data: any): Promise<any> =>
+    api.post('/integrations', data).then(res => res.data),
+
+  update: (id: number, data: any): Promise<any> =>
+    api.put(`/integrations/${id}`, data).then(res => res.data),
+
+  delete: (id: number): Promise<any> =>
+    api.delete(`/integrations/${id}`).then(res => res.data),
+
+  addDevice: (id: number, deviceId: string): Promise<any> =>
+    api.post(`/integrations/${id}/devices`, { device_id: deviceId }).then(res => res.data),
+
+  removeDevice: (id: number, deviceId: string): Promise<any> =>
+    api.delete(`/integrations/${id}/devices/${deviceId}`).then(res => res.data),
+
+  getLogs: (id: number): Promise<any> =>
+    api.get(`/integrations/${id}/logs`).then(res => res.data),
+
+  addLog: (id: number, data: { content: string; operator?: string; attachments?: any[] }): Promise<any> =>
+    api.post(`/integrations/${id}/logs`, data).then(res => res.data),
+
+  uploadAttachment: (files: File[], integrationId?: number): Promise<any> => {
+    const fd = new FormData();
+    files.forEach(f => fd.append('files', f));
+    if (integrationId) fd.append('integration_id', String(integrationId));
+    return api.post('/integrations/upload-attachment', fd, { timeout: 60000 }).then(res => res.data);
+  },
+};
+
 // ─── 飞书集成 API ──────────────────────────────────────────────────────────────
 export const feishuApi = {
   getConfig: (): Promise<ApiResponse<any>> =>

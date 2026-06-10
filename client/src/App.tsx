@@ -17,6 +17,8 @@ const ProductDetail = React.lazy(() => import('./pages/ProductDetail'));
 const Products = React.lazy(() => import('./pages/Products'));
 const BundleDetail = React.lazy(() => import('./pages/BundleDetail'));
 const FeishuSettings = React.lazy(() => import('./pages/FeishuSettings'));
+const Integrations = React.lazy(() => import('./pages/Integrations'));
+const IntegrationDetail = React.lazy(() => import('./pages/IntegrationDetail'));
 
 function App() {
   return (
@@ -44,6 +46,8 @@ function App() {
               <Route path="/upgrades" element={<Navigate to="/issues" replace />} />
               <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
               <Route path="/feishu-settings" element={<PrivateRoute><FeishuSettings /></PrivateRoute>} />
+              <Route path="/integrations" element={<PrivateRoute><Integrations /></PrivateRoute>} />
+              <Route path="/integrations/:id" element={<PrivateRoute><IntegrationDetail /></PrivateRoute>} />
             </Routes>
           </React.Suspense>
         </div>

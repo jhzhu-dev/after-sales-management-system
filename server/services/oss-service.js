@@ -326,6 +326,10 @@ class OSSService {
         return `${base}/knowledge-base/${params.articleId}/${params.fileName}`;
       }
 
+      case 'integration-attachments': {
+        return `${base}/integrations/${params.integrationId}/${params.fileName}`;
+      }
+
       default:
         throw new Error(`buildPathByType: 未知路径类型 "${type}"`);
     }

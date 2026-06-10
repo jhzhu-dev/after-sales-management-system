@@ -55,6 +55,9 @@ const feishuRoutes = require('./routes/feishu');
 // 问题归属分类管理路由
 const issueClassificationRoutes = require('./routes/issue-classifications');
 
+// 系统对接路由
+const integrationRoutes = require('./routes/integrations');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -197,6 +200,9 @@ app.use('/api/feishu', authenticate, feishuRoutes);
 
 // 问题归属分类路由
 app.use('/api/issue-classifications', issueClassificationRoutes);
+
+// 系统对接路由
+app.use('/api/integrations', integrationRoutes);
 
 
 // 所有非API路由都返回前端应用

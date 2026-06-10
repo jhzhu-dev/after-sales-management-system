@@ -7,6 +7,48 @@ export interface FeishuUser {
   synced_at?: string;
 }
 
+// 系统对接
+export type IntegrationStatus = '洽谈中' | '对接中' | '已完成' | '暂停';
+
+export interface Integration {
+  id: number;
+  title: string;
+  customer_id?: number;
+  customer_name?: string;
+  customer_short_name?: string;
+  status: IntegrationStatus;
+  description?: string;
+  responsible_person?: string;
+  started_at?: string;
+  completed_at?: string;
+  device_count?: number;
+  log_count?: number;
+  devices?: IntegrationDevice[];
+  logs?: IntegrationLog[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IntegrationDevice {
+  id: string;
+  nickname?: string;
+  device_code?: string;
+  status?: string;
+  product_name?: string;
+  customer_name?: string;
+  customer_short_name?: string;
+  added_at: string;
+}
+
+export interface IntegrationLog {
+  id: number;
+  integration_id: number;
+  content: string;
+  operator?: string;
+  attachments: Array<{ name: string; url: string; size?: number; type?: string }>;
+  created_at: string;
+}
+
 // 客户类型
 export interface Customer {
   id: number;

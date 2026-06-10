@@ -70,6 +70,151 @@ const BundleDetail: React.FC = () => {
     setDocDragOver(false);
   };
 
+  // 文档树控制：记录哪些文件夹已展开（默认全部折叠）
+  const [expandedDocFolders, setExpandedDocFolders] = useState<Set<string>>(new Set());
+
+  // 构建文档树（支持 title 中以 '/' 分隔的子目录）
+  interface DocTreeNode {
+    name: string;
+    isFile: boolean;
+    doc?: any;
+    docIndex?: number;
+    children: DocTreeNode[];
+    path: string;
+  }
+
+  function buildDocTree(docs: any[]): DocTreeNode[] {
+    const root: DocTreeNode = { name: '', isFile: false, children: [], path: '' };
+    for (let i = 0; i < docs.length; i++) {
+      const doc = docs[i];
+      const rawTitle = (doc.title || '').trim();
+      const parts = rawTitle ? rawTitle.split('/').filter(Boolean) : [];
+      const fileName = doc.original_name || (parts.length > 0 ? parts[parts.length - 1] : `file_${doc.id}`);
+      if (parts.length <= 1) {
+        root.children.push({ name: fileName, isFile: true, doc, docIndex: i, children: [], path: rawTitle });
+      } else {
+        let node = root;
+        for (let j = 0; j < parts.length - 1; j++) {
+          let child = node.children.find(c => !c.isFile && c.name === parts[j]);
+          if (!child) {
+            child = { name: parts[j], isFile: false, children: [], path: parts.slice(0, j + 1).join('/') };
+            node.children.push(child);
+          }
+          node = child;
+        }
+        node.children.push({ name: fileName, isFile: true, doc, docIndex: i, children: [], path: rawTitle });
+      }
+    }
+    return root.children;
+  }
+
+  const renderDocTreeNodes = (nodes: DocTreeNode[], depth: number, catDocs: any[]): React.ReactNode => {
+    return nodes.map(node => {
+      if (node.isFile) {
+        const doc = node.doc!;
+        const docIdx = node.docIndex!;
+        const ext = (doc.original_name || '').split('.').pop()?.toLowerCase() || '';
+        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
+        const isPdf = ext === 'pdf';
+        const canPreview = isImage || isPdf;
+        return (
+          <div
+            key={doc.id}
+            style={{ marginLeft: `${depth * 16}px` }}
+            className={`bg-white p-3 rounded-lg shadow-sm border flex items-center justify-between transition-colors ${selectedDocIds.has(doc.id) ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-green-200'}`}
+          >
+            {docSelectMode && (
+              <input
+                type="checkbox"
+                checked={selectedDocIds.has(doc.id)}
+                onChange={() => toggleDocSelect(doc.id)}
+                className="w-4 h-4 text-blue-600 rounded flex-shrink-0 mr-2"
+              />
+            )}
+            <div
+              className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+              onClick={() => docSelectMode ? toggleDocSelect(doc.id) : handlePreviewDoc(doc, catDocs, docIdx)}
+            >
+              {isImage ? (
+                <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <img
+                    src={`/api/device-documents/${doc.id}/download`}
+                    alt={doc.title}
+                    className="w-10 h-10 object-cover rounded"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </div>
+              ) : (
+                <DocumentIcon className="h-8 w-8 text-gray-400 flex-shrink-0" />
+              )}
+              <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-gray-900 truncate">{node.name}</span>
+                {canPreview && <span className="text-xs text-green-500 font-normal flex-shrink-0">可预览</span>}
+                {doc.file_size ? <span className="text-xs text-gray-400 flex-shrink-0">{formatFileSize(doc.file_size)}</span> : null}
+                {doc.created_at && <span className="text-xs text-gray-400 flex-shrink-0">{new Date(doc.created_at).toLocaleDateString()}</span>}
+                {doc.uploaded_by && <span className="text-xs text-gray-400 flex-shrink-0">上传人: {doc.uploaded_by}</span>}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0 ml-4">
+              <button
+                onClick={() => handlePreviewDoc(doc, catDocs, docIdx)}
+                className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                title="阅览"
+              >
+                <EyeIcon className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => handleDownloadDoc(doc)}
+                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                title="下载"
+              >
+                <DocumentArrowDownIcon className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => handleDeleteDoc(doc.id)}
+                className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                title="删除"
+              >
+                <TrashIcon className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        );
+      } else {
+        const folderKey = node.path;
+        const isCollapsed = !expandedDocFolders.has(folderKey);
+        const fileCount = (function countFiles(n: DocTreeNode): number {
+          return n.isFile ? 1 : n.children.reduce((s, c) => s + countFiles(c), 0);
+        })(node);
+        return (
+          <div key={node.path} style={{ marginLeft: `${depth * 16}px` }}>
+            <button
+              onClick={() => setExpandedDocFolders(prev => {
+                const next = new Set(prev);
+                if (next.has(folderKey)) next.delete(folderKey); else next.add(folderKey);
+                return next;
+              })}
+              className="flex items-center gap-1.5 py-1.5 px-2 w-full text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              <FolderIcon className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+              <span>{node.name}</span>
+              <span className="text-xs text-gray-400 ml-1">({fileCount})</span>
+              {isCollapsed
+                ? <ChevronRightIcon className="h-3 w-3 text-gray-400 ml-auto" />
+                : <ChevronDownIcon className="h-3 w-3 text-gray-400 ml-auto" />
+              }
+            </button>
+            {!isCollapsed && (
+              <div className="mt-1 space-y-2">
+                {renderDocTreeNodes(node.children, depth + 1, catDocs)}
+              </div>
+            )}
+          </div>
+        );
+      }
+    });
+  };
+
   const fetchBundle = useCallback(async () => {
     if (!bundleId) return;
     try {
@@ -821,76 +966,10 @@ const BundleDetail: React.FC = () => {
                               下载全部
                             </button>
                           </div>
-                          {isExpanded && (
+                            {isExpanded && (
                             <div className="px-4 pb-4">
                               <div className="space-y-2 pt-2">
-                                {docs.map((doc: any, docIdx: number) => {
-                                  const ext = (doc.original_name || '').split('.').pop()?.toLowerCase() || '';
-                                  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
-                                  const isPdf = ext === 'pdf';
-                                  const canPreview = isImage || isPdf;
-                                  return (
-                                    <div key={doc.id} className={`bg-white p-3 rounded-lg shadow-sm border flex items-center justify-between transition-colors ${selectedDocIds.has(doc.id) ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-green-200'}`}>
-                                      {docSelectMode && (
-                                        <input
-                                          type="checkbox"
-                                          checked={selectedDocIds.has(doc.id)}
-                                          onChange={() => toggleDocSelect(doc.id)}
-                                          className="w-4 h-4 text-blue-600 rounded flex-shrink-0 mr-2"
-                                        />
-                                      )}
-                                      <div
-                                        className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
-                                        onClick={() => docSelectMode ? toggleDocSelect(doc.id) : handlePreviewDoc(doc, docs, docIdx)}
-                                      >
-                                        {isImage ? (
-                                          <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                            <img
-                                              src={`/api/device-documents/${doc.id}/download`}
-                                              alt={doc.title}
-                                              className="w-10 h-10 object-cover rounded"
-                                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                            />
-                                          </div>
-                                        ) : (
-                                          <DocumentIcon className="h-8 w-8 text-gray-400 flex-shrink-0" />
-                                        )}
-                                        <div className="min-w-0 flex items-center gap-2 flex-wrap">
-                                          <span className="text-sm font-medium text-gray-900 truncate">
-                                            {doc.title || doc.original_name}
-                                          </span>
-                                          {canPreview && <span className="text-xs text-green-500 font-normal flex-shrink-0">可预览</span>}
-                                          {doc.file_size ? <span className="text-xs text-gray-400 flex-shrink-0">{formatFileSize(doc.file_size)}</span> : null}
-                                          {doc.created_at && <span className="text-xs text-gray-400 flex-shrink-0">{new Date(doc.created_at).toLocaleDateString()}</span>}
-                                          {doc.uploaded_by && <span className="text-xs text-gray-400 flex-shrink-0">上传人: {doc.uploaded_by}</span>}
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-1 flex-shrink-0 ml-4">
-                                        <button
-                                          onClick={() => handlePreviewDoc(doc, docs, docIdx)}
-                                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                                          title="阅览"
-                                        >
-                                          <EyeIcon className="h-5 w-5" />
-                                        </button>
-                                        <button
-                                          onClick={() => handleDownloadDoc(doc)}
-                                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                                          title="下载"
-                                        >
-                                          <DocumentArrowDownIcon className="h-5 w-5" />
-                                        </button>
-                                        <button
-                                          onClick={() => handleDeleteDoc(doc.id)}
-                                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                                          title="删除"
-                                        >
-                                          <TrashIcon className="h-5 w-5" />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
+                                {renderDocTreeNodes(buildDocTree(docs), 0, docs)}
                               </div>
                             </div>
                           )}
