@@ -2,7 +2,8 @@ import React, { useEffect } from 'react';
 import { XMarkIcon, ArrowDownTrayIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 
 export interface Attachment {
-  name: string;
+  name: string;       // 用于文件类型判断（含扩展名的原始文件名）
+  title?: string;     // 可选显示标题（用户填写的文档标题）
   url: string;
   ossPath?: string;
   size?: number;
@@ -62,7 +63,7 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachments, initia
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="font-medium text-gray-900 truncate">{att.name}</span>
+            <span className="font-medium text-gray-900 truncate">{att.title || att.name}</span>
             {att.size && <span className="text-xs text-gray-400 flex-shrink-0">{formatFileSize(att.size)}</span>}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 ml-3">

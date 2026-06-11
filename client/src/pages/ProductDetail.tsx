@@ -200,7 +200,14 @@ const ProductDetail: React.FC = () => {
             const atts: Attachment[] = [];
             for (const d of allDocs) {
                 const { data: res } = await api.get(`/product-documents/${d.id}/preview`);
-                if (res.success) atts.push({ name: d.title, url: res.data.url });
+                if (res.success) {
+                    atts.push({
+                        name: d.original_name || d.title,  // 含扩展名，用于文件类型判断
+                        title: d.title,                     // 用户填写的标题，用于弹窗显示
+                        url: res.data.url,
+                        size: d.file_size
+                    });
+                }
             }
             const idx = allDocs.findIndex(d => d.id === docId);
             setPreviewAttachments(atts);

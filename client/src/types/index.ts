@@ -438,6 +438,7 @@ export interface ProductDocument {
   product_id: number;
   doc_type: '规格书' | '使用说明' | '用户手册' | '其他';
   title: string;
+  original_name?: string;
   file_path: string;
   file_size?: number;
   uploaded_by?: string;
