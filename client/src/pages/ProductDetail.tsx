@@ -236,7 +236,10 @@ const ProductDetail: React.FC = () => {
                 formData.append('uploaded_by', uploadBy.trim());
             }
 
-            const { data } = await api.post('/product-documents/upload', formData);
+            const { data } = await api.post('/product-documents/upload', formData, {
+                timeout: 120000,
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
 
             if (data.success) {
                 resetUploadForm();

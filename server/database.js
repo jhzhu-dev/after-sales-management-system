@@ -916,6 +916,17 @@ async function createTables() {
       console.warn('⚠️ devices.status ENUM 迁移警告:', err.message);
     }
 
+    // product_documents 表：补充 original_name 字段（存储原始文件名，用于OSS上传一致性）
+    try {
+      const [origNameCols] = await pool.execute("SHOW COLUMNS FROM product_documents LIKE 'original_name'");
+      if (origNameCols.length === 0) {
+        await pool.execute("ALTER TABLE product_documents ADD COLUMN original_name VARCHAR(255) DEFAULT NULL COMMENT '原始文件名' AFTER title");
+        console.log('✅ product_documents.original_name 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ product_documents.original_name 迁移警告:', err.message);
+    }
+
     // feishu_notifications 表：记录每条飞书通知消息，保存 message_id 和被 @ 的人
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS feishu_notifications (

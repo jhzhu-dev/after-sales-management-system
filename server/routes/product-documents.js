@@ -167,9 +167,15 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         });
     } catch (error) {
         console.error('上传产品资料失败:', error);
-        // 删除已上传的文件
+        // 删除本地临时文件（如果还存在，OSS上传成功后可能已被删除）
         if (req.file) {
-            fs.unlinkSync(req.file.path);
+            try {
+                if (fs.existsSync(req.file.path)) {
+                    fs.unlinkSync(req.file.path);
+                }
+            } catch (unlinkErr) {
+                console.warn('清理临时文件失败:', unlinkErr.message);
+            }
         }
         res.status(500).json({
             success: false,
