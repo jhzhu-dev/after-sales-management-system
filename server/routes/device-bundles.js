@@ -357,7 +357,8 @@ router.put('/:id', [
   body('bundle_code').optional({ nullable: true }).isString(),
   body('description').optional({ nullable: true }).isString(),
   body('remote_code').optional({ nullable: true }).isString(),
-  body('password').optional({ nullable: true }).isString()
+  body('password').optional({ nullable: true }).isString(),
+  body('customer_id').optional().isInt().withMessage('客户ID必须是整数')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -367,10 +368,11 @@ router.put('/:id', [
 
     const { id } = req.params;
     const { name, bundle_code, description } = req.body;
+    const customer_id = req.body.customer_id !== undefined ? parseInt(req.body.customer_id, 10) : undefined;
     const remote_code = req.body.remote_code !== undefined ? (req.body.remote_code?.trim() || null) : undefined;
     const password = req.body.password !== undefined ? (req.body.password?.trim() || null) : undefined;
 
-    const existing = await query('SELECT id FROM device_bundles WHERE id = ?', [id]);
+    const existing = await query('SELECT id, customer_id FROM device_bundles WHERE id = ?', [id]);
     if (existing.length === 0) {
       return res.status(404).json({ success: false, error: '多合一设备不存在' });
     }
@@ -383,16 +385,42 @@ router.put('/:id', [
       }
     }
 
+    if (customer_id !== undefined) {
+      const customerRows = await query('SELECT id FROM customers WHERE id = ?', [customer_id]);
+      if (customerRows.length === 0) {
+        return res.status(400).json({ success: false, error: '客户不存在' });
+      }
+    }
+
     const updateFields = [];
     const updateValues = [];
 
     if (name !== undefined) { updateFields.push('name = ?'); updateValues.push(name); }
     if (bundle_code !== undefined) { updateFields.push('bundle_code = ?'); updateValues.push(bundle_code); }
     if (description !== undefined) { updateFields.push('description = ?'); updateValues.push(description); }
+    if (customer_id !== undefined) { updateFields.push('customer_id = ?'); updateValues.push(customer_id); }
 
     if (updateFields.length > 0) {
       updateValues.push(id);
       await query(`UPDATE device_bundles SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, updateValues);
+    }
+
+    // 客户变更时，同步所有成员设备的 customer_id 并更新 nickname 中的客户名
+    const oldCustomerId = existing[0].customer_id;
+    if (customer_id !== undefined && customer_id !== oldCustomerId) {
+      await query('UPDATE devices SET customer_id = ? WHERE bundle_id = ?', [customer_id, id]);
+      try {
+        const oldCustRows = await query('SELECT name FROM customers WHERE id = ?', [oldCustomerId]);
+        const newCustRows = await query('SELECT name FROM customers WHERE id = ?', [customer_id]);
+        if (oldCustRows.length > 0 && newCustRows.length > 0) {
+          await query(
+            'UPDATE devices SET nickname = REPLACE(nickname, ?, ?) WHERE bundle_id = ? AND nickname IS NOT NULL',
+            [oldCustRows[0].name, newCustRows[0].name, id]
+          );
+        }
+      } catch (e) {
+        console.warn('更新成员设备nickname客户名失败:', e.message);
+      }
     }
 
     // 更新所有成员设备的共享字段（远程码、密码）

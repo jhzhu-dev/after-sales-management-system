@@ -342,9 +342,14 @@ router.put('/:id', [
     const updates = req.body;
 
     // 检查设备是否存在
-    const existingDevice = await query('SELECT id, customer_id, product_id FROM devices WHERE id = ?', [id]);
+    const existingDevice = await query('SELECT id, customer_id, product_id, bundle_id FROM devices WHERE id = ?', [id]);
     if (existingDevice.length === 0) {
       return res.status(404).json({ success: false, error: '设备不存在' });
+    }
+
+    // 多合一成员设备的客户由多合一设备统一管理
+    if (updates.customer_id !== undefined && updates.customer_id !== existingDevice[0].customer_id && existingDevice[0].bundle_id) {
+      return res.status(400).json({ success: false, error: '该设备属于多合一设备，请通过编辑多合一设备修改客户' });
     }
 
     // 如果更新产品线，检查是否存在

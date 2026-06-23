@@ -77,10 +77,6 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       if (device.product_id) {
         fetchModuleTypesByProduct(device.product_id);
       }
-      if (device.customer_id) {
-        const displayName = device.customer_name || '';
-        setCustomerSearch(displayName);
-      }
     }
   }, [device]);
 
@@ -332,7 +328,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
       processedData = {
         name: formData.name?.trim() || null,
         device_code: formData.device_code?.trim() || null,
-        customer_id: formData.customer_id || null,
+        ...(!(device as any).bundle_id ? { customer_id: formData.customer_id || null } : {}),
         status: formData.status,
         remote_code: formData.remote_code?.trim() || null,
         password: formData.password?.trim() || null,
@@ -429,40 +425,37 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 </div>
 
                 {/* 客户 */}
-                <div className="relative">
+                <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">客户</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={customerSearch}
-                      onChange={(e) => {
-                        setCustomerSearch(e.target.value);
-                        setShowCustomerDropdown(true);
-                        if (!e.target.value) setFormData(prev => ({ ...prev, customer_id: undefined }));
+                  {(device as any).bundle_id ? (
+                    <>
+                      <select
+                        value={formData.customer_id || ''}
+                        disabled
+                        className="w-full px-3 py-1.5 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700 appearance-none"
+                      >
+                        <option value="">请选择客户</option>
+                        {customers.map(c => (
+                          <option key={c.id} value={c.id}>{c.name} ({c.short_name})</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-400 mt-1">该设备属于多合一设备，请在多合一设备编辑中修改客户</p>
+                    </>
+                  ) : (
+                    <select
+                      value={formData.customer_id || ''}
+                      onChange={e => {
+                        const v = e.target.value ? parseInt(e.target.value) : undefined;
+                        setFormData(prev => ({ ...prev, customer_id: v }));
                       }}
-                      onFocus={() => setShowCustomerDropdown(true)}
-                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      placeholder="搜索客户名称或简称"
-                    />
-                    {formData.customer_id && (
-                      <button type="button" onClick={handleClearCustomer} className="absolute right-2 top-2 text-gray-400 hover:text-gray-600">
-                        <XMarkIcon className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  {showCustomerDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                      {filteredCustomers.map(c => (
-                        <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)}
-                          className={`w-full text-left px-3 py-2 hover:bg-blue-50 text-sm ${formData.customer_id === c.id ? 'bg-blue-50 text-blue-700' : ''}`}>
-                          <span className="font-medium">{c.name}</span>
-                          <span className="text-gray-400 ml-2">({c.short_name})</span>
-                        </button>
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none"
+                    >
+                      <option value="">请选择客户</option>
+                      {customers.map(c => (
+                        <option key={c.id} value={c.id}>{c.name} ({c.short_name})</option>
                       ))}
-                      {filteredCustomers.length === 0 && <div className="px-3 py-2 text-sm text-gray-500">无匹配客户</div>}
-                    </div>
+                    </select>
                   )}
-                  {showCustomerDropdown && <div className="fixed inset-0 z-0" onClick={() => setShowCustomerDropdown(false)} />}
                 </div>
 
                 {/* 产品线 / 产品型号 只读展示 */}

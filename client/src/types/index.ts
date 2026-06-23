@@ -607,7 +607,7 @@ export interface NewBundleDevice {
 export interface DeviceBundleFormData {
   bundle_code?: string;
   name?: string;
-  customer_id: number;
+  customer_id?: number;
   description?: string;
   device_ids?: string[];
   new_devices?: NewBundleDevice[];

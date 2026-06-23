@@ -291,6 +291,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
         await bundleApi.updateBundle(bundle!.id, {
           bundle_code: bundleCode || undefined,
           name: name || undefined,
+          customer_id: customerId as number,
           description: description || undefined,
           remote_code: remoteCode,
           password: password
@@ -385,13 +386,24 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                   <label className="block text-sm font-medium text-gray-700 mb-1">客户 <span className="text-red-500">*</span></label>
                   <select
                     value={customerId}
-                    onChange={e => { const v = e.target.value ? parseInt(e.target.value) : ''; setCustomerId(v); setSelectedDevices([]); setNewDeviceRows([]); setDeviceSearch(''); setSearchResults([]); }}
-                    disabled={isEdit}
-                    className={`${selectCls} disabled:bg-gray-100`}
+                    onChange={e => {
+                      const v = e.target.value ? parseInt(e.target.value) : '';
+                      setCustomerId(v);
+                      if (!isEdit) {
+                        setSelectedDevices([]);
+                        setNewDeviceRows([]);
+                        setDeviceSearch('');
+                        setSearchResults([]);
+                      }
+                    }}
+                    className={selectCls}
                   >
                     <option value="">请选择客户</option>
                     {customers.map(c => (<option key={c.id} value={c.id}>{c.name} ({c.short_name})</option>))}
                   </select>
+                  {isEdit && (
+                    <p className="text-xs text-gray-400 mt-0.5">修改客户将同步更新所有成员设备</p>
+                  )}
                 </div>
               </div>
 
