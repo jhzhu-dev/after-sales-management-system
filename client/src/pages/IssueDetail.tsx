@@ -20,6 +20,10 @@ import IssueForm from '../components/IssueForm';
 import IssueLogTimeline from '../components/IssueLogTimeline';
 import { formatDate, getStatusColor, getSeverityColor } from '../utils';
 
+function getIssueDeviceLabel(issue: Issue): string {
+  return issue.device_nickname || issue.device_name || issue.device_id || '-';
+}
+
 export default function IssueDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -198,7 +202,7 @@ export default function IssueDetail() {
               {issue.severity === 'high' ? '高' : issue.severity === 'medium' ? '中' : '低'}
             </span>
             <span style={{fontSize: '8pt', color: '#6b7280'}}>
-              设备：{issue.device_name}{issue.device_type ? '（' + issue.device_type + '）' : ''}
+              设备：{getIssueDeviceLabel(issue)}{issue.customer_name ? ` · ${issue.customer_name}` : ''}{issue.device_type ? '（' + issue.device_type + '）' : ''}
             </span>
           </div>
         </div>
@@ -285,8 +289,20 @@ export default function IssueDetail() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-5 print:grid-cols-4 print:gap-y-3">
               <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">设备名称</p>
-                <p className="text-base font-semibold text-gray-900 print:text-sm">{issue.device_name}</p>
+                <p className="text-base font-semibold text-gray-900 print:text-sm">{getIssueDeviceLabel(issue)}</p>
+                {issue.device_nickname && issue.device_name && (
+                  <p className="text-xs text-gray-500 mt-0.5 print:text-xs">{issue.device_name}</p>
+                )}
               </div>
+              {(issue.customer_name || issue.customer_short_name) && (
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">客户</p>
+                  <p className="text-base font-semibold text-gray-900 print:text-sm">{issue.customer_name || '-'}</p>
+                  {issue.customer_short_name && (
+                    <p className="text-xs text-gray-400 mt-0.5 print:text-xs">{issue.customer_short_name}</p>
+                  )}
+                </div>
+              )}
               {(issue as any).device_remote_code && (
                 <div>
                   <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">远程码</p>

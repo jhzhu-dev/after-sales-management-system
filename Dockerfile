@@ -20,6 +20,7 @@ RUN npm ci --only=production --legacy-peer-deps
 
 # 复制后端代码
 COPY server/ ./server/
+COPY scripts/ ./scripts/
 COPY id-generator.js ./
 
 # 复制前端构建产物

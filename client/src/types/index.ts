@@ -89,6 +89,9 @@ export interface Device {
   mechanical_version?: string | null;
   module_total?: number;
   module_versioned?: number;
+  factory_docs_complete?: boolean | number;
+  factory_docs_completed_at?: string | null;
+  factory_docs_completed_by?: string | null;
 }
 
 // 模块类型 (仅用于设备详情页面)
@@ -591,6 +594,9 @@ export interface DeviceBundle {
   };
   created_at: string;
   updated_at: string;
+  factory_docs_complete?: boolean | number;
+  factory_docs_completed_at?: string | null;
+  factory_docs_completed_by?: string | null;
 }
 
 export interface NewBundleDevice {
@@ -615,4 +621,5 @@ export interface DeviceBundleFormData {
   password?: string;
   merchant_id?: string;
   merchant_password?: string;
+  factory_docs_complete?: boolean;
 }

@@ -5,11 +5,78 @@
  */
 
 const axios = require('axios');
+const os = require('os');
 const { query } = require('../database');
 
 const BASE_URL = process.env.FEISHU_BASE_URL || 'https://open.feishu.cn';
 const APP_ID = process.env.FEISHU_APP_ID || '';
 const APP_SECRET = process.env.FEISHU_APP_SECRET || '';
+
+let _systemBaseUrlCache = null;
+let _systemBaseUrlCacheAt = 0;
+const SYSTEM_BASE_URL_CACHE_TTL = 60_000;
+
+function normalizeBaseUrl(url) {
+  return (url || '').trim().replace(/\/+$/, '');
+}
+
+function isLocalhostUrl(url) {
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(url || '');
+}
+
+function detectLanBaseUrl() {
+  const port = process.env.PORT || 5000;
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] || []) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return `http://${net.address}:${port}`;
+      }
+    }
+  }
+  return `http://localhost:${port}`;
+}
+
+/**
+ * 飞书通知卡片中的系统链接基址
+ * 优先级：环境变量 SYSTEM_BASE_URL > 飞书设置 system_base_url > 生产环境局域网 IP > 开发默认
+ */
+async function getSystemBaseUrl() {
+  const envUrl = normalizeBaseUrl(process.env.SYSTEM_BASE_URL);
+  if (envUrl && !(process.env.NODE_ENV === 'production' && isLocalhostUrl(envUrl))) {
+    return envUrl;
+  }
+
+  const now = Date.now();
+  if (_systemBaseUrlCache && now - _systemBaseUrlCacheAt < SYSTEM_BASE_URL_CACHE_TTL) {
+    return _systemBaseUrlCache;
+  }
+
+  try {
+    const config = await getConfig();
+    const dbUrl = normalizeBaseUrl(config?.system_base_url);
+    if (dbUrl) {
+      _systemBaseUrlCache = dbUrl;
+      _systemBaseUrlCacheAt = now;
+      return dbUrl;
+    }
+  } catch (_) {
+    // ignore
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    const detected = detectLanBaseUrl();
+    console.warn(`[飞书] SYSTEM_BASE_URL 未配置，通知链接暂用 ${detected}。请在 .env 或飞书设置中配置系统访问地址`);
+    return detected;
+  }
+
+  return envUrl || 'http://localhost:3000';
+}
+
+function invalidateSystemBaseUrlCache() {
+  _systemBaseUrlCache = null;
+  _systemBaseUrlCacheAt = 0;
+}
 
 // 内存 token 缓存（按 app_id 区分）
 const _tokenCacheMap = {};
@@ -94,16 +161,17 @@ const SEVERITY_CONFIG = {
 /**
  * 新售后问题通知卡片
  */
-function buildIssueCard(issue, mentionOpenId, mentionText = '您有一条新的售后问题需要处理') {
+function buildIssueCard(issue, mentionOpenId, mentionText = '您有一条新的售后问题需要处理', systemBaseUrl) {
   const sev = SEVERITY_CONFIG[issue.severity] || SEVERITY_CONFIG['medium'];
   const severityText = `${sev.emoji} ${sev.label}`;
   const elements = [];
   const mentionLine = mentionOpenId ? `<at id="${mentionOpenId}"></at> ${mentionText}\n` : '';
+  const baseUrl = normalizeBaseUrl(systemBaseUrl) || 'http://localhost:3000';
   elements.push({
     tag: 'div',
     text: {
       tag: 'lark_md',
-      content: `${mentionLine}**设备：** ${issue.device_id || '-'}　**严重程度：** ${severityText}\n**描述：** ${issue.description || '-'}\n[查看详情](${process.env.SYSTEM_BASE_URL || 'http://localhost:3000'}/issues/${issue.id})`,
+      content: `${mentionLine}**设备：** ${issue.device_id || '-'}　**严重程度：** ${severityText}\n**描述：** ${issue.description || '-'}\n[查看详情](${baseUrl}/issues/${issue.id})`,
     },
   });
   return {
@@ -121,18 +189,19 @@ function buildIssueCard(issue, mentionOpenId, mentionText = '您有一条新的�
  * @param {object} device
  * @param {string|string[]} mentionOpenIds  — 单个 open_id 或数组，所有人在同一条消息中被 @
  */
-function buildDeviceCard(device, mentionOpenIds) {
+function buildDeviceCard(device, mentionOpenIds, systemBaseUrl) {
   const ids = Array.isArray(mentionOpenIds)
     ? mentionOpenIds.filter(Boolean)
     : (mentionOpenIds ? [mentionOpenIds] : []);
   const elements = [];
   const mentionPart = ids.map(id => `<at id="${id}"></at>`).join(' ');
   const mentionLine = mentionPart ? `${mentionPart} 有新设备已录入，请确认版本信息\n` : '';
+  const baseUrl = normalizeBaseUrl(systemBaseUrl) || 'http://localhost:3000';
   elements.push({
     tag: 'div',
     text: {
       tag: 'lark_md',
-      content: `${mentionLine}**序列号：** ${device.id || '-'}　**设备名：** ${device.name || '-'}\n**产品线：** ${device.product_line_name || '-'}　**型号：** ${device.product_model || '-'}\n**客户：** ${device.customer_name || '-'}\n[填写版本信息](${process.env.SYSTEM_BASE_URL || 'http://localhost:3000'}/devices/${device.id})`,
+      content: `${mentionLine}**序列号：** ${device.id || '-'}　**设备名：** ${device.name || '-'}\n**产品线：** ${device.product_line_name || '-'}　**型号：** ${device.product_model || '-'}\n**客户：** ${device.customer_name || '-'}\n[填写版本信息](${baseUrl}/devices/${device.id})`,
     },
   });
   return {
@@ -174,7 +243,8 @@ async function sendIssueNotification(issue, assigneeOpenId) {
     const config = await getConfig();
     const chatId = resolveChatId(config);
     if (!config || !chatId) return;
-    const card = buildIssueCard(issue, assigneeOpenId);
+    const systemBaseUrl = await getSystemBaseUrl();
+    const card = buildIssueCard(issue, assigneeOpenId, '您有一条新的售后问题需要处理', systemBaseUrl);
     const messageId = await sendGroupMessage(chatId, card);
     if (messageId) {
       await query(
@@ -197,12 +267,13 @@ async function sendDeviceNotification(device, notifyOpenIds) {
     const config = await getConfig();
     const chatId = resolveChatId(config);
     if (!config || !chatId) return;
-    const card = buildDeviceCard(device, notifyOpenIds);
+    const systemBaseUrl = await getSystemBaseUrl();
+    const card = buildDeviceCard(device, notifyOpenIds, systemBaseUrl);
     const messageId = await sendGroupMessage(chatId, card);
     if (messageId) {
       await query(
         'INSERT INTO feishu_notifications (message_id, type, ref_id, notify_open_ids) VALUES (?, ?, ?, ?)',
-        [messageId, 'device', String(device.id), JSON.stringify(notifyOpenId ? [notifyOpenId] : [])]
+        [messageId, 'device', String(device.id), JSON.stringify(Array.isArray(notifyOpenIds) ? notifyOpenIds : (notifyOpenIds ? [notifyOpenIds] : []))]
       ).catch(e => console.warn('[飞书] 写入通知日志失败:', e.message));
     }
   } catch (err) {
@@ -216,7 +287,8 @@ async function sendIssueUpdateNotification(issue, changeType, assigneeOpenId) {
     const chatId = resolveChatId(config);
     if (!config || !chatId) return;
     const mentionText = '您被指定为该问题的跟进人，请及时处理';
-    const card = buildIssueCard(issue, assigneeOpenId, mentionText);
+    const systemBaseUrl = await getSystemBaseUrl();
+    const card = buildIssueCard(issue, assigneeOpenId, mentionText, systemBaseUrl);
     const messageId = await sendGroupMessage(chatId, card);
     if (messageId) {
       await query(
@@ -387,6 +459,8 @@ async function syncUsers() {
 module.exports = {
   getConfig,
   getTenantToken,
+  getSystemBaseUrl,
+  invalidateSystemBaseUrlCache,
   syncUsers,
   sendGroupMessage,
   sendIssueNotification,

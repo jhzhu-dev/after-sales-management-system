@@ -53,7 +53,7 @@ router.get('/', async (req, res) => {
       LEFT JOIN products p ON d.product_id = p.id
       ${whereClause}
       GROUP BY b.id
-      ORDER BY b.created_at DESC
+      ORDER BY b.bundle_code DESC
       LIMIT ? OFFSET ?
     `;
     params.push(limitNum, offset);
@@ -399,6 +399,16 @@ router.put('/:id', [
     if (bundle_code !== undefined) { updateFields.push('bundle_code = ?'); updateValues.push(bundle_code); }
     if (description !== undefined) { updateFields.push('description = ?'); updateValues.push(description); }
     if (customer_id !== undefined) { updateFields.push('customer_id = ?'); updateValues.push(customer_id); }
+
+    if (req.body.factory_docs_complete !== undefined) {
+      const complete = req.body.factory_docs_complete === true || req.body.factory_docs_complete === 1 || req.body.factory_docs_complete === '1';
+      updateFields.push('factory_docs_complete = ?');
+      updateValues.push(complete ? 1 : 0);
+      updateFields.push('factory_docs_completed_at = ?');
+      updateValues.push(complete ? new Date() : null);
+      updateFields.push('factory_docs_completed_by = ?');
+      updateValues.push(complete ? (req.body.factory_docs_completed_by || null) : null);
+    }
 
     if (updateFields.length > 0) {
       updateValues.push(id);

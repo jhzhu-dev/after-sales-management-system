@@ -618,6 +618,7 @@ export const feishuApi = {
     app_id?: string;
     app_secret?: string;
     chat_id?: string;
+    system_base_url?: string;
   }): Promise<ApiResponse<any>> =>
     api.post('/feishu/config', data).then(res => res.data),
 

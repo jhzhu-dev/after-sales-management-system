@@ -50,6 +50,7 @@ router.get('/', async (req, res) => {
         d.id, d.name, d.nickname, d.device_code, d.product_line_id,
         d.product_id, d.customer_id, d.location,
         d.status, d.remote_code, d.password, d.notes, d.bundle_id,
+        d.factory_docs_complete, d.factory_docs_completed_at, d.factory_docs_completed_by,
         d.created_at, d.updated_at,
         pl.name as product_line_name,
         p.name as product_name,
@@ -81,7 +82,7 @@ router.get('/', async (req, res) => {
       LEFT JOIN issues i ON d.id = i.device_id
       ${whereClause}
       GROUP BY d.id, pl.name, p.name, p.model, c.name, c.short_name, db.id, db.bundle_code, db.name
-      ORDER BY d.created_at DESC
+      ORDER BY d.name DESC
       LIMIT ${parseInt(limitNum)} OFFSET ${parseInt(offset)}
     `;
 
@@ -127,6 +128,7 @@ router.get('/:id', async (req, res) => {
     d.id, d.name, d.nickname, d.device_code, d.product_line_id,
     d.product_id, d.customer_id, d.location,
     d.status, d.remote_code, d.password, d.notes, d.bundle_id,
+    d.factory_docs_complete, d.factory_docs_completed_at, d.factory_docs_completed_by,
     d.created_at, d.updated_at,
     pl.name as product_line_name,
       p.name as product_name,
@@ -373,7 +375,7 @@ router.put('/:id', [
     }
 
     // 只允许更新存在的字段（白名单）
-    const allowedFields = ['name', 'nickname', 'device_code', 'product_line_id', 'product_id', 'customer_id', 'status', 'remote_code', 'password', 'notes'];
+    const allowedFields = ['name', 'nickname', 'device_code', 'product_line_id', 'product_id', 'customer_id', 'status', 'remote_code', 'password', 'notes', 'factory_docs_complete'];
     const filteredUpdates = {};
     Object.keys(updates).forEach(key => {
       if (allowedFields.includes(key) && updates[key] !== undefined) {
@@ -386,6 +388,16 @@ router.put('/:id', [
     const updateValues = [];
 
     Object.keys(filteredUpdates).forEach(key => {
+      if (key === 'factory_docs_complete') {
+        const complete = filteredUpdates[key] === true || filteredUpdates[key] === 1 || filteredUpdates[key] === '1';
+        updateFields.push('factory_docs_complete = ?');
+        updateValues.push(complete ? 1 : 0);
+        updateFields.push('factory_docs_completed_at = ?');
+        updateValues.push(complete ? new Date() : null);
+        updateFields.push('factory_docs_completed_by = ?');
+        updateValues.push(complete ? (updates.factory_docs_completed_by || null) : null);
+        return;
+      }
       updateFields.push(`${key} = ?`);
       updateValues.push(filteredUpdates[key]);
     });

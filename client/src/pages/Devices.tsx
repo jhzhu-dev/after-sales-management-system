@@ -1,17 +1,47 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PencilIcon, TrashIcon, EyeIcon, ChevronUpIcon, ChevronDownIcon, PlusIcon, PrinterIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { deviceApi, moduleApi, productLineApi, bundleApi } from '../services/api';
-import { Device, DeviceBundle, FilterOptions, DeviceFormData } from '../types';
+import { deviceApi, moduleApi, productLineApi, bundleApi, customerApi } from '../services/api';
+import { Device, DeviceBundle, FilterOptions, DeviceFormData, Customer } from '../types';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import DeviceForm from '../components/DeviceForm';
 import BundleForm from '../components/BundleForm';
 import ExportButton from '../components/ExportButton';
+import SearchableSelect from '../components/SearchableSelect';
 import { exportToExcel } from '../utils/exportUtils';
 import { formatDate, getStatusColor } from '../utils';
 
 type ViewMode = 'devices' | 'bundles';
+
+function sortByField<T extends Record<string, any>>(items: T[], field: string, order: 'asc' | 'desc'): T[] {
+  if (!field) return items;
+  return [...items].sort((a, b) => {
+    const aValue = a[field];
+    const bValue = b[field];
+    if (aValue === bValue) return 0;
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return 1;
+    if (bValue == null) return -1;
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return order === 'asc'
+        ? aValue.localeCompare(bValue, 'zh-CN')
+        : bValue.localeCompare(aValue, 'zh-CN');
+    }
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return order === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+    return 0;
+  });
+}
+
+function isFactoryDocsComplete(value: boolean | number | undefined | null): boolean {
+  return value === true || value === 1;
+}
+
+function factoryDocsLabel(value: boolean | number | undefined | null): string {
+  return isFactoryDocsComplete(value) ? '已完善' : '未完善';
+}
 
 export default function Devices() {
   const navigate = useNavigate();
@@ -54,10 +84,10 @@ export default function Devices() {
     status: '',
     issueStatus: ''
   });
-  const [sortField, setSortField] = useState<string>(searchParams.get('sortField') || '');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>((searchParams.get('sortOrder') as 'asc' | 'desc') || 'asc');
-  const [bundleSortField, setBundleSortField] = useState<string>('');
-  const [bundleSortOrder, setBundleSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<string>(searchParams.get('sortField') || 'name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>((searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc');
+  const [bundleSortField, setBundleSortField] = useState<string>('bundle_code');
+  const [bundleSortOrder, setBundleSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showDeviceForm, setShowDeviceForm] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [showBundleForm, setShowBundleForm] = useState(false);
@@ -70,6 +100,7 @@ export default function Devices() {
   const [printDevices, setPrintDevices] = useState<Device[] | null>(null);
   const [printBundles, setPrintBundles] = useState<DeviceBundle[] | null>(null);
   const [globalSearch, setGlobalSearch] = useState<string>(() => searchParams.get('q') || '');
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
 
   const fetchAllDevices = async () => {
     try {
@@ -116,18 +147,7 @@ export default function Devices() {
       filtered = filtered.filter(b => Number((b as any).open_issues || 0) === 0);
     }
     if (bundleSortField) {
-      filtered.sort((a, b) => {
-        const aVal = (a as any)[bundleSortField];
-        const bVal = (b as any)[bundleSortField];
-        if (aVal === bVal) return 0;
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return bundleSortOrder === 'asc' ? aVal.localeCompare(bVal, 'zh-CN') : bVal.localeCompare(aVal, 'zh-CN');
-        }
-        if (typeof aVal === 'number' && typeof bVal === 'number') {
-          return bundleSortOrder === 'asc' ? aVal - bVal : bVal - aVal;
-        }
-        return 0;
-      });
+      filtered = sortByField(filtered, bundleSortField, bundleSortOrder);
     }
     setFilteredBundles(filtered);
     setBundlePagination({ current: 1, pageSize: filtered.length, total: filtered.length, pages: 1 });
@@ -164,24 +184,7 @@ export default function Devices() {
 
     // 排序
     if (sortField) {
-      filtered.sort((a, b) => {
-        const aValue = a[sortField as keyof Device];
-        const bValue = b[sortField as keyof Device];
-
-        if (aValue === bValue) return 0;
-
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortOrder === 'asc'
-            ? aValue.localeCompare(bValue, 'zh-CN')
-            : bValue.localeCompare(aValue, 'zh-CN');
-        }
-
-        if (typeof aValue === 'number' && typeof bValue === 'number') {
-          return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-        }
-
-        return 0;
-      });
+      filtered = sortByField(filtered, sortField, sortOrder);
     }
 
     setFilteredDevices(filtered);
@@ -200,6 +203,7 @@ export default function Devices() {
       fetchAllDevices();
       fetchAllBundles();
       fetchProductLines();
+      fetchCustomers();
       setIsInitialized(true);
     }
   }, [isInitialized]);
@@ -304,6 +308,17 @@ export default function Devices() {
     }
   };
 
+  const fetchCustomers = async () => {
+    try {
+      const result = await customerApi.getCustomers();
+      if (result.success) {
+        setAllCustomers(result.data);
+      }
+    } catch (error) {
+      console.error('获取客户列表失败:', error);
+    }
+  };
+
   const handleGlobalSearch = (q: string) => {
     setGlobalSearch(q);
     setVisibleCount(20);
@@ -333,27 +348,13 @@ export default function Devices() {
     return result;
   })();
 
-  const deviceCustomerOptions = Array.from(
-    new Map(
-      allDevices
-        .filter(d => !d.bundle_id && d.customer_id)
-        .map(d => [String(d.customer_id), {
-          id: String(d.customer_id),
-          name: d.customer_name || d.customer_short_name || `客户#${d.customer_id}`
-        }])
-    ).values()
-  ).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
-
-  const bundleCustomerOptions = Array.from(
-    new Map(
-      allBundles
-        .filter(b => (b as any).customer_id)
-        .map(b => [String((b as any).customer_id), {
-          id: String((b as any).customer_id),
-          name: b.customer_name || b.customer_short_name || `客户#${(b as any).customer_id}`
-        }])
-    ).values()
-  ).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+  const customerFilterOptions = useMemo(() => [
+    { id: '', name: '全部客户' },
+    ...allCustomers
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+      .map(c => ({ id: String(c.id), name: c.name, short_name: c.short_name }))
+  ], [allCustomers]);
 
   const handleFilterChange = (key: string, value: string) => {
     setVisibleCount(20);
@@ -505,7 +506,7 @@ export default function Devices() {
     if (deviceIssueFilter === 'has') filtered = filtered.filter(d => Number(d.open_issues || 0) > 0);
     if (deviceIssueFilter === 'none') filtered = filtered.filter(d => Number(d.open_issues || 0) === 0);
     if (filters.status) filtered = filtered.filter(d => d.status === filters.status);
-    return filtered;
+    return sortByField(filtered, sortField, sortOrder);
   })();
 
   const DEVICE_EXPORT_COLUMNS = [
@@ -517,6 +518,7 @@ export default function Devices() {
     { key: 'customer_short_name', label: '客户简称' },
     { key: 'remote_code', label: '远程码' },
     { key: 'mechanical_version', label: '机械版本' },
+    { key: 'factory_docs_complete', label: '出厂资料' },
     { key: 'status', label: '状态' },
     { key: 'open_issues', label: '待解决问题' },
     { key: 'created_at', label: '创建时间' },
@@ -525,9 +527,13 @@ export default function Devices() {
   const handleExport = () => {
     const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
     const filename = `设备管理_${timestamp}`;
-    const data = selectedDevices.length > 0
+    const data = (selectedDevices.length > 0
       ? allFilteredDevices.filter(d => selectedDevices.includes(d.id))
-      : allFilteredDevices;
+      : allFilteredDevices
+    ).map(d => ({
+      ...d,
+      factory_docs_complete: factoryDocsLabel(d.factory_docs_complete),
+    }));
     exportToExcel(data as any[], DEVICE_EXPORT_COLUMNS, filename);
   };
 
@@ -538,6 +544,7 @@ export default function Devices() {
     { key: 'customer_name', label: '客户' },
     { key: 'customer_short_name', label: '客户简称' },
     { key: 'device_count', label: '设备数量' },
+    { key: 'factory_docs_complete', label: '出厂资料' },
     { key: 'document_count', label: '资料数量' },
     { key: 'created_at', label: '创建时间' },
   ];
@@ -548,15 +555,19 @@ export default function Devices() {
     if (bundleFilters.status) filtered = filtered.filter(b => String((b as any).bundle_status || '') === bundleFilters.status);
     if (bundleFilters.issueStatus === 'has') filtered = filtered.filter(b => Number((b as any).open_issues || 0) > 0);
     if (bundleFilters.issueStatus === 'none') filtered = filtered.filter(b => Number((b as any).open_issues || 0) === 0);
-    return filtered;
+    return sortByField(filtered, bundleSortField, bundleSortOrder);
   })();
 
   const handleBundleExport = () => {
     const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
     const filename = `多合一设备_${timestamp}`;
-    const data = selectedBundles.length > 0
+    const data = (selectedBundles.length > 0
       ? allFilteredBundles.filter(b => selectedBundles.includes(b.id))
-      : allFilteredBundles;
+      : allFilteredBundles
+    ).map(b => ({
+      ...b,
+      factory_docs_complete: factoryDocsLabel(b.factory_docs_complete),
+    }));
     exportToExcel(data as any[], BUNDLE_EXPORT_COLUMNS, filename);
   };
 
@@ -730,6 +741,26 @@ export default function Devices() {
       render: (value: string) => value
         ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">{value}</span>
         : <span className="text-gray-300">—</span>,
+      width: '90px'
+    },
+    {
+      key: 'factory_docs_complete' as keyof Device,
+      title: '出厂资料',
+      render: (_: any, record: Device) => {
+        const complete = isFactoryDocsComplete(record.factory_docs_complete);
+        if (complete) {
+          return (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+              <CheckCircleIcon className="h-3.5 w-3.5" />已完善
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
+            <ExclamationTriangleIcon className="h-3.5 w-3.5" />未完善
+          </span>
+        );
+      },
       width: '90px'
     },
     {
@@ -927,6 +958,26 @@ export default function Devices() {
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-white text-blue-600 border border-blue-200">{display}</span>;
       },
       width: '130px'
+    },
+    {
+      key: 'factory_docs_complete' as keyof DeviceBundle,
+      title: '出厂资料',
+      render: (_: any, record: DeviceBundle) => {
+        const complete = isFactoryDocsComplete(record.factory_docs_complete);
+        if (complete) {
+          return (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+              <CheckCircleIcon className="h-3.5 w-3.5" />已完善
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
+            <ExclamationTriangleIcon className="h-3.5 w-3.5" />未完善
+          </span>
+        );
+      },
+      width: '90px'
     },
     {
       key: 'document_count' as keyof DeviceBundle,
@@ -1192,16 +1243,13 @@ export default function Devices() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">客户</label>
-              <select
+              <SearchableSelect
                 value={deviceCustomerFilter}
-                onChange={(e) => { setVisibleCount(20); setDeviceCustomerFilter(e.target.value); }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">全部客户</option>
-                {deviceCustomerOptions.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                onChange={(v) => { setVisibleCount(20); setDeviceCustomerFilter(v); }}
+                options={customerFilterOptions}
+                placeholder="全部客户"
+                searchPlaceholder="搜索客户名称或简称"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1279,6 +1327,7 @@ export default function Devices() {
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>产品名称</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>客户</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>机械版本</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>出厂资料</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>状态</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>创建时间</th>
               </tr>
@@ -1292,6 +1341,7 @@ export default function Devices() {
                   <td style={{padding:'3pt 6pt'}}>{d.product_name || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.customer_name || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.mechanical_version || '-'}</td>
+                  <td style={{padding:'3pt 6pt'}}>{factoryDocsLabel(d.factory_docs_complete)}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.status}</td>
                   <td style={{padding:'3pt 6pt'}}>{new Date(d.created_at).toLocaleDateString('zh-CN')}</td>
                 </tr>
@@ -1310,16 +1360,13 @@ export default function Devices() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">客户</label>
-              <select
+              <SearchableSelect
                 value={bundleFilters.customerId}
-                onChange={(e) => setBundleFilters(prev => ({ ...prev, customerId: e.target.value, page: 1 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">全部客户</option>
-                {bundleCustomerOptions.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                onChange={(v) => setBundleFilters(prev => ({ ...prev, customerId: v, page: 1 }))}
+                options={customerFilterOptions}
+                placeholder="全部客户"
+                searchPlaceholder="搜索客户名称或简称"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
@@ -1394,6 +1441,7 @@ export default function Devices() {
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>多合一名称</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>客户</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>设备数量</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>出厂资料</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>资料数量</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>创建时间</th>
               </tr>
@@ -1405,6 +1453,7 @@ export default function Devices() {
                   <td style={{padding:'3pt 6pt'}}>{b.name || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{b.customer_name || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{b.device_count || 0}</td>
+                  <td style={{padding:'3pt 6pt'}}>{factoryDocsLabel(b.factory_docs_complete)}</td>
                   <td style={{padding:'3pt 6pt'}}>{b.document_count || 0}</td>
                   <td style={{padding:'3pt 6pt'}}>{new Date(b.created_at).toLocaleDateString('zh-CN')}</td>
                 </tr>

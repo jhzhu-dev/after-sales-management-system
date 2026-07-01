@@ -11,6 +11,7 @@ const FeishuSettings: React.FC = () => {
     app_id: '',
     app_secret: '',
     chat_id: '',
+    system_base_url: '',
   });
   const [users, setUsers] = useState<FeishuUser[]>([]);
   const [configLoading, setConfigLoading] = useState(true);
@@ -36,6 +37,7 @@ const FeishuSettings: React.FC = () => {
           app_id: res.data.app_id || '',
           app_secret: res.data.app_secret || '',
           chat_id: chatId,
+          system_base_url: res.data.system_base_url || '',
         });
       }
     } catch (e) {
@@ -192,6 +194,18 @@ const FeishuSettings: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <p className="text-xs text-gray-400 mt-1">所有通知（售后问题、设备录入、升级任务）统一发送到此群，消息卡片标题会区分类型</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">系统访问地址</label>
+            <input
+              type="url"
+              value={config.system_base_url}
+              onChange={e => setConfig(prev => ({ ...prev, system_base_url: e.target.value.trim() }))}
+              placeholder="http://192.168.0.181:5000"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">飞书通知卡片中的跳转链接将使用此地址（生产环境请填写实际部署 IP 或域名，勿使用 localhost）</p>
           </div>
 
           <div className="flex gap-3 pt-2">

@@ -31,30 +31,31 @@ router.get('/config', async (req, res) => {
  */
 router.post('/config', async (req, res) => {
   try {
-    const { app_id, app_secret, chat_id } = req.body;
+    const { app_id, app_secret, chat_id, system_base_url } = req.body;
 
     // 检查是否已有配置
     const existing = await feishuService.getConfig();
 
     if (existing) {
-      // 更新：如果 app_secret 是 '***' 则不更新该字段
-      const secretClause = app_secret && app_secret !== '***'
-        ? ', app_secret = ?'
-        : '';
-      const params = [app_id, chat_id];
-      if (app_secret && app_secret !== '***') params.splice(1, 0, app_secret);
-      params.push(existing.id);
-
-      await query(
-        `UPDATE feishu_config SET app_id = ?${secretClause}, chat_id = ? WHERE id = ?`,
-        params
-      );
+      if (app_secret && app_secret !== '***') {
+        await query(
+          'UPDATE feishu_config SET app_id = ?, app_secret = ?, chat_id = ?, system_base_url = ? WHERE id = ?',
+          [app_id, app_secret, chat_id, system_base_url || null, existing.id]
+        );
+      } else {
+        await query(
+          'UPDATE feishu_config SET app_id = ?, chat_id = ?, system_base_url = ? WHERE id = ?',
+          [app_id, chat_id, system_base_url || null, existing.id]
+        );
+      }
     } else {
       await query(
-        `INSERT INTO feishu_config (app_id, app_secret, chat_id) VALUES (?, ?, ?)`,
-        [app_id, app_secret || '', chat_id || '']
+        `INSERT INTO feishu_config (app_id, app_secret, chat_id, system_base_url) VALUES (?, ?, ?, ?)`,
+        [app_id, app_secret || '', chat_id || '', system_base_url || null]
       );
     }
+
+    feishuService.invalidateSystemBaseUrlCache();
 
     res.json({ success: true, message: '配置已保存' });
   } catch (err) {
@@ -100,6 +101,7 @@ router.post('/test-message', async (req, res) => {
       return res.status(400).json({ success: false, error: '请先配置通知群 Chat ID' });
     }
 
+    const systemBaseUrl = await feishuService.getSystemBaseUrl();
     const testCard = {
       schema: '2.0',
       header: {
@@ -110,7 +112,7 @@ router.post('/test-message', async (req, res) => {
         elements: [
           {
             tag: 'markdown',
-            content: '这是一条来自**设备管理系统**的测试消息，表示飞书通知功能配置成功！\n\n发送时间：' + new Date().toLocaleString('zh-CN'),
+            content: `这是一条来自**设备管理系统**的测试消息，表示飞书通知功能配置成功！\n\n系统访问地址：${systemBaseUrl}\n\n发送时间：` + new Date().toLocaleString('zh-CN'),
           },
         ],
       },

@@ -278,6 +278,7 @@ router.get('/:id', async (req, res) => {
       SELECT 
         i.*,
         d.name as device_name,
+        d.nickname as device_nickname,
         d.remote_code as device_remote_code,
         pl.name as device_type,
         c.name as customer_name,

@@ -14,7 +14,8 @@ import {
   ChevronRightIcon,
   ChevronLeftIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { DeviceBundle } from '../types';
 import { bundleApi } from '../services/api';
@@ -24,6 +25,10 @@ import BundleForm from '../components/BundleForm';
 import ExportButton from '../components/ExportButton';
 import { exportToExcel } from '../utils/exportUtils';
 import { formatDate, getStatusColor } from '../utils';
+
+function isFactoryDocsComplete(value: boolean | number | undefined | null): boolean {
+  return value === true || value === 1;
+}
 
 const BundleDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -251,6 +256,22 @@ const BundleDetail: React.FC = () => {
     fetchBundle();
     fetchDocuments();
   }, [fetchBundle, fetchDocuments]);
+
+  const handleToggleFactoryDocsComplete = async () => {
+    if (!bundle || !bundleId) return;
+    const next = !isFactoryDocsComplete(bundle.factory_docs_complete);
+    const action = next ? '标记为已完成全部上传' : '取消已完成标记';
+    if (!window.confirm(`确定要${action}吗？`)) return;
+    try {
+      const response = await bundleApi.updateBundle(bundleId, { factory_docs_complete: next } as any);
+      if (response.success) {
+        setBundle(prev => prev ? { ...prev, factory_docs_complete: next } : prev);
+      }
+    } catch (error) {
+      console.error('更新出厂资料完善状态失败:', error);
+      alert('更新出厂资料完善状态失败');
+    }
+  };
 
   const handleRemoveDevice = async (deviceId: string) => {
     if (!bundle) return;
@@ -844,6 +865,27 @@ const BundleDetail: React.FC = () => {
                 <div className="flex justify-between items-center no-print">
                   <h3 className="text-base font-medium text-gray-900">多合一设备出厂资料</h3>
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleToggleFactoryDocsComplete}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-colors text-sm border ${
+                        isFactoryDocsComplete(bundle?.factory_docs_complete)
+                          ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
+                          : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {isFactoryDocsComplete(bundle?.factory_docs_complete) ? (
+                        <>
+                          <CheckCircleIcon className="h-4 w-4" />
+                          已完成全部上传
+                        </>
+                      ) : (
+                        <>
+                          <ExclamationTriangleIcon className="h-4 w-4" />
+                          标记为已完成全部上传
+                        </>
+                      )}
+                    </button>
                     {documents.length > 0 && (
                       <button
                         onClick={() => { const entering = !docSelectMode; setDocSelectMode(entering); setSelectedDocIds(new Set()); if (entering) setExpandedCategories(new Set(docCategories)); }}

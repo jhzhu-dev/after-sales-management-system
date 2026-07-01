@@ -720,6 +720,33 @@ async function createTables() {
       console.warn('⚠️ devices.notes 迁移警告:', err.message);
     }
 
+    // 出厂资料是否已完善（人工标记）
+    try {
+      const [fdcCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'factory_docs_complete'");
+      if (fdcCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加出厂资料完善状态字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN factory_docs_complete TINYINT(1) NOT NULL DEFAULT 0");
+        await pool.execute("ALTER TABLE devices ADD COLUMN factory_docs_completed_at TIMESTAMP NULL");
+        await pool.execute("ALTER TABLE devices ADD COLUMN factory_docs_completed_by VARCHAR(100) NULL");
+        console.log('✅ devices 出厂资料完善状态字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ devices.factory_docs_complete 迁移警告:', err.message);
+    }
+
+    try {
+      const [bFdcCols] = await pool.execute("SHOW COLUMNS FROM device_bundles LIKE 'factory_docs_complete'");
+      if (bFdcCols.length === 0) {
+        console.log('🔄 正在为 device_bundles 表添加出厂资料完善状态字段...');
+        await pool.execute("ALTER TABLE device_bundles ADD COLUMN factory_docs_complete TINYINT(1) NOT NULL DEFAULT 0");
+        await pool.execute("ALTER TABLE device_bundles ADD COLUMN factory_docs_completed_at TIMESTAMP NULL");
+        await pool.execute("ALTER TABLE device_bundles ADD COLUMN factory_docs_completed_by VARCHAR(100) NULL");
+        console.log('✅ device_bundles 出厂资料完善状态字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ device_bundles.factory_docs_complete 迁移警告:', err.message);
+    }
+
     // 为 device_documents 表添加 bundle_id 字段，并将 device_id 改为可 NULL
     try {
       const [docBundleIdCols] = await pool.execute("SHOW COLUMNS FROM device_documents LIKE 'bundle_id'");
@@ -896,6 +923,16 @@ async function createTables() {
       }
     } catch (err) {
       console.warn('⚠️ feishu_config.chat_id 迁移警告:', err.message);
+    }
+
+    try {
+      const [sbuCols] = await pool.execute("SHOW COLUMNS FROM feishu_config LIKE 'system_base_url'");
+      if (sbuCols.length === 0) {
+        await pool.execute("ALTER TABLE feishu_config ADD COLUMN system_base_url VARCHAR(500) DEFAULT NULL COMMENT '飞书通知卡片中的系统访问地址' AFTER chat_id");
+        console.log('✅ feishu_config.system_base_url 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ feishu_config.system_base_url 迁移警告:', err.message);
     }
 
     // 设备状态迁移：正常/异常/维护中 → 生产中/使用中(正常)/使用中(异常)/已停用

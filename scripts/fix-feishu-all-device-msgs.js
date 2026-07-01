@@ -68,11 +68,28 @@ async function main() {
   console.log(`[3/4] 开始按时间最近原则匹配设备并修复...\n`);
 
   let fixed = 0;
+  let skipped = 0;
+  let failed = 0;
   const usedDeviceIds = new Set();
+  const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
 
   for (const msg of deviceMessages) {
     const msgTs = parseInt(msg.create_time); // 毫秒
     const msgTime = new Date(msgTs).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+
+    if (Date.now() - msgTs > fourteenDaysMs) {
+      console.log(`  [SKIP] ${msg.message_id} (${msgTime}) — 超过 14 天，飞书不允许更新`);
+      skipped++;
+      continue;
+    }
+
+    // 跳过已是正确链接的消息
+    const rawContent = msg.body?.content || '';
+    if (rawContent.includes(CORRECT_BASE) && !rawContent.includes('localhost:3000')) {
+      console.log(`  [SKIP] ${msg.message_id} (${msgTime}) — 链接已是 ${CORRECT_BASE}`);
+      skipped++;
+      continue;
+    }
 
     // 找时间最接近且未被占用的设备
     let bestDevice = null;
@@ -111,22 +128,29 @@ async function main() {
     };
 
     // PATCH 消息
-    const patchRes = await axios.patch(
-      `${BASE_URL}/open-apis/im/v1/messages/${msg.message_id}`,
-      { content: JSON.stringify(newCard) },
-      { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, timeout: 8000 }
-    );
+    try {
+      const patchRes = await axios.patch(
+        `${BASE_URL}/open-apis/im/v1/messages/${msg.message_id}`,
+        { content: JSON.stringify(newCard) },
+        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, timeout: 8000 }
+      );
 
-    if (patchRes.data.code === 0) {
-      console.log(`  ✓ 修复成功  →  ${CORRECT_BASE}/devices/${bestDevice.id}\n`);
-      usedDeviceIds.add(bestDevice.id);
-      fixed++;
-    } else {
-      console.log(`  ✗ 修复失败: ${patchRes.data.msg}\n`);
+      if (patchRes.data.code === 0) {
+        console.log(`  ✓ 修复成功  →  ${CORRECT_BASE}/devices/${bestDevice.id}\n`);
+        usedDeviceIds.add(bestDevice.id);
+        fixed++;
+      } else {
+        console.log(`  ✗ 修复失败: ${patchRes.data.msg}\n`);
+        failed++;
+      }
+    } catch (err) {
+      const apiMsg = err.response?.data?.msg || err.message;
+      console.log(`  ✗ 修复失败: ${apiMsg}\n`);
+      failed++;
     }
   }
 
-  console.log(`[4/4] 完成，共修复 ${fixed}/${deviceMessages.length} 条消息`);
+  console.log(`[4/4] 完成，修复 ${fixed} 条，跳过 ${skipped} 条，失败 ${failed} 条（共 ${deviceMessages.length} 条）`);
 }
 
 main().catch(e => {
