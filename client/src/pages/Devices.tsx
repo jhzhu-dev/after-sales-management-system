@@ -605,7 +605,15 @@ export default function Devices() {
       setEditingDevice(null);
     } catch (error) {
       console.error('保存设备失败:', error);
-      throw error;
+      const apiError = (error as any)?.response?.data;
+      let msg = apiError?.error || apiError?.details?.[0]?.msg || (error as Error)?.message || '保存设备失败';
+      if (apiError?.error_code === 'DEVICE_ID_DUPLICATED' && apiError?.data?.id) {
+        msg = `生产序列号已存在：${apiError.data.id}`;
+      }
+      if (apiError?.error_code === 'PRODUCT_LINE_NOT_FOUND' && apiError?.data?.product_line_id) {
+        msg = `产品线不存在（ID: ${apiError.data.product_line_id}）`;
+      }
+      throw new Error(msg);
     }
   };
 

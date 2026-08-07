@@ -59,7 +59,8 @@ const issueClassificationRoutes = require('./routes/issue-classifications');
 const integrationRoutes = require('./routes/integrations');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const HTTP_PORT = Number(process.env.PORT || 5000);
+const HTTPS_PORT = HTTP_PORT + 1;
 
 // 设置响应头
 app.use((req, res, next) => {
@@ -99,16 +100,20 @@ app.use((req, res, next) => {
 
 // 处理HTTPS重定向问题
 app.use((req, res, next) => {
-  // 如果请求是HTTPS但端口是5000，重定向到正确的HTTPS端口5001
-  if (req.secure && req.get('host').includes(':5000')) {
-    const httpsUrl = `https://${req.get('host').replace(':5000', ':5001')}${req.originalUrl}`;
+  const host = req.get('host') || '';
+
+  // 如果请求是HTTPS但端口是HTTP端口，重定向到HTTPS端口
+  if (req.secure && host.endsWith(`:${HTTP_PORT}`)) {
+    const httpsUrl = `https://${host.replace(new RegExp(`:${HTTP_PORT}$`), `:${HTTPS_PORT}`)}${req.originalUrl}`;
     return res.redirect(301, httpsUrl);
   }
-  // 如果请求是HTTP但端口是5001，重定向到正确的HTTP端口5000
-  if (!req.secure && req.get('host').includes(':5001')) {
-    const httpUrl = `http://${req.get('host').replace(':5001', ':5000')}${req.originalUrl}`;
+
+  // 如果请求是HTTP但端口是HTTPS端口，重定向到HTTP端口
+  if (!req.secure && host.endsWith(`:${HTTPS_PORT}`)) {
+    const httpUrl = `http://${host.replace(new RegExp(`:${HTTPS_PORT}$`), `:${HTTP_PORT}`)}${req.originalUrl}`;
     return res.redirect(301, httpUrl);
   }
+
   next();
 });
 
@@ -271,14 +276,14 @@ async function startServer() {
       console.log('ℹ️  SSL证书加载失败，仅启动HTTP服务:', error.message);
     }
 
-    const httpServer = app.listen(PORT, '0.0.0.0', () => {
+    const httpServer = app.listen(HTTP_PORT, '0.0.0.0', () => {
       console.log('✅ HTTP服务器启动成功!');
-      console.log(`📊 本地HTTP访问地址: http://localhost:${PORT}`);
+      console.log(`📊 本地HTTP访问地址: http://localhost:${HTTP_PORT}`);
       
       if (allIPs.length > 0) {
         console.log('🌐 局域网访问地址 (HTTP):');
         allIPs.forEach((ip, index) => {
-          console.log(`   ${index + 1}. http://${ip}:${PORT}`);
+          console.log(`   ${index + 1}. http://${ip}:${HTTP_PORT}`);
         });
       }
       
@@ -297,20 +302,20 @@ async function startServer() {
       httpsServer.on('error', (error) => {
         console.error('❌ HTTPS服务器启动失败:', error.message);
         if (error.code === 'EADDRINUSE') {
-          console.error('   端口被占用，请检查是否有其他服务在使用端口', PORT + 1);
+          console.error('   端口被占用，请检查是否有其他服务在使用端口', HTTPS_PORT);
         } else if (error.code === 'EACCES') {
-          console.error('   权限不足，无法绑定端口', PORT + 1);
+          console.error('   权限不足，无法绑定端口', HTTPS_PORT);
         }
       });
 
-      httpsServer.listen(PORT + 1, '0.0.0.0', () => {
+      httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
         console.log('✅ HTTPS服务器启动成功!');
-        console.log(`🔒 本地HTTPS访问地址: https://localhost:${PORT + 1}`);
+        console.log(`🔒 本地HTTPS访问地址: https://localhost:${HTTPS_PORT}`);
         
         if (allIPs.length > 0) {
           console.log('🌐 局域网访问地址 (HTTPS):');
           allIPs.forEach((ip, index) => {
-            console.log(`   ${index + 1}. https://${ip}:${PORT + 1}`);
+            console.log(`   ${index + 1}. https://${ip}:${HTTPS_PORT}`);
           });
         }
       });

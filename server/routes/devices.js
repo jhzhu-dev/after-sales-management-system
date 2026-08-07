@@ -205,8 +205,13 @@ router.get('/:id', async (req, res) => {
 router.post('/', [
   body('id').optional({ nullable: true }).isString().withMessage('设备ID必须是字符串'),
   body('name').optional({ nullable: true }).isString().withMessage('订单号必须是字符串'),
-  body('product_line_id').notEmpty().isInt().withMessage('产品线ID必须是整数'),
-  body('customer_id').optional({ nullable: true }).isInt().withMessage('客户ID必须是整数'),
+  body('product_line_id')
+    .exists({ checkFalsy: true }).withMessage('产品线不能为空')
+    .bail()
+    .isInt().withMessage('产品线ID必须是整数')
+    .toInt(),
+  body('product_id').optional({ nullable: true, checkFalsy: true }).isInt().withMessage('产品ID必须是整数').toInt(),
+  body('customer_id').optional({ nullable: true, checkFalsy: true }).isInt().withMessage('客户ID必须是整数').toInt(),
   body('status').optional({ nullable: true }).isIn(['生产中', '使用中(正常)', '使用中(异常)', '已停用', '正常']).withMessage('状态必须是：生产中、使用中(正常)、使用中(异常)或已停用'),
   body('remote_code').optional({ nullable: true }).isString().withMessage('远程码必须是字符串'),
   body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串')
@@ -217,34 +222,48 @@ router.post('/', [
     if (req.body.status === '正常') req.body.status = '使用中(正常)';
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('验证失败:', errors.array());
+      const details = errors.array();
+      console.log('验证失败:', details);
       return res.status(400).json({
         success: false,
-        error: '输入数据无效',
-        details: errors.array()
+        error_code: 'VALIDATION_ERROR',
+        error: details[0]?.msg || '输入数据无效',
+        details
       });
     }
 
     const { id, name, device_code, product_line_id, product_id, customer_id, status = '使用中(正常)', remote_code, password, notes } = req.body;
 
     // 如果提供了ID，使用用户提供的ID，否则自动生成
-    let deviceId = id;
+    let deviceId = typeof id === 'string' ? id.trim() : id;
     if (!deviceId) {
       const IDGenerator = require('../../id-generator');
       const idGenerator = new IDGenerator();
-      deviceId = idGenerator.generate();
-    }
+      const maxRetries = 8;
+      for (let i = 0; i < maxRetries; i++) {
+        const candidate = idGenerator.generate();
+        const existing = await query('SELECT id FROM devices WHERE id = ?', [candidate]);
+        if (existing.length === 0) {
+          deviceId = candidate;
+          break;
+        }
+      }
 
-    // 检查设备ID是否已存在
-    const existingDevice = await query('SELECT id FROM devices WHERE id = ?', [deviceId]);
-    if (existingDevice.length > 0) {
-      return res.status(400).json({ success: false, error: '设备ID已存在' });
+      if (!deviceId) {
+        return res.status(503).json({ success: false, error_code: 'DEVICE_ID_GENERATION_FAILED', error: '自动生成设备ID失败，请重试' });
+      }
+    } else {
+      // 检查设备ID是否已存在
+      const existingDevice = await query('SELECT id FROM devices WHERE id = ?', [deviceId]);
+      if (existingDevice.length > 0) {
+        return res.status(400).json({ success: false, error_code: 'DEVICE_ID_DUPLICATED', error: '设备ID已存在', data: { id: deviceId } });
+      }
     }
 
     // 检查产品线是否存在
     const productLine = await query('SELECT id FROM product_lines WHERE id = ?', [product_line_id]);
     if (productLine.length === 0) {
-      return res.status(400).json({ success: false, error: '产品线不存在' });
+      return res.status(400).json({ success: false, error_code: 'PRODUCT_LINE_NOT_FOUND', error: '产品线不存在', data: { product_line_id } });
     }
 
     const insertQuery = `

@@ -53,6 +53,7 @@ const BundleDetail: React.FC = () => {
   const [bgUpload, setBgUpload] = useState<{ fileCount: number; progress: number; done: boolean; error: string | null; statusText?: string; failedFiles?: string[]; skippedCount?: number } | null>(null);
   const [docSelectMode, setDocSelectMode] = useState(false);
   const [selectedDocIds, setSelectedDocIds] = useState<Set<number>>(new Set());
+  const [batchDownloading, setBatchDownloading] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<{
     url: string; title: string; type: string;
     docId: number; originalName: string;
@@ -521,9 +522,14 @@ const BundleDetail: React.FC = () => {
   };
 
   const handleBatchDownloadDocs = async () => {
-    if (selectedDocIds.size === 0) return;
+    if (selectedDocIds.size === 0 || batchDownloading) return;
     try {
+      setBatchDownloading(true);
       const token = localStorage.getItem('auth_token');
+      if (!token) {
+        alert('登录状态已失效，请重新登录后重试');
+        return;
+      }
       const response = await fetch('/api/device-documents/batch-download', {
         method: 'POST',
         headers: {
@@ -546,10 +552,13 @@ const BundleDetail: React.FC = () => {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // 立即 revoke 在部分浏览器会打断下载，这里延迟释放。
+      window.setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
     } catch (error) {
       console.error('批量下载失败:', error);
       alert('批量下载失败');
+    } finally {
+      setBatchDownloading(false);
     }
   };
 
@@ -921,11 +930,11 @@ const BundleDetail: React.FC = () => {
                     <div className="ml-auto flex gap-2">
                       <button
                         onClick={handleBatchDownloadDocs}
-                        disabled={selectedDocIds.size === 0}
+                        disabled={selectedDocIds.size === 0 || batchDownloading}
                         className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
                         <DocumentArrowDownIcon className="h-4 w-4" />
-                        批量下载
+                        {batchDownloading ? '下载中...' : '批量下载'}
                       </button>
                       <button
                         onClick={handleBatchDeleteDocs}
