@@ -35,6 +35,7 @@ router.get('/', async (req, res) => {
         CASE
           WHEN COUNT(DISTINCT d.id) = 0 THEN '生产中'
           WHEN SUM(CASE WHEN d.status = '使用中(异常)' THEN 1 ELSE 0 END) > 0 THEN '使用中(异常)'
+          WHEN SUM(CASE WHEN d.status = '已发货' THEN 1 ELSE 0 END) > 0 THEN '已发货'
           WHEN SUM(CASE WHEN d.status = '生产中' THEN 1 ELSE 0 END) > 0 THEN '生产中'
           WHEN COUNT(DISTINCT d.id) = SUM(CASE WHEN d.status = '已停用' THEN 1 ELSE 0 END) THEN '已停用'
           ELSE '使用中(正常)'
@@ -151,6 +152,47 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.error('获取多合一设备详情失败:', error);
     res.status(500).json({ success: false, error: '获取多合一设备详情失败' });
+  }
+});
+
+// 多合一设备发货：出厂资料完善且全部成员为「生产中」时，将全部成员置为已发货
+router.post('/:id/ship', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const bundleResult = await query('SELECT id, factory_docs_complete FROM device_bundles WHERE id = ?', [id]);
+    const bundle = bundleResult[0];
+    if (!bundle) {
+      return res.status(404).json({ success: false, error: '多合一设备不存在' });
+    }
+    const docsComplete = bundle.factory_docs_complete === true
+      || bundle.factory_docs_complete === 1
+      || bundle.factory_docs_complete === '1';
+    if (!docsComplete) {
+      return res.status(400).json({ success: false, error: '出厂资料未完善，无法发货' });
+    }
+    const members = await query('SELECT id, status FROM devices WHERE bundle_id = ?', [id]);
+    if (members.length === 0) {
+      return res.status(400).json({ success: false, error: '该多合一设备下没有成员设备' });
+    }
+    const notProduction = members.filter(d => d.status !== '生产中');
+    if (notProduction.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `存在非「生产中」状态的成员设备，无法发货：${notProduction.map(d => d.id).join('、')}`
+      });
+    }
+    await transaction(async (conn) => {
+      for (const member of members) {
+        await conn.execute(
+          `UPDATE devices SET status = '已发货', shipped_at = NOW(), updated_at = NOW() WHERE id = ?`,
+          [member.id]
+        );
+      }
+    });
+    res.json({ success: true, message: `多合一设备已发货，共 ${members.length} 台设备已标记为已发货` });
+  } catch (error) {
+    console.error('多合一设备发货失败:', error);
+    res.status(500).json({ success: false, error: '多合一设备发货失败' });
   }
 });
 
@@ -445,7 +487,29 @@ router.put('/:id', [
       }
     }
 
-    res.json({ success: true, message: '多合一设备更新成功' });
+    // 出厂资料完善后，自动将成员设备（生产中状态）同步为已发货，与单台设备发货逻辑一致
+    let syncedShipCount = 0;
+    if (req.body.factory_docs_complete !== undefined) {
+      const complete = req.body.factory_docs_complete === true
+        || req.body.factory_docs_complete === 1
+        || req.body.factory_docs_complete === '1';
+      if (complete) {
+        const syncResult = await query(
+          `UPDATE devices SET status = '已发货', shipped_at = NOW(), updated_at = NOW()
+           WHERE bundle_id = ? AND status = '生产中'`,
+          [id]
+        );
+        syncedShipCount = syncResult.affectedRows || 0;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: syncedShipCount > 0
+        ? `多合一设备更新成功，${syncedShipCount} 台成员设备已同步为已发货`
+        : '多合一设备更新成功',
+      data: { synced_ship_count: syncedShipCount }
+    });
   } catch (error) {
     console.error('更新多合一设备失败:', error);
     res.status(500).json({ success: false, error: '更新多合一设备失败' });

@@ -72,7 +72,7 @@ export interface Device {
   customer_id?: number;
   customer_name?: string;
   customer_short_name?: string;
-  status: '生产中' | '使用中(正常)' | '使用中(异常)' | '已停用';
+  status: '生产中' | '已发货' | '使用中(正常)' | '使用中(异常)' | '已停用';
   created_at: string;
   updated_at: string;
   remote_code?: string;
@@ -92,6 +92,7 @@ export interface Device {
   factory_docs_complete?: boolean | number;
   factory_docs_completed_at?: string | null;
   factory_docs_completed_by?: string | null;
+  shipped_at?: string | null;
 }
 
 // 模块类型 (仅用于设备详情页面)
@@ -258,7 +259,7 @@ export interface DeviceFormData {
   product_line_id: string | number;
   product_id?: number | null;
   customer_id?: number | null;
-  status: '生产中' | '使用中(正常)' | '使用中(异常)' | '已停用';
+  status: '生产中' | '已发货' | '使用中(正常)' | '使用中(异常)' | '已停用';
   remote_code?: string | null;
   password?: string | null;
   merchant_id?: string | null;
@@ -349,6 +350,7 @@ export const MODULE_CATEGORY_MAP: Record<string, string> = {
 // 状态映射
 export const STATUS_MAP: Record<string, string> = {
   '生产中': '生产中',
+  '已发货': '已发货',
   '使用中(正常)': '使用中(正常)',
   '使用中(异常)': '使用中(异常)',
   '已停用': '已停用',

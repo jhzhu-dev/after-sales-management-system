@@ -15,7 +15,8 @@ import {
   ChevronLeftIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  TruckIcon
 } from '@heroicons/react/24/outline';
 import { DeviceBundle } from '../types';
 import { bundleApi } from '../services/api';
@@ -54,6 +55,7 @@ const BundleDetail: React.FC = () => {
   const [docSelectMode, setDocSelectMode] = useState(false);
   const [selectedDocIds, setSelectedDocIds] = useState<Set<number>>(new Set());
   const [batchDownloading, setBatchDownloading] = useState(false);
+  const [shipping, setShipping] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<{
     url: string; title: string; type: string;
     docId: number; originalName: string;
@@ -266,11 +268,41 @@ const BundleDetail: React.FC = () => {
     try {
       const response = await bundleApi.updateBundle(bundleId, { factory_docs_complete: next } as any);
       if (response.success) {
-        setBundle(prev => prev ? { ...prev, factory_docs_complete: next } : prev);
+        await fetchBundle();
+        if (next) {
+          const synced = Number((response as any).data?.synced_ship_count || 0);
+          alert(synced > 0
+            ? `出厂资料已标记完善，${synced} 台成员设备已同步为已发货`
+            : '出厂资料已标记完善');
+        }
       }
     } catch (error) {
       console.error('更新出厂资料完善状态失败:', error);
       alert('更新出厂资料完善状态失败');
+    }
+  };
+
+  // 多合一设备发货：出厂资料完善且全部成员为生产中时，一键置为已发货
+  const handleShipBundle = async () => {
+    if (!bundle || shipping) return;
+    const devices = bundle.devices || [];
+    const allProduction = devices.length > 0 && devices.every((d: any) => d.status === '生产中');
+    if (!allProduction) return;
+    if (!window.confirm(`确认将多合一设备「${bundle.bundle_code}」的全部 ${devices.length} 台设备标记为已发货吗？`)) return;
+    setShipping(true);
+    try {
+      const response = await bundleApi.shipBundle(bundle.id);
+      if (response.success) {
+        await fetchBundle();
+        alert(response.message || '多合一设备已发货');
+      } else {
+        alert(response.error || '发货失败');
+      }
+    } catch (error: any) {
+      console.error('多合一设备发货失败:', error);
+      alert(error?.response?.data?.error || '发货失败');
+    } finally {
+      setShipping(false);
     }
   };
 
@@ -651,6 +683,23 @@ const BundleDetail: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {bundle.devices && bundle.devices.length > 0 && bundle.devices.every((d: any) => d.status === '生产中') && (
+              <button
+                onClick={handleShipBundle}
+                disabled={shipping || !isFactoryDocsComplete(bundle.factory_docs_complete)}
+                title={!isFactoryDocsComplete(bundle.factory_docs_complete) ? '出厂资料未完善，无法发货' : '将全部成员设备标记为已发货'}
+                className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  shipping
+                    ? 'bg-gray-400 text-white cursor-wait'
+                    : isFactoryDocsComplete(bundle.factory_docs_complete)
+                      ? 'bg-orange-500 text-white hover:bg-orange-600'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <TruckIcon className="h-4 w-4 mr-2" />
+                {shipping ? '发货中...' : '发货'}
+              </button>
+            )}
             <button
               onClick={handlePrint}
               className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
@@ -821,6 +870,7 @@ const BundleDetail: React.FC = () => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">商户号</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">商户密码</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">发货时间</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">待解决问题</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase no-print">操作</th>
                       </tr>
@@ -843,6 +893,9 @@ const BundleDetail: React.FC = () => {
                               {device.status}
                             </span>
                           </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            {device.shipped_at ? formatDate(device.shipped_at) : '-'}
+                          </td>
                           <td className="px-4 py-3">
                             {device.open_issues ? (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{device.open_issues}</span>
@@ -859,7 +912,7 @@ const BundleDetail: React.FC = () => {
                         </tr>
                       )) : (
                         <tr>
-                          <td colSpan={9} className="px-4 py-8 text-center text-gray-500">暂无成员设备</td>
+                          <td colSpan={10} className="px-4 py-8 text-center text-gray-500">暂无成员设备</td>
                         </tr>
                       )}
                     </tbody>

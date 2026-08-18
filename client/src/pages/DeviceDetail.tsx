@@ -13,6 +13,7 @@ import {
   EyeSlashIcon,
   TagIcon,
   WrenchScrewdriverIcon,
+  TruckIcon,
   PrinterIcon,
   DocumentIcon,
   ArrowUpTrayIcon,
@@ -25,6 +26,7 @@ import {
 import { Device, Module, Issue, ModuleFormData, DeviceFormData, VersionRelease, DeviceUpgrade, SOPTemplate, ChecklistItem, SOPTemplateItem } from '../types';
 import { deviceApi, moduleApi, issueApi, versionReleaseApi, moduleVersionApi, deviceUpgradeApi, sopTemplateApi, uploadChecklistImage, bundleApi } from '../services/api';
 import api from '../services/api';
+import { formatDate } from '../utils';
 import Layout from '../components/Layout';
 import ModuleForm from '../components/ModuleForm';
 import DeviceForm from '../components/DeviceForm';
@@ -97,6 +99,7 @@ const DeviceDetail: React.FC = () => {
   const [sopTemplate, setSopTemplate] = useState<SOPTemplate | null>(null);
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [versionSubmitting, setVersionSubmitting] = useState(false);
+  const [shipping, setShipping] = useState(false);
 
   // 设备出厂资料相关状态
   const [deviceDocuments, setDeviceDocuments] = useState<any[]>([]);
@@ -241,7 +244,13 @@ const DeviceDetail: React.FC = () => {
     try {
       const response = await deviceApi.updateDevice(id, { factory_docs_complete: next } as any);
       if (response.success) {
-        setDevice(prev => prev ? { ...prev, factory_docs_complete: next } : prev);
+        await fetchDevice();
+        if (next) {
+          const synced = Number((response as any).data?.synced_ship_count || 0);
+          alert(synced > 0
+            ? '出厂资料已标记完善，设备已自动同步为已发货'
+            : '出厂资料已标记完善');
+        }
       }
     } catch (error) {
       console.error('更新出厂资料完善状态失败:', error);
@@ -796,6 +805,27 @@ const DeviceDetail: React.FC = () => {
     setShowDeviceForm(true);
   };
 
+  // 设备发货：生产中 + 出厂资料完善
+  const handleShipDevice = async () => {
+    if (!device || shipping) return;
+    if (!window.confirm(`确认将设备「${device.name || device.id}」标记为已发货吗？`)) return;
+    setShipping(true);
+    try {
+      const response = await deviceApi.shipDevice(device.id);
+      if (response.success) {
+        await fetchDevice();
+        alert('设备已标记为已发货');
+      } else {
+        alert(response.error || '发货失败');
+      }
+    } catch (error: any) {
+      console.error('设备发货失败:', error);
+      alert(error?.response?.data?.error || '发货失败');
+    } finally {
+      setShipping(false);
+    }
+  };
+
   const handleDeviceSubmit = async (data: DeviceFormData) => {
     try {
       console.log('开始更新设备:', id, data);
@@ -858,6 +888,7 @@ const DeviceDetail: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case '生产中': return 'bg-blue-100 text-blue-800';
+      case '已发货': return 'bg-orange-100 text-orange-800';
       case '使用中(正常)': return 'bg-green-100 text-green-800';
       case '使用中(异常)': return 'bg-red-100 text-red-800';
       case '已停用': return 'bg-gray-100 text-gray-500';
@@ -873,6 +904,8 @@ const DeviceDetail: React.FC = () => {
     switch (status) {
       case '生产中':
         return <ClockIcon className="h-5 w-5 text-blue-500" />;
+      case '已发货':
+        return <TruckIcon className="h-5 w-5 text-orange-500" />;
       case '使用中(正常)':
       case 'closed':
         return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
@@ -1038,6 +1071,23 @@ const DeviceDetail: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 no-print">
+            {device.status === '生产中' && (
+              <button
+                onClick={handleShipDevice}
+                disabled={shipping || !isFactoryDocsComplete(device.factory_docs_complete)}
+                title={!isFactoryDocsComplete(device.factory_docs_complete) ? '出厂资料未完善，无法发货' : '将设备标记为已发货'}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                  shipping
+                    ? 'bg-gray-400 text-white cursor-wait'
+                    : isFactoryDocsComplete(device.factory_docs_complete)
+                      ? 'bg-orange-500 text-white hover:bg-orange-600'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <TruckIcon className="h-4 w-4" />
+                {shipping ? '发货中...' : '发货'}
+              </button>
+            )}
             <button
               onClick={handlePrint}
               className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
@@ -1097,6 +1147,9 @@ const DeviceDetail: React.FC = () => {
                   {device.status}
                 </span>
               </div>
+              {device.shipped_at && (
+                <p className="text-xs text-gray-500 mt-1">发货时间：{formatDate(device.shipped_at)}</p>
+              )}
             </div>
             {/* 行2第三列: 备注 */}
             <div title={device.notes || ''}>

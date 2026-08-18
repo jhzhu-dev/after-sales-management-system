@@ -64,7 +64,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
         product_line_id: device.product_line_id || '',
         product_id: device.product_id || undefined,
         customer_id: device.customer_id || undefined,
-        status: device.status as '生产中' | '使用中(正常)' | '使用中(异常)' | '已停用',
+        status: device.status as '生产中' | '已发货' | '使用中(正常)' | '使用中(异常)' | '已停用',
         remote_code: device.remote_code || '',
         password: device.password || '',
         merchant_id: (device as any).merchant_id || '',
@@ -483,6 +483,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                     className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
                     <option value="生产中">生产中</option>
+                    <option value="已发货">已发货</option>
                     <option value="使用中(正常)">使用中(正常)</option>
                     <option value="使用中(异常)">使用中(异常)</option>
                     <option value="已停用">已停用</option>
@@ -649,6 +650,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 >
                   <option value="生产中">生产中</option>
+                  <option value="已发货">已发货</option>
                   <option value="使用中(正常)">使用中(正常)</option>
                   <option value="使用中(异常)">使用中(异常)</option>
                   <option value="已停用">已停用</option>

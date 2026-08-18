@@ -331,6 +331,7 @@ export default function Devices() {
     const s = globalSearch.trim().toLowerCase();
     let result = allDevices.filter(d =>
       (d.id && d.id.toLowerCase().includes(s)) ||
+      (d.device_code && d.device_code.toLowerCase().includes(s)) ||
       (d.name && d.name.toLowerCase().includes(s)) ||
       ((d as any).nickname && (d as any).nickname.toLowerCase().includes(s)) ||
       (d.product_name && d.product_name.toLowerCase().includes(s)) ||
@@ -958,6 +959,19 @@ export default function Devices() {
       width: '80px'
     },
     {
+      key: 'bundle_status' as any,
+      title: <BundleSortableHeader field="bundle_status" title="状态" />,
+      render: (value: string, record: DeviceBundle) => {
+        const status = (record as any).bundle_status || '生产中';
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+            {status}
+          </span>
+        );
+      },
+      width: '100px'
+    },
+    {
       key: 'remote_code' as keyof DeviceBundle,
       title: <BundleSortableHeader field="remote_code" title="远程码" />,
       render: (value: string) => {
@@ -1144,6 +1158,7 @@ export default function Devices() {
                 >
                   <option value="">全部状态</option>
                   <option value="生产中">生产中</option>
+                  <option value="已发货">已发货</option>
                   <option value="使用中(正常)">使用中(正常)</option>
                   <option value="使用中(异常)">使用中(异常)</option>
                   <option value="已停用">已停用</option>
@@ -1164,6 +1179,7 @@ export default function Devices() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">生产序列号</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">设备编码</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">订单号 / 简称</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">产品名称</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">客户</th>
@@ -1174,7 +1190,7 @@ export default function Devices() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {globalSearchResults.length === 0 ? (
-                    <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">没有找到匹配的设备</td></tr>
+                    <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">没有找到匹配的设备</td></tr>
                   ) : globalSearchResults.slice(0, visibleCount).map(d => (
                     <tr
                       key={d.id}
@@ -1182,6 +1198,7 @@ export default function Devices() {
                       onClick={() => { sessionStorage.setItem('devices_highlight', d.id); navigate(`/devices/${d.id}`); }}
                     >
                       <td className="px-4 py-3 font-mono text-blue-600 font-medium whitespace-nowrap">{d.id}</td>
+                      <td className="px-4 py-3 font-mono text-gray-700 whitespace-nowrap">{d.device_code || '-'}</td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{d.name || '-'}</div>
                         {(d as any).nickname && <div className="text-xs text-gray-400">{(d as any).nickname}</div>}
@@ -1270,6 +1287,7 @@ export default function Devices() {
               >
                 <option value="">全部状态</option>
                 <option value="生产中">生产中</option>
+                <option value="已发货">已发货</option>
                 <option value="使用中(正常)">使用中(正常)</option>
                 <option value="使用中(异常)">使用中(异常)</option>
                 <option value="已停用">已停用</option>
@@ -1385,6 +1403,7 @@ export default function Devices() {
               >
                 <option value="">全部</option>
                 <option value="生产中">生产中</option>
+                <option value="已发货">已发货</option>
                 <option value="使用中(正常)">使用中(正常)</option>
                 <option value="使用中(异常)">使用中(异常)</option>
                 <option value="已停用">已停用</option>
@@ -1449,6 +1468,7 @@ export default function Devices() {
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>多合一名称</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>客户</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>设备数量</th>
+                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>状态</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>出厂资料</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>资料数量</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>创建时间</th>
@@ -1461,6 +1481,7 @@ export default function Devices() {
                   <td style={{padding:'3pt 6pt'}}>{b.name || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{b.customer_name || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{b.device_count || 0}</td>
+                  <td style={{padding:'3pt 6pt'}}>{(b as any).bundle_status || '生产中'}</td>
                   <td style={{padding:'3pt 6pt'}}>{factoryDocsLabel(b.factory_docs_complete)}</td>
                   <td style={{padding:'3pt 6pt'}}>{b.document_count || 0}</td>
                   <td style={{padding:'3pt 6pt'}}>{new Date(b.created_at).toLocaleDateString('zh-CN')}</td>

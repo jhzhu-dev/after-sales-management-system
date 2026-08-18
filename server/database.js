@@ -734,6 +734,33 @@ async function createTables() {
       console.warn('⚠️ devices.factory_docs_complete 迁移警告:', err.message);
     }
 
+    // 设备发货时间（已发货状态使用）
+    try {
+      const [shippedAtCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'shipped_at'");
+      if (shippedAtCols.length === 0) {
+        console.log('🔄 正在为 devices 表添加发货时间字段...');
+        await pool.execute("ALTER TABLE devices ADD COLUMN shipped_at TIMESTAMP NULL");
+        console.log('✅ devices.shipped_at 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ devices.shipped_at 迁移警告:', err.message);
+    }
+
+    // 设备状态枚举增加「已发货」
+    try {
+      const [statusCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'status'");
+      const statusType = (statusCols[0] && statusCols[0].Type) || '';
+      if (!statusType.includes('已发货')) {
+        console.log('🔄 正在扩展 devices.status 枚举，增加「已发货」...');
+        await pool.execute(
+          "ALTER TABLE devices MODIFY COLUMN status ENUM('生产中','已发货','使用中(正常)','使用中(异常)','已停用') NULL DEFAULT '使用中(正常)'"
+        );
+        console.log('✅ devices.status 已支持「已发货」');
+      }
+    } catch (err) {
+      console.warn('⚠️ devices.status 枚举迁移警告:', err.message);
+    }
+
     try {
       const [bFdcCols] = await pool.execute("SHOW COLUMNS FROM device_bundles LIKE 'factory_docs_complete'");
       if (bFdcCols.length === 0) {

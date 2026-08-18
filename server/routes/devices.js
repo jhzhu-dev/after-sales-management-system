@@ -50,7 +50,7 @@ router.get('/', async (req, res) => {
         d.id, d.name, d.nickname, d.device_code, d.product_line_id,
         d.product_id, d.customer_id, d.location,
         d.status, d.remote_code, d.password, d.notes, d.bundle_id,
-        d.factory_docs_complete, d.factory_docs_completed_at, d.factory_docs_completed_by,
+        d.factory_docs_complete, d.factory_docs_completed_at, d.factory_docs_completed_by, d.shipped_at,
         d.created_at, d.updated_at,
         pl.name as product_line_name,
         p.name as product_name,
@@ -128,7 +128,7 @@ router.get('/:id', async (req, res) => {
     d.id, d.name, d.nickname, d.device_code, d.product_line_id,
     d.product_id, d.customer_id, d.location,
     d.status, d.remote_code, d.password, d.notes, d.bundle_id,
-    d.factory_docs_complete, d.factory_docs_completed_at, d.factory_docs_completed_by,
+    d.factory_docs_complete, d.factory_docs_completed_at, d.factory_docs_completed_by, d.shipped_at,
     d.created_at, d.updated_at,
     pl.name as product_line_name,
       p.name as product_name,
@@ -202,6 +202,37 @@ router.get('/:id', async (req, res) => {
 });
 
 // 创建设备
+// 设备发货：仅「生产中」状态且出厂资料完善时允许
+router.post('/:id/ship', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deviceResult = await query('SELECT id, status, factory_docs_complete FROM devices WHERE id = ?', [id]);
+    const device = deviceResult[0];
+    if (!device) {
+      return res.status(404).json({ success: false, error: '设备不存在' });
+    }
+    if (device.status !== '生产中') {
+      return res.status(400).json({ success: false, error: '仅「生产中」状态的设备可以发货' });
+    }
+    const docsComplete = device.factory_docs_complete === true
+      || device.factory_docs_complete === 1
+      || device.factory_docs_complete === '1';
+    if (!docsComplete) {
+      return res.status(400).json({ success: false, error: '出厂资料未完善，无法发货' });
+    }
+    await query(
+      `UPDATE devices SET status = '已发货', shipped_at = NOW(), updated_at = NOW() WHERE id = ?`,
+      [id]
+    );
+    const updatedResult = await query('SELECT * FROM devices WHERE id = ?', [id]);
+    res.json({ success: true, data: updatedResult[0], message: '设备已标记为已发货' });
+  } catch (error) {
+    console.error('设备发货失败:', error);
+    res.status(500).json({ success: false, error: '设备发货失败' });
+  }
+});
+
+// 创建设备
 router.post('/', [
   body('id').optional({ nullable: true }).isString().withMessage('设备ID必须是字符串'),
   body('name').optional({ nullable: true }).isString().withMessage('订单号必须是字符串'),
@@ -212,7 +243,7 @@ router.post('/', [
     .toInt(),
   body('product_id').optional({ nullable: true, checkFalsy: true }).isInt().withMessage('产品ID必须是整数').toInt(),
   body('customer_id').optional({ nullable: true, checkFalsy: true }).isInt().withMessage('客户ID必须是整数').toInt(),
-  body('status').optional({ nullable: true }).isIn(['生产中', '使用中(正常)', '使用中(异常)', '已停用', '正常']).withMessage('状态必须是：生产中、使用中(正常)、使用中(异常)或已停用'),
+  body('status').optional({ nullable: true }).isIn(['生产中', '已发货', '使用中(正常)', '使用中(异常)', '已停用', '正常']).withMessage('状态必须是：生产中、已发货、使用中(正常)、使用中(异常)或已停用'),
   body('remote_code').optional({ nullable: true }).isString().withMessage('远程码必须是字符串'),
   body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串')
 ], async (req, res) => {
@@ -343,7 +374,7 @@ router.put('/:id', [
   body('name').optional({ nullable: true, checkFalsy: true }),  // 订单号允许为空/null
   body('product_line_id').optional().isInt().withMessage('产品线ID必须是整数'),
   body('customer_id').optional({ nullable: true }).isInt().withMessage('客户ID必须是整数'),
-  body('status').optional({ nullable: true }).isIn(['生产中', '使用中(正常)', '使用中(异常)', '已停用', '正常']).withMessage('状态必须是：生产中、使用中(正常)、使用中(异常)或已停用'),
+  body('status').optional({ nullable: true }).isIn(['生产中', '已发货', '使用中(正常)', '使用中(异常)', '已停用', '正常']).withMessage('状态必须是：生产中、已发货、使用中(正常)、使用中(异常)或已停用'),
   body('remote_code').optional({ nullable: true }).isString().withMessage('远程码必须是字符串'),
   body('password').optional({ nullable: true }).isString().withMessage('密码必须是字符串')
 ], async (req, res) => {
@@ -363,7 +394,7 @@ router.put('/:id', [
     const updates = req.body;
 
     // 检查设备是否存在
-    const existingDevice = await query('SELECT id, customer_id, product_id, bundle_id FROM devices WHERE id = ?', [id]);
+    const existingDevice = await query('SELECT id, customer_id, product_id, bundle_id, status FROM devices WHERE id = ?', [id]);
     if (existingDevice.length === 0) {
       return res.status(404).json({ success: false, error: '设备不存在' });
     }
@@ -501,10 +532,28 @@ router.put('/:id', [
       }
     }
 
+    // 出厂资料完善后，自动将设备（生产中状态）同步为已发货，与多合一设备逻辑一致
+    let syncedShipCount = 0;
+    const docsCompleteRequested = filteredUpdates.factory_docs_complete === true
+      || filteredUpdates.factory_docs_complete === 1
+      || filteredUpdates.factory_docs_complete === '1';
+    if (docsCompleteRequested) {
+      const effectiveStatus = filteredUpdates.status !== undefined
+        ? String(filteredUpdates.status)
+        : existingDevice[0].status;
+      if (effectiveStatus === '生产中') {
+        const syncResult = await query(
+          `UPDATE devices SET status = '已发货', shipped_at = NOW(), updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          [finalId]
+        );
+        syncedShipCount = syncResult.affectedRows || 0;
+      }
+    }
+
     res.json({
       success: true,
-      message: '设备更新成功',
-      data: { new_id: finalId }
+      message: syncedShipCount > 0 ? '设备更新成功，已自动同步为已发货' : '设备更新成功',
+      data: { new_id: finalId, synced_ship_count: syncedShipCount }
     });
   } catch (error) {
     console.error('更新设备失败:', error);

@@ -95,6 +95,10 @@ export const deviceApi = {
   updateDevice: (id: string, data: Partial<DeviceFormData>): Promise<ApiResponse<Device>> =>
     api.put(`/devices/${id}`, data).then(res => res.data),
 
+  // 设备发货（生产中 + 出厂资料完善）
+  shipDevice: (id: string): Promise<ApiResponse<Device>> =>
+    api.post(`/devices/${id}/ship`).then(res => res.data),
+
   // 删除设备
   deleteDevice: (id: string): Promise<ApiResponse<void>> =>
     api.delete(`/devices/${id}`).then(res => res.data),
@@ -561,6 +565,10 @@ export const bundleApi = {
 
   updateBundle: (id: number, data: Partial<DeviceBundleFormData>): Promise<ApiResponse<any>> =>
     api.put(`/device-bundles/${id}`, data).then(res => res.data),
+
+  // 多合一设备发货（全部成员设备置为已发货）
+  shipBundle: (id: number): Promise<ApiResponse<any>> =>
+    api.post(`/device-bundles/${id}/ship`).then(res => res.data),
 
   deleteBundle: (id: number): Promise<ApiResponse<void>> =>
     api.delete(`/device-bundles/${id}`).then(res => res.data),

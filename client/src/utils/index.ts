@@ -68,6 +68,7 @@ export function formatRelativeTime(date: string | Date): string {
 export function getStatusColor(status: string): string {
   const statusColors: Record<string, string> = {
     '生产中': 'text-blue-600 bg-blue-100',
+    '已发货': 'text-orange-600 bg-orange-100',
     '使用中(正常)': 'text-green-600 bg-green-100',
     '使用中(异常)': 'text-red-600 bg-red-100',
     '已停用': 'text-gray-500 bg-gray-100',
