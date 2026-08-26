@@ -66,6 +66,8 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
   const [customerId, setCustomerId] = useState<number | ''>(bundle?.customer_id || '');
   const [remoteCode, setRemoteCode] = useState(bundle?.remote_code || '');
   const [password, setPassword] = useState(bundle?.password || '');
+  const [merchantId, setMerchantId] = useState(bundle?.merchant_id || '');
+  const [merchantPassword, setMerchantPassword] = useState(bundle?.merchant_password || '');
   const [description, setDescription] = useState(bundle?.description || '');
 
   const [selectedDevices, setSelectedDevices] = useState<Device[]>([]);
@@ -294,7 +296,9 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
           customer_id: customerId as number,
           description: description || undefined,
           remote_code: remoteCode,
-          password: password
+          password: password,
+          merchant_id: merchantId,
+          merchant_password: merchantPassword
         });
         const currentIds = bundleDevices.map(d => d.id);
         const toAdd = selectedDeviceIds.filter(id => !currentIds.includes(id));
@@ -340,6 +344,8 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
         description: description.trim() || undefined,
         remote_code: remoteCode.trim() || undefined,
         password: password.trim() || undefined,
+        merchant_id: merchantId.trim() || undefined,
+        merchant_password: merchantPassword.trim() || undefined,
         device_ids: selectedDeviceIds.length > 0 ? selectedDeviceIds : undefined,
         new_devices: newDevices.length > 0 ? newDevices : undefined,
       });
@@ -415,6 +421,17 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">密码 <span className="text-gray-400 font-normal">(共享)</span></label>
                   <input type="text" value={password} onChange={e => setPassword(e.target.value)} placeholder="所有设备共用密码" className={inputCls} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">商户号 <span className="text-gray-400 font-normal">(共享)</span></label>
+                  <input type="text" value={merchantId} onChange={e => setMerchantId(e.target.value)} placeholder="所有设备共用商户号" className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">商户密码 <span className="text-gray-400 font-normal">(共享)</span></label>
+                  <input type="text" value={merchantPassword} onChange={e => setMerchantPassword(e.target.value)} placeholder="所有设备共用商户密码" className={inputCls} />
                 </div>
               </div>
 
