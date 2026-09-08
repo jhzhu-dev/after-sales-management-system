@@ -57,6 +57,7 @@ export default function Issues() {
   const [selectedIssues, setSelectedIssues] = useState<number[]>([]);
   const [showIssueForm, setShowIssueForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showUpgradeFilters, setShowUpgradeFilters] = useState(false);
   const [moduleTypes, setModuleTypes] = useState<Array<{id: number, name: string}>>([]);
 
   // 从实际问题数据中派生模块选项（含自定义模块名）
@@ -763,8 +764,32 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
 
     return (
       <div className="space-y-4">
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-20">
+          <div className="flex items-center justify-between px-2 py-1.5">
+            <button
+              type="button"
+              onClick={() => setShowUpgradeFilters(f => !f)}
+              className="flex items-center text-sm font-medium text-gray-700 hover:text-primary-600"
+            >
+              <span>筛选</span>
+              <span className="text-xs ml-2">{showUpgradeFilters ? '▲ 收起' : '▼ 展开'}</span>
+            </button>
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-gray-500 whitespace-nowrap">共 {upgradeTotal} 条</p>
+              <ExportButton
+                onExport={handleExportUpgrades}
+              />
+              <button
+                onClick={handlePrint}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <PrinterIcon className="h-4 w-4 mr-2" />
+                打印
+              </button>
+            </div>
+          </div>
+          {showUpgradeFilters && (
+          <div className="flex flex-wrap items-center gap-3 p-2 3xl:p-3">
             <div className="relative flex-1 min-w-[200px]">
               <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               <input
@@ -789,26 +814,16 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               options={[{ value: '', label: '所有版本类型' }, { value: 'factory', label: '出厂版本' }, { value: 'update', label: '更新版本' }]}
               className="min-w-40 bg-card border border-border rounded-xl py-2 pl-3 pr-8 text-sm focus:ring-2 focus:ring-primary-500/40"
             />
-            <Select
+            <SearchableSelect
               value={upgradeFilters.customer}
               onChange={v => setUpgradeFilters(f => ({ ...f, customer: v }))}
               placeholder="所有客户"
-              options={[{ value: '', label: '所有客户' }, ...customers.map(c => ({ value: c.name, label: c.name }))]}
+              searchPlaceholder="搜索客户名称或简称"
+              options={customers.map(c => ({ id: c.name, name: c.name, short_name: c.short_name }))}
               className="min-w-40 bg-card border border-border rounded-xl py-2 pl-3 pr-8 text-sm focus:ring-2 focus:ring-primary-500/40"
             />
-            <div className="flex-1"></div>
-            <ExportButton
-              onExport={handleExportUpgrades}
-            />
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <PrinterIcon className="h-4 w-4 mr-2" />
-              打印
-            </button>
-            <p className="text-sm text-gray-500 whitespace-nowrap">共 {upgradeTotal} 条</p>
           </div>
+          )}
         </div>
         <div ref={upgradeScrollRef} className="bg-card rounded-2xl border border-border shadow-soft overflow-auto no-scrollbar" style={{ maxHeight: 'calc(100vh - 240px)' }}>
           {upgradeLoading ? (
