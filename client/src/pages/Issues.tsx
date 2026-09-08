@@ -817,7 +817,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             <p className="text-sm text-gray-500 whitespace-nowrap">共 {upgradeTotal} 条</p>
           </div>
         </div>
-        <div ref={upgradeScrollRef} className="bg-card rounded-2xl border border-border shadow-soft overflow-auto" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+        <div ref={upgradeScrollRef} className="bg-card rounded-2xl border border-border shadow-soft overflow-auto no-scrollbar" style={{ maxHeight: 'calc(100vh - 240px)' }}>
           {upgradeLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -825,15 +825,15 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
           ) : upgrades.length === 0 ? (
             <div className="text-center py-16 text-gray-400">暂无版本演进记录</div>
           ) : (
-            <table className="min-w-full divide-y divide-gray-100">
-              <thead className="bg-gray-50 sticky top-0 z-10">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted sticky top-0 z-10">
                 <tr>
                   {['订单号','设备简称','客户','模块类型','版本号','变更说明','操作人','发布日期','检查项'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border">
                 {upgrades.slice(0, visibleUpgradeCount).map((item: any) => {
                   const checklist: any[] = (() => {
                     if (!item.checklist) return [];
@@ -849,7 +849,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                   };
                   return (
                     <React.Fragment key={item.id}>
-                      <tr className="hover:bg-blue-50 transition-colors duration-150">
+                      <tr className="hover:bg-muted transition-colors duration-150">
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-900 text-sm">{item.device_name || '-'}</div>
                           <div className="text-xs text-gray-400">{item.device_id}</div>

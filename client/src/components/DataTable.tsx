@@ -98,7 +98,7 @@ export default function DataTable<T extends Record<string, any>>({
 
   if (loading) {
     return (
-      <div className="apple-card">
+      <div className="bg-card rounded-2xl border border-border shadow-soft">
         <div className="p-4 3xl:p-6">
           <div className="animate-pulse">
             <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
@@ -114,18 +114,18 @@ export default function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div className={cn('apple-card overflow-hidden', className)}>
-      <div ref={scrollRef} className={(scrollable || onLoadMore) ? 'overflow-auto' : 'overflow-x-auto'} style={(scrollable || onLoadMore) ? { maxHeight: 'calc(100vh - 240px)' } : undefined}>
-        <table className="min-w-full divide-y divide-gray-200" style={fixedLayout ? { tableLayout: 'fixed' } : undefined}>
-          <thead className="bg-gray-100 backdrop-blur border-b border-gray-200 sticky top-0 z-10">
+    <div className={cn('bg-card rounded-2xl border border-border shadow-soft overflow-hidden', className)}>
+      <div ref={scrollRef} className={(scrollable || onLoadMore) ? 'overflow-auto no-scrollbar' : 'overflow-x-auto no-scrollbar'} style={(scrollable || onLoadMore) ? { maxHeight: 'calc(100vh - 240px)' } : undefined}>
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted backdrop-blur border-b border-border sticky top-0 z-10">
             <tr>
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
                   className={cn(
-                    'text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap',
+                    'text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap',
                     compact ? 'px-3 py-2' : 'px-4 py-2 3xl:px-6 3xl:py-3',
-                    column.sortable && 'cursor-pointer hover:bg-gray-100'
+                    column.sortable && 'cursor-pointer hover:bg-muted'
                   )}
                   style={{ width: column.width }}
                   onClick={() => column.sortable && handleSort(column.key)}
@@ -165,12 +165,12 @@ export default function DataTable<T extends Record<string, any>>({
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="divide-y divide-border">
             {sortedData.map((record, index) => (
               <tr
                 key={String(record[rowKey])}
                 className={cn(
-                  'hover:bg-blue-50 transition-colors duration-150',
+                  'hover:bg-muted transition-colors duration-150',
                   onRowClick && 'cursor-pointer'
                 )}
                 onClick={() => onRowClick?.(record)}
@@ -193,7 +193,7 @@ export default function DataTable<T extends Record<string, any>>({
       </div>
 
       {pagination && (
-        <div className="bg-transparent px-4 py-3 flex items-center justify-between border-t border-gray-200/70 dark:border-white/10 sm:px-6">
+        <div className="bg-transparent px-4 py-3 flex items-center justify-between border-t border-border sm:px-6">
           <div className="flex-1 flex justify-between sm:hidden">
             <button
               onClick={() => pagination.onChange(pagination.current - 1, pagination.pageSize)}

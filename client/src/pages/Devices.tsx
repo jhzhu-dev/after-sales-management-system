@@ -1177,27 +1177,27 @@ export default function Devices() {
 
           {/* 全局搜索结果表 */}
           <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
+            <div className="overflow-x-auto no-scrollbar">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead className="bg-muted">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">生产序列号</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">设备编码</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">订单号 / 简称</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">产品名称</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">客户</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">远程码</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">所属多合一</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">生产序列号</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">设备编码</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">订单号 / 简称</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">产品名称</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">客户</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">远程码</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">所属多合一</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">状态</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border">
                   {globalSearchResults.length === 0 ? (
                     <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">没有找到匹配的设备</td></tr>
                   ) : globalSearchResults.slice(0, visibleCount).map(d => (
                     <tr
                       key={d.id}
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className="hover:bg-muted cursor-pointer"
                       onClick={() => { sessionStorage.setItem('devices_highlight', d.id); navigate(`/devices/${d.id}`); }}
                     >
                       <td className="px-4 py-3 font-mono text-primary-600 font-medium whitespace-nowrap">{d.id}</td>
