@@ -99,7 +99,7 @@ html.dark body {
   --primary-foreground: #ffffff;
   --secondary: rgba(255, 255, 255, 0.72);
   --secondary-foreground: #2c3e50;
-  --muted: rgba(242, 243, 244, 0.96);
+  --muted: #eef0f2;
   --muted-foreground: #85929e;
   --accent: rgba(52, 152, 219, 0.08);
   --accent-foreground: #2c3e50;
@@ -129,7 +129,7 @@ html.dark {
   --primary-foreground: #ffffff;
   --secondary: rgba(255, 255, 255, 0.06);
   --secondary-foreground: #e2e8f0;
-  --muted: rgba(255, 255, 255, 0.10);
+  --muted: rgba(255, 255, 255, 0.18);
   --muted-foreground: #94a3b8;
   --accent: rgba(59, 130, 246, 0.15);
   --accent-foreground: #bfdbfe;
