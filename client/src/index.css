@@ -80,26 +80,26 @@ html.dark body {
 
 /* Apple 风格设计令牌 */
 :root {
-  --apple-surface: rgba(255, 255, 255, 0.92);
-  --apple-surface-strong: rgba(255, 255, 255, 0.97);
-  --apple-surface-muted: rgba(242, 243, 244, 0.95);
+  --apple-surface: rgba(255, 255, 255, 0.72);
+  --apple-surface-strong: rgba(255, 255, 255, 0.86);
+  --apple-surface-muted: rgba(255, 255, 255, 0.66);
   --apple-border: rgba(44, 62, 80, 0.10);
   --apple-border-strong: rgba(44, 62, 80, 0.16);
-  --apple-shadow: 0 1px 2px rgba(28, 40, 51, 0.05), 0 10px 30px rgba(28, 40, 51, 0.06);
-  --apple-shadow-lg: 0 2px 4px rgba(28, 40, 51, 0.06), 0 16px 44px rgba(28, 40, 51, 0.09);
-  --apple-blur: 20px;
+  --apple-shadow: 0 1px 2px rgba(28, 40, 51, 0.05), 0 10px 30px rgba(28, 40, 51, 0.07);
+  --apple-shadow-lg: 0 2px 4px rgba(28, 40, 51, 0.06), 0 16px 44px rgba(28, 40, 51, 0.10);
+  --apple-blur: 24px;
   /* shadcn 语义令牌（浅色） */
   --background: #f2f3f4;
   --foreground: #1c2833;
-  --card: #ffffff;
+  --card: rgba(255, 255, 255, 0.72);
   --card-foreground: #1c2833;
-  --popover: #ffffff;
+  --popover: rgba(255, 255, 255, 0.85);
   --popover-foreground: #1c2833;
   --primary: #3498db;
   --primary-foreground: #ffffff;
-  --secondary: #e9ebed;
+  --secondary: rgba(255, 255, 255, 0.55);
   --secondary-foreground: #2c3e50;
-  --muted: #eef0f1;
+  --muted: rgba(242, 243, 244, 0.66);
   --muted-foreground: #85929e;
   --accent: rgba(52, 152, 219, 0.08);
   --accent-foreground: #2c3e50;
@@ -111,9 +111,9 @@ html.dark body {
 }
 
 html.dark {
-  --apple-surface: rgba(28, 31, 41, 0.72);
-  --apple-surface-strong: rgba(28, 31, 41, 0.86);
-  --apple-surface-muted: rgba(28, 31, 41, 0.55);
+  --apple-surface: rgba(28, 31, 41, 0.50);
+  --apple-surface-strong: rgba(28, 31, 41, 0.72);
+  --apple-surface-muted: rgba(28, 31, 41, 0.42);
   --apple-border: rgba(255, 255, 255, 0.08);
   --apple-border-strong: rgba(255, 255, 255, 0.12);
   --apple-shadow: 0 1px 2px rgba(0, 0, 0, 0.30), 0 8px 24px rgba(0, 0, 0, 0.40);
@@ -121,9 +121,9 @@ html.dark {
   /* shadcn 语义令牌（深色） */
   --background: #0b1220;
   --foreground: #e2e8f0;
-  --card: rgba(28, 31, 41, 0.72);
+  --card: rgba(28, 31, 41, 0.52);
   --card-foreground: #e2e8f0;
-  --popover: rgba(28, 31, 41, 0.90);
+  --popover: rgba(28, 31, 41, 0.78);
   --popover-foreground: #e2e8f0;
   --primary: #3b82f6;
   --primary-foreground: #ffffff;
@@ -213,6 +213,13 @@ html.dark {
   }
 }
 
+/* 让卡片/弹窗等 bg-card 表面呈现毛玻璃（配合半透明 --card） */
+.bg-card,
+.bg-popover {
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
 /* Tailwind v4 兼容：保留 flex-* 旧名称（flex-shrink/flex-grow 已改名） */
 @layer utilities {
   .flex-shrink-0 {
@@ -254,8 +261,8 @@ html.dark {
 .absolute.inset-0.bg-black\/40,
 .absolute.inset-0.bg-black\/75,
 .fixed.inset-0.bg-gray-500\/75 {
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* 深色：背景表面（卡片 / 表格 / 弹窗 / 页面底） */
@@ -865,10 +872,14 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   .bg-white,
   .bg-gray-50,
   .bg-blue-50,
-  .bg-green-50 {
+  .bg-green-50,
+  .bg-card,
+  .bg-popover {
     background: white !important;
     padding: 4pt !important;
     margin-bottom: 4pt !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 
   /* 边框保留但优化 */
