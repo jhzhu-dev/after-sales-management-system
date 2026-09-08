@@ -8,7 +8,7 @@ import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
 import CustomerRequirementForm from '../components/CustomerRequirementForm';
 import { customerRequirementApi } from '../services/api';
 import { CustomerRequirement, CustomerRequirementFormData, CustomerRequirementAttachment } from '../types';
-import { formatDate } from '../utils';
+import { formatDate, getUrgencyColor, getRequirementTypeColor } from '../utils';
 
 const STATUSES = ['待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
 const STATUS_COLORS: Record<string, string> = {
@@ -200,8 +200,8 @@ const CustomerRequirementDetail: React.FC = () => {
 
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {field('客户', data.customer_name)}
-            {field('需求分类', data.requirement_type)}
-            {field('紧急程度', data.urgency)}
+            {field('需求分类', <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getRequirementTypeColor(data.requirement_type)}`}>{data.requirement_type}</span>)}
+            {field('紧急程度', <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getUrgencyColor(data.urgency)}`}>{data.urgency}</span>)}
             {field('当前状态', statusBadge(data.status))}
             {field('需求提出日期', data.proposed_date)}
             {field('发布版本号', data.publish_version)}
@@ -225,6 +225,29 @@ const CustomerRequirementDetail: React.FC = () => {
               <dt className="text-xs text-gray-500 mb-1">废弃原因</dt>
               <dd className="text-sm text-red-600 whitespace-pre-wrap">{data.deprecated_reason}</dd>
             </div>
+          )}
+        </SectionCard>
+
+        {/* 涉及设备 */}
+        <SectionCard title="涉及设备">
+          {data.devices && data.devices.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {data.devices.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => navigate(`/devices/${d.id}`)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
+                  </svg>
+                  {d.name || d.nickname || d.id}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">{data.device_names || '暂无涉及设备'}</p>
           )}
         </SectionCard>
 

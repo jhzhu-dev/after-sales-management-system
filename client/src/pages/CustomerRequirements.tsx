@@ -8,7 +8,7 @@ import SearchableSelect, { SearchableSelectOption } from '../components/Searchab
 import CustomerRequirementForm from '../components/CustomerRequirementForm';
 import { customerRequirementApi, customerApi } from '../services/api';
 import { CustomerRequirement, CustomerRequirementFormData, Customer } from '../types';
-import { formatDate } from '../utils';
+import { formatDate, getUrgencyColor, getRequirementTypeColor } from '../utils';
 
 const REQ_TYPES = ['接口对接', '功能定制', '输出结果定制'];
 const URGENCIES = ['低', '普通', '高', '紧急'];
@@ -105,12 +105,24 @@ const CustomerRequirements: React.FC = () => {
     </span>
   );
 
+  const renderTypeBadge = (type: string) => (
+    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getRequirementTypeColor(type)}`}>
+      {type}
+    </span>
+  );
+
+  const renderUrgencyBadge = (urgency: string) => (
+    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getUrgencyColor(urgency)}`}>
+      {urgency}
+    </span>
+  );
+
   const columns: Column<CustomerRequirement>[] = [
     { key: 'req_code', title: '需求编号', width: '140px' },
     { key: 'customer_name', title: '客户' },
     { key: 'device_names', title: '涉及设备', render: (v: any) => v || '-' },
-    { key: 'requirement_type', title: '分类' },
-    { key: 'urgency', title: '紧急程度', render: (v: any) => <span className={v === '紧急' ? 'text-red-600 font-medium' : ''}>{v}</span> },
+    { key: 'requirement_type', title: '分类', render: (v: any) => renderTypeBadge(v) },
+    { key: 'urgency', title: '紧急程度', render: (v: any) => renderUrgencyBadge(v) },
     { key: 'status', title: '状态', render: (v: any) => renderStatusBadge(v) },
     { key: 'proposed_date', title: '提出日期' },
     { key: 'publish_version', title: '发布版本', render: (v: any) => v || '-' },
