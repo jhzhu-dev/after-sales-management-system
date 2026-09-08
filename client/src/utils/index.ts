@@ -108,14 +108,9 @@ export function getUrgencyColor(urgency: string): string {
   return urgencyColors[urgency] || 'text-gray-600 bg-gray-100';
 }
 
-// 获取需求分类颜色
+// 获取需求分类颜色（参照运维中心“分类”徽章：统一紫色）
 export function getRequirementTypeColor(type: string): string {
-  const typeColors: Record<string, string> = {
-    '接口对接': 'text-blue-600 bg-blue-100',
-    '功能定制': 'text-purple-600 bg-purple-100',
-    '输出结果定制': 'text-cyan-600 bg-cyan-100',
-  };
-  return typeColors[type] || 'text-gray-600 bg-gray-100';
+  return 'text-purple-700 bg-purple-100';
 }
 
 // 获取设备类型颜色

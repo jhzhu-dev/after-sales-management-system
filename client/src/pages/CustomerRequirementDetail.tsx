@@ -200,8 +200,8 @@ const CustomerRequirementDetail: React.FC = () => {
 
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {field('客户', data.customer_name)}
-            {field('需求分类', <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getRequirementTypeColor(data.requirement_type)}`}>{data.requirement_type}</span>)}
-            {field('紧急程度', <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getUrgencyColor(data.urgency)}`}>{data.urgency}</span>)}
+            {field('需求分类', <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getRequirementTypeColor(data.requirement_type)}`}>{data.requirement_type}</span>)}
+            {field('紧急程度', <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getUrgencyColor(data.urgency)}`}>{data.urgency}</span>)}
             {field('当前状态', statusBadge(data.status))}
             {field('需求提出日期', data.proposed_date)}
             {field('发布版本号', data.publish_version)}

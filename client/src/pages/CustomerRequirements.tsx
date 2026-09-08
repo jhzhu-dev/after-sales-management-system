@@ -106,13 +106,13 @@ const CustomerRequirements: React.FC = () => {
   );
 
   const renderTypeBadge = (type: string) => (
-    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getRequirementTypeColor(type)}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getRequirementTypeColor(type)}`}>
       {type}
     </span>
   );
 
   const renderUrgencyBadge = (urgency: string) => (
-    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getUrgencyColor(urgency)}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getUrgencyColor(urgency)}`}>
       {urgency}
     </span>
   );
