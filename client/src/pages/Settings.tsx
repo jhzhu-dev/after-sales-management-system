@@ -11,6 +11,7 @@ import {
   TagIcon,
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
+import { Button } from '../components/ui/button';
 import { formatDate } from '../utils';
 import { moduleTypeApi, customerApi, sopTemplateApi, feishuApi, issueClassificationApi } from '../services/api';
 import { ModuleType, Customer, SOPTemplate, SOPTemplateItem, FeishuUser, IssueClassification } from '../types';
@@ -418,13 +419,10 @@ export default function Settings() {
           <div>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-gray-900">模块类型列表</h2>
-              <button
-                onClick={() => handleOpenModal()}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
+              <Button onClick={() => handleOpenModal()}>
                 <PlusIcon className="h-5 w-5" />
                 新增模块类型
-              </button>
+              </Button>
             </div>
 
             {loading ? (
@@ -789,13 +787,10 @@ export default function Settings() {
                   onChange={(e) => setCustomerSearch(e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <button
-                  onClick={() => handleOpenCustomerModal()}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
+                <Button onClick={() => handleOpenCustomerModal()}>
                   <PlusIcon className="h-5 w-5" />
                   新增客户
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -928,13 +923,10 @@ export default function Settings() {
                 <h2 className="text-lg font-semibold text-gray-900">问题分类管理</h2>
                 <p className="text-sm text-gray-500 mt-1">管理问题记录的归属分类，初始内置：运营问题、出厂问题、设备问题</p>
               </div>
-              <button
-                onClick={() => handleOpenClassificationModal()}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
+              <Button onClick={() => handleOpenClassificationModal()}>
                 <PlusIcon className="h-5 w-5" />
                 新增分类
-              </button>
+              </Button>
             </div>
 
             {loading ? (

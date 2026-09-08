@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
+import { Button } from '../components/ui/button';
 import { feishuApi } from '../services/api';
 import { FeishuUser } from '../types';
 
@@ -209,20 +210,12 @@ const FeishuSettings: React.FC = () => {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
+            <Button onClick={handleSave} disabled={saving}>
               {saving || syncing ? '保存并同步中...' : '保存并同步群组成员'}
-            </button>
-            <button
-              onClick={handleTest}
-              disabled={testing}
-              className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 disabled:opacity-50"
-            >
+            </Button>
+            <Button variant="secondary" onClick={handleTest} disabled={testing}>
               {testing ? '发送中...' : '发送测试消息'}
-            </button>
+            </Button>
           </div>
         </div>
 
