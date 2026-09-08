@@ -23,6 +23,29 @@
   --color-primary-900: #1e3a8a;
 }
 
+/* shadcn 语义工具类映射（bg-background / text-foreground / border-border 等） */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
 /* ========== 全局主题：浅色 / 深色 ========== */
 html {
   color-scheme: light;
@@ -35,11 +58,11 @@ html.dark {
 
 body {
   min-height: 100vh;
-  background-color: #f4f6fb;
+  background-color: #e8ecf3;
   background-image:
-    radial-gradient(1200px 600px at 8% -10%, rgba(59, 130, 246, 0.10), transparent 60%),
-    radial-gradient(1000px 560px at 100% 0%, rgba(147, 197, 253, 0.14), transparent 55%),
-    linear-gradient(180deg, #fbfcfe 0%, #f4f6fb 100%);
+    radial-gradient(1200px 600px at 8% -10%, rgba(59, 130, 246, 0.12), transparent 60%),
+    radial-gradient(1000px 560px at 100% 0%, rgba(147, 197, 253, 0.16), transparent 55%),
+    linear-gradient(180deg, #f2f5fa 0%, #e8ecf3 100%);
   background-attachment: fixed;
   color: #1f2937;
   transition: background-color 0.25s ease, color 0.25s ease;
@@ -60,11 +83,31 @@ html.dark body {
   --apple-surface: rgba(255, 255, 255, 0.72);
   --apple-surface-strong: rgba(255, 255, 255, 0.86);
   --apple-surface-muted: rgba(255, 255, 255, 0.55);
-  --apple-border: rgba(17, 24, 39, 0.06);
-  --apple-border-strong: rgba(17, 24, 39, 0.10);
-  --apple-shadow: 0 1px 2px rgba(17, 24, 39, 0.04), 0 8px 24px rgba(17, 24, 39, 0.06);
-  --apple-shadow-lg: 0 2px 4px rgba(17, 24, 39, 0.04), 0 16px 48px rgba(17, 24, 39, 0.10);
+  --apple-border: rgba(17, 24, 39, 0.12);
+  --apple-border-strong: rgba(17, 24, 39, 0.16);
+  --apple-shadow: 0 1px 3px rgba(17, 24, 39, 0.08), 0 12px 32px rgba(17, 24, 39, 0.10);
+  --apple-shadow-lg: 0 2px 4px rgba(17, 24, 39, 0.08), 0 18px 48px rgba(17, 24, 39, 0.14);
   --apple-blur: 20px;
+  /* shadcn 语义令牌（浅色） */
+  --background: #f4f6fb;
+  --foreground: #1f2937;
+  --card: rgba(255, 255, 255, 0.72);
+  --card-foreground: #1f2937;
+  --popover: rgba(255, 255, 255, 0.90);
+  --popover-foreground: #1f2937;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(17, 24, 39, 0.04);
+  --secondary-foreground: #1f2937;
+  --muted: rgba(17, 24, 39, 0.05);
+  --muted-foreground: #6b7280;
+  --accent: rgba(59, 130, 246, 0.10);
+  --accent-foreground: #1d4ed8;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: rgba(17, 24, 39, 0.12);
+  --input: rgba(17, 24, 39, 0.14);
+  --ring: rgba(59, 130, 246, 0.5);
 }
 
 html.dark {
@@ -75,6 +118,26 @@ html.dark {
   --apple-border-strong: rgba(255, 255, 255, 0.12);
   --apple-shadow: 0 1px 2px rgba(0, 0, 0, 0.30), 0 8px 24px rgba(0, 0, 0, 0.40);
   --apple-shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.30), 0 16px 48px rgba(0, 0, 0, 0.50);
+  /* shadcn 语义令牌（深色） */
+  --background: #0b1220;
+  --foreground: #e2e8f0;
+  --card: rgba(28, 31, 41, 0.72);
+  --card-foreground: #e2e8f0;
+  --popover: rgba(28, 31, 41, 0.90);
+  --popover-foreground: #e2e8f0;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.06);
+  --secondary-foreground: #e2e8f0;
+  --muted: rgba(255, 255, 255, 0.06);
+  --muted-foreground: #94a3b8;
+  --accent: rgba(59, 130, 246, 0.15);
+  --accent-foreground: #bfdbfe;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.10);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: rgba(59, 130, 246, 0.6);
 }
 
 * {
@@ -163,6 +226,9 @@ html.dark {
   }
   .flex-grow {
     flex-grow: 1;
+  }
+  .shadow {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.10), 0 1px 2px -1px rgb(0 0 0 / 0.10);
   }
 }
 

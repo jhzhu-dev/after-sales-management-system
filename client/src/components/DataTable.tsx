@@ -117,7 +117,7 @@ export default function DataTable<T extends Record<string, any>>({
     <div className={cn('apple-card overflow-hidden', className)}>
       <div ref={scrollRef} className={(scrollable || onLoadMore) ? 'overflow-auto' : 'overflow-x-auto'} style={(scrollable || onLoadMore) ? { maxHeight: 'calc(100vh - 240px)' } : undefined}>
         <table className="min-w-full divide-y divide-gray-200" style={fixedLayout ? { tableLayout: 'fixed' } : undefined}>
-          <thead className="bg-gray-50/70 backdrop-blur sticky top-0 z-10">
+          <thead className="bg-gray-100 backdrop-blur border-b border-gray-200 sticky top-0 z-10">
             <tr>
               {columns.map((column) => (
                 <th

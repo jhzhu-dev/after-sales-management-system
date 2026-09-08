@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import { format, parseISO, isValid } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { useState, useEffect } from 'react';
@@ -16,9 +17,9 @@ export function useIs1080p(): boolean {
   return is1080p;
 }
 
-// 合并CSS类名
+// 合并CSS类名（支持 tailwind-merge 去重冲突类）
 export function cn(...inputs: ClassValue[]) {
-  return clsx(inputs);
+  return twMerge(clsx(inputs));
 }
 
 // 格式化日期
