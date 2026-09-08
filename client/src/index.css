@@ -93,7 +93,7 @@ html.dark body {
   --foreground: #1c2833;
   --card: rgba(255, 255, 255, 0.92);
   --card-foreground: #1c2833;
-  --popover: rgba(255, 255, 255, 0.80);
+  --popover: rgba(255, 255, 255, 0.90);
   --popover-foreground: #1c2833;
   --primary: #3498db;
   --primary-foreground: #ffffff;
@@ -123,7 +123,7 @@ html.dark {
   --foreground: #e2e8f0;
   --card: rgba(28, 31, 41, 0.68);
   --card-foreground: #e2e8f0;
-  --popover: rgba(28, 31, 41, 0.72);
+  --popover: rgba(28, 31, 41, 0.90);
   --popover-foreground: #e2e8f0;
   --primary: #3b82f6;
   --primary-foreground: #ffffff;
@@ -601,6 +601,13 @@ html.dark textarea {
 html.dark input::placeholder,
 html.dark textarea::placeholder {
   color: #6b7280;
+}
+
+/* 原生下拉控件统一为圆角 + 玻璃质感（闭合态） */
+select.rounded-md,
+input.rounded-md,
+input.rounded {
+  border-radius: 0.75rem !important;
 }
 
 /* 深色下滚动条 */
