@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import SearchableSelect, { SearchableSelectOption } from './SearchableSelect';
 import { customerRequirementApi, customerApi, deviceApi } from '../services/api';
+import { Button } from '../components/ui/button';
 import { CustomerRequirement, CustomerRequirementFormData, Customer, Device, RequirementType } from '../types';
 
 interface CustomerRequirementFormProps {
@@ -203,10 +204,8 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">取消</button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
-              {submitting ? '提交中...' : '保存'}
-            </button>
+            <Button type="button" variant="outline" onClick={onClose}>取消</Button>
+            <Button type="submit" disabled={submitting}>{submitting ? '提交中...' : '保存'}</Button>
           </div>
         </form>
       </div>

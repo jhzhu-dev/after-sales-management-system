@@ -2,6 +2,7 @@
 import { XMarkIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { DeviceBundle, Device, Customer, NewBundleDevice, FeishuUser } from '../types';
 import { customerApi, deviceApi, bundleApi, productLineApi, productApi, productModuleApi, feishuApi } from '../services/api';
+import { Button } from '../components/ui/button';
 import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 
 interface BundleFormProps {
@@ -646,10 +647,8 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                 {isEdit && (<span>已选 {selectedDeviceIds.length} 台设备</span>)}
               </div>
               <div className="flex gap-3">
-                <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">取消</button>
-                <button type="submit" disabled={submitting} className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
-                  {submitting ? '保存中...' : (isEdit ? '保存修改' : '创建多合一设备')}
-                </button>
+                <Button type="button" variant="outline" onClick={onClose}>取消</Button>
+                <Button type="submit" disabled={submitting}>{submitting ? '保存中...' : (isEdit ? '保存修改' : '创建多合一设备')}</Button>
               </div>
             </div>
           </form>
