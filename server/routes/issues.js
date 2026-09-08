@@ -602,15 +602,21 @@ router.put('/:id', [
     Object.keys(updates).forEach(key => {
       if (!allowedFields.includes(key) || updates[key] === undefined) return;
       // 特殊处理日期时间字段
-      if ((key === 'resolved_at' || key === 'visit_at') && updates[key]) {
-        // 将ISO 8601格式转换为MySQL兼容格式（使用本地时间，避免时区偏移）
-        const date = new Date(updates[key]);
-        if (!isNaN(date.getTime())) {
-          const pad = n => String(n).padStart(2, '0');
-          const localStr = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-          updateFields.push(`${key} = ?`);
-          updateValues.push(localStr);
+      if ((key === 'resolved_at' || key === 'visit_at' || key === 'feedback_time') && updates[key]) {
+        let value = String(updates[key]).trim();
+        // 若为 ISO 8601（含 T/Z）或 datetime-local，转换为 MySQL 兼容格式（本地时间）
+        if (value.includes('T') || value.includes('Z')) {
+          const date = new Date(value);
+          if (!isNaN(date.getTime())) {
+            const pad = n => String(n).padStart(2, '0');
+            value = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+          }
+        } else if (value.length === 16) {
+          // datetime-local 无秒：补 :00
+          value += ':00';
         }
+        updateFields.push(`${key} = ?`);
+        updateValues.push(value);
       } else if (key === 'attachments' && updates[key]) {
         updateFields.push(`${key} = ?`);
         updateValues.push(JSON.stringify(updates[key]));
