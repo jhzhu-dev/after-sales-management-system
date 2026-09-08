@@ -1139,7 +1139,7 @@ export default function Devices() {
         {globalSearch && (
         <>
           {/* 产品线 + 状态筛选器（全局搜索时也可用） */}
-          <div className="bg-card rounded-2xl border border-border shadow-soft p-4 no-print">
+          <div className="bg-card rounded-2xl border border-border shadow-soft p-4 no-print relative z-20">
             <div className="flex flex-wrap items-end gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">产品线</label>
@@ -1250,7 +1250,7 @@ export default function Devices() {
         {!globalSearch && viewMode === 'devices' && (
         <>
         {/* 筛选器 */}
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 no-print">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 no-print relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -119,7 +119,7 @@ const TestTasks: React.FC = () => {
 
         {successMsg && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">{successMsg}</div>}
 
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3 relative z-20">
           <div>
             <label className="block text-xs text-gray-500 mb-1">产品</label>
             <SearchableSelect value={filters.product_id} onChange={v => setFilters(f => ({ ...f, product_id: v, page: 1 }))} options={productOptions} placeholder="全部产品" />

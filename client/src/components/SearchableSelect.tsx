@@ -22,7 +22,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   options,
   placeholder = '请选择',
   searchPlaceholder = '搜索...',
-  className = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40',
+  className = 'w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40',
 }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -66,18 +66,18 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         onClick={() => setOpen(prev => !prev)}
         className={`${className} text-left bg-white flex items-center justify-between gap-2`}
       >
-        <span className={value ? 'text-gray-900' : 'text-gray-900'}>{selectedLabel}</span>
-        <ChevronDownIcon className={`h-4 w-4 text-gray-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <span className={value ? 'text-foreground' : 'text-muted-foreground'}>{selectedLabel}</span>
+        <ChevronDownIcon className={`h-4 w-4 text-muted-foreground flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg overflow-hidden">
+        <div className="absolute z-20 w-full mt-1 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden">
           <div className="p-2 border-b border-gray-100">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+              className="w-full px-2 py-1.5 text-sm bg-muted/40 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               autoFocus
             />
           </div>
@@ -87,18 +87,18 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 key={o.id || '__all__'}
                 type="button"
                 onClick={() => handleSelect(o.id)}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 ${
-                  value === o.id ? 'bg-blue-50 text-primary-700 font-medium' : 'text-gray-900'
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-muted ${
+                  value === o.id ? 'bg-primary-50 text-primary-700 font-medium' : 'text-foreground'
                 }`}
               >
                 {o.name}
                 {o.short_name && o.id !== '' && (
-                  <span className="text-gray-400 ml-1">({o.short_name})</span>
+                  <span className="text-muted-foreground ml-1">({o.short_name})</span>
                 )}
               </button>
             ))}
             {filteredOptions.length === 0 && (
-              <div className="px-3 py-2 text-sm text-gray-500">无匹配项</div>
+              <div className="px-3 py-2 text-sm text-muted-foreground">无匹配项</div>
             )}
           </div>
         </div>

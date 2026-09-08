@@ -147,7 +147,7 @@ const CustomerRequirements: React.FC = () => {
         )}
 
         {/* 筛选区 */}
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3 relative z-20">
           <div>
             <label className="block text-xs text-gray-500 mb-1">客户</label>
             <SearchableSelect value={filters.customer_id} onChange={v => setFilters(f => ({ ...f, customer_id: v, page: 1 }))} options={customerOptions} placeholder="全部客户" />

@@ -7,6 +7,7 @@ import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import KnowledgeBase from '../components/KnowledgeBase';
 import DataTable from '../components/DataTable';
+import SearchableSelect from '../components/SearchableSelect';
 import IssueForm from '../components/IssueForm';
 import ExportButton from '../components/ExportButton';
 import { exportToExcel } from '../utils/exportUtils';
@@ -997,7 +998,20 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <h1 className="text-xl 3xl:text-2xl font-black text-gray-900 tracking-tight">运维中心</h1>
               <p className="text-gray-500 text-sm mt-1 font-medium">统一管理全生命周期的运维问题与升级演进</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap md:justify-end">
+            {activeTab === 'issues' && (
+              <div className="flex items-center gap-2">
+                <ExportButton onExport={handleExportIssues} />
+                <Button variant="outline" size="sm" onClick={handlePrint}>
+                  <PrinterIcon className="h-4 w-4" />
+                  打印
+                </Button>
+                <Button onClick={handleAdd}>
+                  <PlusIcon className="h-4 w-4" />
+                  新增问题
+                </Button>
+              </div>
+            )}
             <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
               {[
                 { id: 'issues' as const, label: '问题记录', icon: ChatBubbleLeftRightIcon },
@@ -1031,21 +1045,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         {/* 故障管理内容 */}
         {activeTab === 'issues' && (<>
 
-        {/* 批量操作按钮 */}
-        <div className="flex justify-end gap-2 no-print">
-          <ExportButton
-            onExport={handleExportIssues}
-          />
-          <Button variant="outline" size="sm" onClick={handlePrint}>
-            <PrinterIcon className="h-4 w-4" />
-            打印
-          </Button>
-          <Button onClick={handleAdd}>
-            <PlusIcon className="h-4 w-4" />
-            新增问题
-          </Button>
-        </div>
-
         {/* 批量操作 */}
         {selectedIssues.length > 0 && (
           <div className="bg-blue-50 border border-primary-200 rounded-lg p-4 no-print">
@@ -1073,7 +1072,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         )}
 
         {/* 筛选器 */}
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 no-print">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 no-print relative z-20">
           <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1091,18 +1090,12 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 客户
               </label>
-              <select
+              <SearchableSelect
                 value={filters.customer || ''}
-                onChange={(e) => handleFilterChange('customer', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="">全部客户</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => handleFilterChange('customer', v)}
+                options={customers.map(c => ({ id: c.name, name: c.name, short_name: c.short_name }))}
+                placeholder="全部客户"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
