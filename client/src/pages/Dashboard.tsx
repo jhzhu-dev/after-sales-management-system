@@ -36,6 +36,14 @@ import {
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
+const severityBarColor = (severity: string) => {
+  const map: Record<string, string> = {
+    'low': '#22C55E', 'medium': '#F59E0B', 'high': '#EF4444',
+    '低': '#22C55E', '中': '#F59E0B', '高': '#EF4444',
+  };
+  return map[severity] || '#EF4444';
+};
+
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -207,7 +215,11 @@ export default function Dashboard() {
                     <XAxis dataKey="severity" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#EF4444" />
+                    <Bar dataKey="count">
+                      {stats.issueSeverityDistribution.map((entry: any, index: number) => (
+                        <Cell key={index} fill={severityBarColor(entry.severity)} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </ChartCard>

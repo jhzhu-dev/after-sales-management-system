@@ -8,6 +8,7 @@ import SearchableSelect, { SearchableSelectOption } from '../components/Searchab
 import TestTaskForm from '../components/TestTaskForm';
 import { testTaskApi, productApi } from '../services/api';
 import { TestTask, TestTaskFormData, Product } from '../types';
+import { getUrgencyColor } from '../utils';
 
 const PRIORITIES = ['低', '普通', '高', '紧急'];
 const STATUSES = ['测试中', '已测试', '通过', '不通过'];
@@ -96,7 +97,7 @@ const TestTasks: React.FC = () => {
     { key: 'product_name', title: '产品', render: (v: any, r: TestTask) => v || '-' },
     { key: 'model_name', title: '模型名称', render: (v: any) => v || '-' },
     { key: 'model_version', title: '版本号', render: (v: any) => v || '-' },
-    { key: 'priority', title: '优先级', render: (v: any) => <span className={v === '紧急' ? 'text-red-600 font-medium' : ''}>{v}</span> },
+    { key: 'priority', title: '优先级', render: (v: any) => <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getUrgencyColor(v)}`}>{v}</span> },
     { key: 'shenzhen_requester_name', title: '深圳需求人', render: (v: any) => v || '-' },
     { key: 'shanghai_tester', title: '上海测试人', render: (v: any) => v || '-' },
     { key: 'status', title: '状态', render: (v: any) => <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[v] || 'text-gray-600 bg-gray-100'}`}>{v}</span> },

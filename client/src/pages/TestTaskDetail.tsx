@@ -8,7 +8,7 @@ import TestTaskForm from '../components/TestTaskForm';
 import TestSummaryForm from '../components/TestSummaryForm';
 import { testTaskApi } from '../services/api';
 import { TestTask, TestTaskFormData } from '../types';
-import { formatDate } from '../utils';
+import { formatDate, getUrgencyColor } from '../utils';
 
 const STATUS_COLORS: Record<string, string> = {
   '测试中': 'text-blue-600 bg-blue-100',
@@ -184,7 +184,7 @@ const TestTaskDetail: React.FC = () => {
             {field('模型名称', data.model_name)}
             {field('模型版本号', data.model_version)}
             {field('当前版本', data.current_version)}
-            {field('优先级别', data.priority)}
+            {field('优先级别', <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getUrgencyColor(data.priority)}`}>{data.priority}</span>)}
             {field('深圳需求人', data.shenzhen_requester_name)}
             {field('上海测试人', data.shanghai_tester)}
             {field('计划完成时间', data.planned_completion_date)}
