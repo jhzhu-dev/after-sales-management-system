@@ -39,6 +39,7 @@ const CustomerRequirementDetail: React.FC = () => {
 
   // 状态流转
   const [targetStatus, setTargetStatus] = useState('');
+  const [operator, setOperator] = useState('');
   const [reason, setReason] = useState('');
   const [publishVersion, setPublishVersion] = useState('');
   const [publishTime, setPublishTime] = useState('');
@@ -79,6 +80,7 @@ const CustomerRequirementDetail: React.FC = () => {
   const handleStatusChange = async () => {
     if (!targetStatus) { alert('请选择目标状态'); return; }
     if (targetStatus === data?.status) { alert('目标状态与当前状态一致'); return; }
+    if (!operator.trim()) { alert('请填写登记人名字'); return; }
     if (!reason.trim()) { alert('请填写状态流转原因'); return; }
     if (targetStatus === '已发布' && (!publishVersion || !publishTime)) { alert('进入「已发布」需填写发布版本号与发布时间'); return; }
     if (targetStatus === '废弃' && !deprecatedReason.trim()) { alert('废弃需求必须填写废弃原因'); return; }
@@ -88,6 +90,7 @@ const CustomerRequirementDetail: React.FC = () => {
     try {
       const res = await customerRequirementApi.changeStatus(reqId, {
         status: targetStatus,
+        operator: operator.trim(),
         reason,
         publish_version: publishVersion || undefined,
         publish_time: publishTime || undefined,
@@ -96,6 +99,7 @@ const CustomerRequirementDetail: React.FC = () => {
       if (res.success) {
         // 隐藏流转表单 + 弹出成功提示
         setTargetStatus('');
+        setOperator('');
         setReason(''); setPublishVersion(''); setPublishTime(''); setDeprecatedReason('');
         setSuccessStatus(newStatus);
         setShowSuccess(true);
@@ -294,6 +298,10 @@ const CustomerRequirementDetail: React.FC = () => {
                 将状态流转至：<span className="font-medium text-gray-900">{targetStatus}</span>
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">登记人 <span className="text-red-500">*</span></label>
+                  <input type="text" value={operator} onChange={e => setOperator(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="必填，填写本次流转的登记人名字" />
+                </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">流转原因 <span className="text-red-500">*</span></label>
                   <input type="text" value={reason} onChange={e => setReason(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="必填，写入状态变更日志" />

@@ -265,15 +265,16 @@ router.put('/:id', [
 // PUT /api/customer-requirements/:id/status - 状态流转（允许跳级/回退，须填原因）
 router.put('/:id/status', [
   body('status').isIn(CQ_STATUSES).withMessage('目标状态非法'),
-  body('reason').notEmpty().withMessage('状态流转必须填写原因')
+  body('reason').notEmpty().withMessage('状态流转必须填写原因'),
+  body('operator').notEmpty().withMessage('状态流转必须填写登记人名字')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return fail(res, 400, '输入数据无效', errors.array());
 
     const { id } = req.params;
-    const { status, reason } = req.body;
-    const operator = (req.user && req.user.username) || 'system';
+    const { status, reason, operator } = req.body;
+    const resolvedOperator = (operator && operator.trim()) || (req.user && req.user.username) || 'system';
     const publish_version = req.body.publish_version;
     const publish_time = req.body.publish_time;
     const deprecated_reason = req.body.deprecated_reason;
@@ -300,13 +301,13 @@ router.put('/:id/status', [
           status === '已发布' ? (publish_version || null) : existing[0].publish_version,
           status === '已发布' ? (publish_time || null) : existing[0].publish_time,
           status === '废弃' ? (deprecated_reason || null) : existing[0].deprecated_reason,
-          operator,
+          resolvedOperator,
           id
         ]
       );
       await conn.query(
         `INSERT INTO customer_requirement_logs (requirement_id, from_status, to_status, operator, remark) VALUES (?, ?, ?, ?, ?)`,
-        [id, fromStatus, status, operator, reason]
+        [id, fromStatus, status, resolvedOperator, reason]
       );
     });
 

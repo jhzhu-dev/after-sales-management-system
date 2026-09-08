@@ -629,7 +629,7 @@ export const customerRequirementApi = {
     api.post('/customer-requirements', data).then(res => res.data),
   update: (id: number, data: Partial<CustomerRequirementFormData>): Promise<ApiResponse<any>> =>
     api.put(`/customer-requirements/${id}`, data).then(res => res.data),
-  changeStatus: (id: number, data: { status: string; reason: string; publish_version?: string; publish_time?: string; deprecated_reason?: string }): Promise<ApiResponse<any>> =>
+  changeStatus: (id: number, data: { status: string; operator: string; reason: string; publish_version?: string; publish_time?: string; deprecated_reason?: string }): Promise<ApiResponse<any>> =>
     api.put(`/customer-requirements/${id}/status`, data).then(res => res.data),
   uploadAttachments: (id: number, formData: FormData): Promise<ApiResponse<any>> =>
     api.post(`/customer-requirements/${id}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 }).then(res => res.data),
@@ -659,6 +659,15 @@ export const testTaskApi = {
     api.delete(`/test-tasks/attachments/${attId}`).then(res => res.data),
   downloadAttachmentUrl: (attId: number): string =>
     `/api/test-tasks/attachments/${attId}/download`,
+};
+
+// 订单信息表导入 API
+export const orderImportApi = {
+  preview: (file: File): Promise<any> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/orders-import/preview', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 }).then(res => res.data);
+  },
 };
 
 export default api;
