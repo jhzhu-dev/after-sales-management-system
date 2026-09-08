@@ -4,6 +4,7 @@ import { ChevronDownIcon } from '@heroicons/react/24/outline';
 export interface SelectOption {
   value: string | number;
   label: string;
+  short_name?: string;
 }
 
 interface SelectProps {
@@ -46,7 +47,10 @@ const Select: React.FC<SelectProps> = ({
     if (!searchable) return options;
     const q = search.trim().toLowerCase();
     if (!q) return options;
-    return options.filter(o => o.label.toLowerCase().includes(q));
+    return options.filter(o =>
+      o.label.toLowerCase().includes(q) ||
+      (o.short_name && o.short_name.toLowerCase().includes(q))
+    );
   }, [options, search, searchable]);
 
   useEffect(() => {
@@ -103,6 +107,9 @@ const Select: React.FC<SelectProps> = ({
                 }`}
               >
                 {o.label}
+                {o.short_name && String(o.value) !== '' && (
+                  <span className="text-muted-foreground ml-1">({o.short_name})</span>
+                )}
               </button>
             ))}
             {filteredOptions.length === 0 && (
