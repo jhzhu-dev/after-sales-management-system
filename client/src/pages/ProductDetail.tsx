@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { Button } from '../components/ui/button';
 import { Product, ProductDocument, ProductModule, ModuleType, ProductVersion } from '../types';
 import { productModuleApi, moduleTypeApi, productVersionApi } from '../services/api';
 import api from '../services/api';
@@ -362,16 +363,15 @@ const ProductDetail: React.FC = () => {
                                 编辑产品
                             </button>
                             {activeTab === 'modules' && (
-                                <button
+                                <Button
                                     onClick={() => {
                                         fetchModules();
                                         setShowModuleForm(true);
                                     }}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 inline-flex items-center gap-2"
                                 >
                                     <PlusIcon className="h-5 w-5" />
                                     新增模块配置
-                                </button>
+                                </Button>
                             )}
                         </div>
                     </div>

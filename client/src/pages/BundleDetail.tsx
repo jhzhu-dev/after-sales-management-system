@@ -22,6 +22,7 @@ import { DeviceBundle } from '../types';
 import { bundleApi } from '../services/api';
 import api from '../services/api';
 import Layout from '../components/Layout';
+import { Button } from '../components/ui/button';
 import BundleForm from '../components/BundleForm';
 import ExportButton from '../components/ExportButton';
 import { exportToExcel } from '../utils/exportUtils';
@@ -707,13 +708,7 @@ const BundleDetail: React.FC = () => {
               <PrinterIcon className="h-4 w-4 mr-2" />
               打印
             </button>
-            <button
-              onClick={() => setShowBundleForm(true)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
-            >
-              <PencilIcon className="h-4 w-4 mr-2" />
-              编辑多合一设备
-            </button>
+            <Button onClick={() => setShowBundleForm(true)}><PencilIcon className="h-4 w-4" />编辑多合一设备</Button>
             <button
               onClick={handleDelete}
               className="inline-flex items-center px-4 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
