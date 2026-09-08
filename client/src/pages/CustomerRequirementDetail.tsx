@@ -392,7 +392,7 @@ const CustomerRequirementDetail: React.FC = () => {
 
       {showSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black bg-opacity-40" onClick={() => setShowSuccess(false)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowSuccess(false)} />
           <div className="relative z-10 bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4 text-center">
             <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-100 mb-3">
               <CheckIcon className="h-8 w-8 text-green-600" />

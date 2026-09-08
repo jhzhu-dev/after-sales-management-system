@@ -1,6 +1,27 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@source "./";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ========== 设计令牌（Tailwind v4 CSS 配置） ========== */
+@theme {
+  --breakpoint-3xl: 2200px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans", sans-serif;
+  --radius-4xl: 2rem;
+  --radius-5xl: 2.5rem;
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-soft-lg: 0 2px 4px rgba(0, 0, 0, 0.04), 0 16px 48px rgba(0, 0, 0, 0.10);
+  --shadow-glass: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(0, 0, 0, 0.08);
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+}
 
 /* ========== 全局主题：浅色 / 深色 ========== */
 html {
@@ -126,6 +147,22 @@ html.dark {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
     background-color: var(--apple-surface);
+  }
+}
+
+/* Tailwind v4 兼容：保留 flex-* 旧名称（flex-shrink/flex-grow 已改名） */
+@layer utilities {
+  .flex-shrink-0 {
+    flex-shrink: 0;
+  }
+  .flex-shrink {
+    flex-shrink: 1;
+  }
+  .flex-grow-0 {
+    flex-grow: 0;
+  }
+  .flex-grow {
+    flex-grow: 1;
   }
 }
 

@@ -1631,7 +1631,7 @@ const DeviceDetail: React.FC = () => {
 
       {/* 模块版本历史弹窗 */}
       {showModuleVersionHistory && selectedModuleForVersion && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
@@ -1699,7 +1699,7 @@ const DeviceDetail: React.FC = () => {
 
       {/* 版本更新弹窗 (重构) */}
       {showVersionUpdateForm && selectedModuleForVersion && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="px-4 py-3 3xl:px-6 3xl:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h3 className="text-lg font-bold text-gray-900">
@@ -1847,7 +1847,7 @@ const DeviceDetail: React.FC = () => {
 
       {/* 添加问题弹窗 */}
       {showIssueForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">添加问题</h3>
@@ -1942,7 +1942,7 @@ const DeviceDetail: React.FC = () => {
 
       {/* 解决问题弹窗 */}
       {showResolveForm && selectedIssueForResolve && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">解决问题</h3>
@@ -2014,7 +2014,7 @@ const DeviceDetail: React.FC = () => {
 
       {/* 设备出厂资料上传弹窗 (批量) */}
       {showDocUploadModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 3xl:px-6 3xl:py-4 border-b border-gray-200 bg-green-50">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -2289,7 +2289,7 @@ const DeviceDetail: React.FC = () => {
 
       {/* 文件阅览器 */}
       {previewDoc && (
-        <div className="fixed inset-0 bg-black bg-opacity-85 flex items-center justify-center z-50" onClick={() => setPreviewDoc(null)}>
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50" onClick={() => setPreviewDoc(null)}>
           <div
             className="relative w-full mx-4 flex flex-col bg-gray-900 rounded-xl overflow-hidden shadow-2xl"
             style={{ maxWidth: '1100px', maxHeight: '92vh' }}
@@ -2331,7 +2331,7 @@ const DeviceDetail: React.FC = () => {
                     const d = previewDoc.catDocs[newIdx];
                     handlePreviewDocument(d.id, d.original_name, previewDoc.catDocs, newIdx);
                   }}
-                  className="flex-shrink-0 w-12 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  className="flex-shrink-0 w-12 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
                   title="上一个 (←)"
                 >
                   <ChevronLeftIcon className="h-8 w-8" />
@@ -2383,7 +2383,7 @@ const DeviceDetail: React.FC = () => {
                     const d = previewDoc.catDocs[newIdx];
                     handlePreviewDocument(d.id, d.original_name, previewDoc.catDocs, newIdx);
                   }}
-                  className="flex-shrink-0 w-12 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  className="flex-shrink-0 w-12 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
                   title="下一个 (→)"
                 >
                   <ChevronRightIcon className="h-8 w-8" />
