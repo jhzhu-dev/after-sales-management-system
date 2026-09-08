@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowUpTrayIcon, CheckCircleIcon, ExclamationCircleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Button } from '../components/ui/button';
+import Select from './Select';
 import { issueImportApi, deviceApi } from '../services/api';
 
 interface PreviewRow {
@@ -131,24 +132,24 @@ const IssueImportPanel: React.FC<IssueImportPanelProps> = ({ onClose, onDone }) 
   };
 
   const inputCls = 'hidden';
-  const cellInputCls = 'w-full px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 bg-white';
-  const cellSelectCls = 'w-full px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 bg-white';
+  const cellInputCls = 'w-full px-2.5 py-1.5 text-xs border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40 bg-card text-foreground placeholder:text-muted-foreground';
+  const cellSelectCls = 'w-full px-2.5 py-1.5 border border-border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary-500/40';
 
   return (
     <div className="space-y-4">
         <div>
           {/* 上传区 */}
           <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden mb-4">
-            <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
-              <h3 className="text-sm font-semibold text-gray-800">上传反馈单</h3>
-              <label className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+            <div className="flex items-center justify-between px-5 py-3 bg-muted border-b border-border">
+              <h3 className="text-sm font-semibold text-foreground">上传反馈单</h3>
+              <label className="inline-flex items-center px-3 py-1.5 border border-border rounded-lg text-sm text-foreground hover:bg-muted cursor-pointer bg-card">
                 <ArrowUpTrayIcon className="h-4 w-4 mr-1" />
                 {loading ? '解析中...' : rows.length > 0 ? '重新选择' : '选择 Excel'}
                 <input type="file" accept=".xlsx,.xls" className={inputCls} onChange={handleFile} disabled={loading} />
               </label>
             </div>
             <div className="p-4">
-              <p className="text-sm text-gray-500">上传《反馈单模板.xlsx》，自动识别反馈时间、设备编码、严重程度、问题状态与分类。识别后可在表格中手动修改，填写完整即可导入。</p>
+              <p className="text-sm text-muted-foreground">上传《反馈单模板.xlsx》，自动识别反馈时间、设备编码、严重程度、问题状态与分类。识别后可在表格中手动修改，填写完整即可导入。</p>
               {error && (
                 <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm flex items-start gap-2">
                   <ExclamationCircleIcon className="h-5 w-5 flex-shrink-0" /> {error}
@@ -172,73 +173,75 @@ const IssueImportPanel: React.FC<IssueImportPanelProps> = ({ onClose, onDone }) 
             <>
               <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
                 <div className="overflow-x-auto no-scrollbar">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-border text-sm">
+                    <thead className="bg-muted backdrop-blur border-b border-border">
                       <tr>
-                        <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">行号</th>
-                        <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">反馈时间</th>
-                        <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">反馈单号</th>
-                        <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">设备编码</th>
-                        <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">设备</th>
-                        <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">紧急度</th>
-                        <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">状态</th>
-                        <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">问题描述</th>
-                        <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">责任人</th>
-                        <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">分类</th>
-                        <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">校验</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">行号</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">反馈时间</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">反馈单号</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">设备编码</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">设备</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">紧急度</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">状态</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">问题描述</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">责任人</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">分类</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">校验</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-border">
                       {rows.map((r) => {
                         const complete = isComplete(r);
                         return (
-                          <tr key={r.rowIndex} className={complete ? '' : 'bg-orange-50/40'}>
-                            <td className="px-3 py-2 text-xs text-gray-500">{r.rowIndex}</td>
-                            <td className="px-3 py-2 text-xs whitespace-nowrap">
+                          <tr key={r.rowIndex} className={`transition-colors ${complete ? 'hover:bg-muted/50' : 'bg-orange-50/40 hover:bg-orange-50'}`}>
+                            <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{r.rowIndex}</td>
+                            <td className="px-3 py-2 whitespace-nowrap min-w-[150px]">
                               <input type="text" value={r.feedback_time || ''} onChange={e => setCell(r.rowIndex, { feedback_time: e.target.value })} className={cellInputCls} />
                             </td>
-                            <td className="px-3 py-2 text-xs whitespace-nowrap">
+                            <td className="px-3 py-2 whitespace-nowrap min-w-[140px]">
                               <input type="text" value={r.feedback_no || ''} onChange={e => setCell(r.rowIndex, { feedback_no: e.target.value })} className={cellInputCls} />
                             </td>
-                            <td className="px-3 py-2 text-xs">
+                            <td className="px-3 py-2 min-w-[160px]">
                               <div className="relative">
-                                <input type="text" value={r.device_code || ''} onChange={e => setDeviceCode(r.rowIndex, e.target.value)} className={`${cellInputCls} pr-6`} placeholder="输入编码/序列号" />
-                                <MagnifyingGlassIcon className="h-3 w-3 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                <input type="text" value={r.device_code || ''} onChange={e => setDeviceCode(r.rowIndex, e.target.value)} className={`${cellInputCls} pr-7`} placeholder="输入编码/序列号" />
+                                <MagnifyingGlassIcon className="h-3.5 w-3.5 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                               </div>
                             </td>
-                            <td className="px-3 py-2 text-xs text-gray-700">
+                            <td className="px-3 py-2 text-xs min-w-[140px]">
                               {r.device_id ? (
-                                <span className="text-green-600">{r.device_name || r.device_id}</span>
+                                <span className="inline-flex items-center gap-1 text-green-600 bg-green-50 border border-green-200 rounded-md px-2 py-0.5">
+                                  <CheckCircleIcon className="h-3.5 w-3.5" />{r.device_name || r.device_id}
+                                </span>
                               ) : (
-                                <span className="text-red-500" title="未匹配到设备">未匹配</span>
+                                <span className="inline-flex items-center gap-1 text-red-500 bg-red-50 border border-red-200 rounded-md px-2 py-0.5" title="未匹配到设备">
+                                  <ExclamationCircleIcon className="h-3.5 w-3.5" />未匹配
+                                </span>
                               )}
                             </td>
-                            <td className="px-3 py-2 text-xs">
-                              <select value={r.severity} onChange={e => setCell(r.rowIndex, { severity: e.target.value })} className={cellSelectCls}>
-                                {SEVERITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                              </select>
+                            <td className="px-3 py-2 min-w-[110px]">
+                              <Select value={r.severity} onChange={v => setCell(r.rowIndex, { severity: v })} options={SEVERITY_OPTIONS} className={cellSelectCls} />
                             </td>
-                            <td className="px-3 py-2 text-xs">
-                              <select value={r.status} onChange={e => setCell(r.rowIndex, { status: e.target.value })} className={cellSelectCls}>
-                                {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                              </select>
+                            <td className="px-3 py-2 min-w-[110px]">
+                              <Select value={r.status} onChange={v => setCell(r.rowIndex, { status: v })} options={STATUS_OPTIONS} className={cellSelectCls} />
                             </td>
-                            <td className="px-3 py-2 text-xs min-w-[220px]">
-                              <textarea value={r.description || ''} onChange={e => setCell(r.rowIndex, { description: e.target.value })} rows={1} className={`${cellInputCls} resize-y`} placeholder="问题描述" />
+                            <td className="px-3 py-2 min-w-[240px]">
+                              <textarea value={r.description || ''} onChange={e => setCell(r.rowIndex, { description: e.target.value })} rows={1} className={`${cellInputCls} resize-y leading-relaxed`} placeholder="问题描述" />
                             </td>
-                            <td className="px-3 py-2 text-xs">
+                            <td className="px-3 py-2 min-w-[120px]">
                               <input type="text" value={r.assignee || ''} onChange={e => setCell(r.rowIndex, { assignee: e.target.value })} className={cellInputCls} placeholder="责任人" />
                             </td>
-                            <td className="px-3 py-2 text-xs">
-                              <select value={r.category} onChange={e => setCell(r.rowIndex, { category: e.target.value })} className={cellSelectCls}>
-                                {CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                              </select>
+                            <td className="px-3 py-2 min-w-[130px]">
+                              <Select value={r.category} onChange={v => setCell(r.rowIndex, { category: v })} options={CATEGORY_OPTIONS} className={cellSelectCls} />
                             </td>
-                            <td className="px-3 py-2 text-xs">
+                            <td className="px-3 py-2 text-xs whitespace-nowrap">
                               {complete ? (
-                                <span className="text-green-600">可导入</span>
+                                <span className="inline-flex items-center gap-1 text-green-600 font-medium">
+                                  <CheckCircleIcon className="h-3.5 w-3.5" />可导入
+                                </span>
                               ) : (
-                                <span className="text-orange-500" title={!r.description?.trim() ? '问题描述为空' : '未匹配到设备'}>需补充</span>
+                                <span className="inline-flex items-center gap-1 text-orange-500 font-medium" title={!r.description?.trim() ? '问题描述为空' : '未匹配到设备'}>
+                                  <ExclamationCircleIcon className="h-3.5 w-3.5" />需补充
+                                </span>
                               )}
                             </td>
                           </tr>
