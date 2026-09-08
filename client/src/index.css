@@ -387,6 +387,10 @@ html.dark .bg-red-100 {
   background-color: rgba(239, 68, 68, 0.16);
 }
 
+html.dark .bg-red-200 {
+  background-color: rgba(239, 68, 68, 0.28);
+}
+
 html.dark .bg-yellow-50,
 html.dark .bg-yellow-100 {
   background-color: rgba(234, 179, 8, 0.16);
