@@ -80,9 +80,9 @@ html.dark body {
 
 /* Apple 风格设计令牌 */
 :root {
-  --apple-surface: rgba(255, 255, 255, 0.72);
-  --apple-surface-strong: rgba(255, 255, 255, 0.86);
-  --apple-surface-muted: rgba(255, 255, 255, 0.66);
+  --apple-surface: rgba(255, 255, 255, 0.86);
+  --apple-surface-strong: rgba(255, 255, 255, 0.94);
+  --apple-surface-muted: rgba(255, 255, 255, 0.82);
   --apple-border: rgba(44, 62, 80, 0.10);
   --apple-border-strong: rgba(44, 62, 80, 0.16);
   --apple-shadow: 0 1px 2px rgba(28, 40, 51, 0.05), 0 10px 30px rgba(28, 40, 51, 0.07);
@@ -91,15 +91,15 @@ html.dark body {
   /* shadcn 语义令牌（浅色） */
   --background: #f2f3f4;
   --foreground: #1c2833;
-  --card: rgba(255, 255, 255, 0.72);
+  --card: rgba(255, 255, 255, 0.92);
   --card-foreground: #1c2833;
-  --popover: rgba(255, 255, 255, 0.85);
+  --popover: rgba(255, 255, 255, 0.97);
   --popover-foreground: #1c2833;
   --primary: #3498db;
   --primary-foreground: #ffffff;
-  --secondary: rgba(255, 255, 255, 0.55);
+  --secondary: rgba(255, 255, 255, 0.72);
   --secondary-foreground: #2c3e50;
-  --muted: rgba(242, 243, 244, 0.66);
+  --muted: rgba(242, 243, 244, 0.80);
   --muted-foreground: #85929e;
   --accent: rgba(52, 152, 219, 0.08);
   --accent-foreground: #2c3e50;
@@ -111,9 +111,9 @@ html.dark body {
 }
 
 html.dark {
-  --apple-surface: rgba(28, 31, 41, 0.50);
-  --apple-surface-strong: rgba(28, 31, 41, 0.72);
-  --apple-surface-muted: rgba(28, 31, 41, 0.42);
+  --apple-surface: rgba(28, 31, 41, 0.66);
+  --apple-surface-strong: rgba(28, 31, 41, 0.82);
+  --apple-surface-muted: rgba(28, 31, 41, 0.58);
   --apple-border: rgba(255, 255, 255, 0.08);
   --apple-border-strong: rgba(255, 255, 255, 0.12);
   --apple-shadow: 0 1px 2px rgba(0, 0, 0, 0.30), 0 8px 24px rgba(0, 0, 0, 0.40);
@@ -121,9 +121,9 @@ html.dark {
   /* shadcn 语义令牌（深色） */
   --background: #0b1220;
   --foreground: #e2e8f0;
-  --card: rgba(28, 31, 41, 0.52);
+  --card: rgba(28, 31, 41, 0.68);
   --card-foreground: #e2e8f0;
-  --popover: rgba(28, 31, 41, 0.78);
+  --popover: rgba(28, 31, 41, 0.88);
   --popover-foreground: #e2e8f0;
   --primary: #3b82f6;
   --primary-foreground: #ffffff;
