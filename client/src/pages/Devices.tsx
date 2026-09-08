@@ -1139,7 +1139,7 @@ export default function Devices() {
         {globalSearch && (
         <>
           {/* 产品线 + 状态筛选器（全局搜索时也可用） */}
-          <div className="bg-white rounded-lg shadow p-4 no-print">
+          <div className="bg-card rounded-2xl border border-border shadow-soft p-4 no-print">
             <div className="flex flex-wrap items-end gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">产品线</label>
@@ -1176,7 +1176,7 @@ export default function Devices() {
           </div>
 
           {/* 全局搜索结果表 */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
@@ -1250,7 +1250,7 @@ export default function Devices() {
         {!globalSearch && viewMode === 'devices' && (
         <>
         {/* 筛选器 */}
-        <div className="bg-white rounded-lg shadow p-4 3xl:p-6 no-print">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 no-print">
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1395,7 +1395,7 @@ export default function Devices() {
         {!globalSearch && viewMode === 'bundles' && (
         <>
         {/* 多合一设备筛选器 */}
-        <div className="bg-white rounded-lg shadow p-4 3xl:p-6 no-print">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 no-print">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">客户</label>

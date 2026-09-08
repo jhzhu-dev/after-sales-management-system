@@ -11,7 +11,7 @@ import { CustomerRequirement, CustomerRequirementFormData, Customer } from '../t
 import { formatDate, getUrgencyColor, getRequirementTypeColor } from '../utils';
 
 const REQ_TYPES = ['接口对接', '功能定制', '输出结果定制'];
-const URGENCIES = ['低', '中', '高'];
+const URGENCIES = ['高', '中', '低'];
 const STATUSES = ['待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
 
 const STATUS_COLORS: Record<string, string> = {
@@ -147,7 +147,7 @@ const CustomerRequirements: React.FC = () => {
         )}
 
         {/* 筛选区 */}
-        <div className="bg-white rounded-lg shadow p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
             <label className="block text-xs text-gray-500 mb-1">客户</label>
             <SearchableSelect value={filters.customer_id} onChange={v => setFilters(f => ({ ...f, customer_id: v, page: 1 }))} options={customerOptions} placeholder="全部客户" />

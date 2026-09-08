@@ -199,7 +199,7 @@ const Products: React.FC = () => {
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     </div>
                 ) : products.length === 0 ? (
-                    <div className="bg-white rounded-lg shadow p-12 text-center">
+                    <div className="bg-card rounded-2xl border border-border shadow-soft p-12 text-center">
                         <p className="text-gray-500 mb-4">暂无产品数据</p>
                         <button
                             onClick={handleAddProduct}
@@ -214,7 +214,7 @@ const Products: React.FC = () => {
                         {products.map(product => (
                             <div key={product.id}
                                 onClick={() => navigate(`/products/${product.id}`)}
-                                className="bg-white rounded-lg shadow hover:shadow-lg hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer p-4 3xl:p-6 border border-gray-100"
+                                className="bg-card rounded-2xl border border-border shadow-soft hover:shadow-lg hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer p-4 3xl:p-6"
                             >
                                 <div className="flex justify-between items-start mb-3">
                                     <h3 className="font-bold text-base text-gray-900 leading-snug flex-1 min-w-0 mr-3">{product.name}</h3>
@@ -265,7 +265,7 @@ const Products: React.FC = () => {
                     </div>
                 ) : (
                     // 列表视图
-                    <div className="bg-white rounded-lg shadow divide-y divide-gray-100">
+                    <div className="bg-card rounded-2xl border border-border shadow-soft divide-y divide-gray-100">
                         {products.map(product => (
                             <div key={product.id}
                                 onClick={() => navigate(`/products/${product.id}`)}

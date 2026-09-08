@@ -318,7 +318,7 @@ const ReleaseLibrary: React.FC = () => {
                 )}
 
                 {/* 模块类型 Tabs */}
-                <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
                     <div className="border-b border-gray-200 no-print">
                         <nav className="flex -mb-px">
                             {moduleTypes.map((type) => (
@@ -545,7 +545,7 @@ const ReleaseLibrary: React.FC = () => {
                                 // 方块视图 - 突出版本描述
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 3xl:gap-6">
                                     {filteredReleases.map((release) => (
-                                        <div key={release.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50">
+                                        <div key={release.id} className="bg-card rounded-2xl border border-border shadow-soft p-5 hover:shadow-lg transition-shadow">
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="flex items-center gap-2">
                                                     <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold font-mono">

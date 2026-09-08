@@ -55,7 +55,7 @@ const TestSummaryForm: React.FC<TestSummaryFormProps> = ({ taskId, onSubmitted }
   if (uploadedCount) return <div className="text-sm text-gray-500">正在上传附件 {uploadedCount}...</div>;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-card rounded-2xl border border-border shadow-soft p-6">
       <h2 className="text-base font-semibold text-gray-900 mb-4">提交测试总结（上海）</h2>
 
       {msg && <div className="mb-3 p-3 bg-blue-50 border border-primary-200 rounded-md text-primary-700 text-sm">{msg}</div>}

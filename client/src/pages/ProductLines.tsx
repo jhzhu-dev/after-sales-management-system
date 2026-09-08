@@ -183,7 +183,7 @@ const ProductLines: React.FC = () => {
                             <div
                                 key={line.id}
                                 onClick={() => navigate(`/products?product_line_id=${line.id}`)}
-                                className="bg-white rounded-lg shadow hover:shadow-lg hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer overflow-hidden"
+                                className="bg-card rounded-2xl border border-border shadow-soft hover:shadow-lg hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer overflow-hidden"
                             >
                                 <div className="p-4 3xl:p-6">
                                     <div className="flex justify-between items-start mb-2">
@@ -249,7 +249,7 @@ const ProductLines: React.FC = () => {
                     </div>
                 ) : (
                     // 列表视图
-                    <div className="bg-white rounded-lg shadow divide-y divide-gray-100">
+                    <div className="bg-card rounded-2xl border border-border shadow-soft divide-y divide-gray-100">
                         {productLines.map((line) => (
                             <div key={line.id}
                                 onClick={() => navigate(`/products?product_line_id=${line.id}`)}

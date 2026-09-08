@@ -256,7 +256,7 @@ export default function KnowledgeBase({ productLines }: Props) {
   return (
     <div className="space-y-4">
       {/* 工具栏 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div className="bg-card rounded-2xl border border-border shadow-soft p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-48">
             <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
@@ -302,13 +302,13 @@ export default function KnowledgeBase({ productLines }: Props) {
       {loading ? (
         <div className="text-center py-12 text-gray-400 text-sm">加载中...</div>
       ) : articles.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
+        <div className="text-center py-16 bg-card rounded-2xl border border-border shadow-soft">
           <BookOpenIcon className="h-12 w-12 text-gray-200 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">暂无知识词条</p>
           <p className="text-gray-400 text-sm mt-1">点击"新增词条"开始积累运维知识</p>
         </div>
       ) : displayedArticles.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
+        <div className="text-center py-16 bg-card rounded-2xl border border-border shadow-soft">
           <BookOpenIcon className="h-12 w-12 text-gray-200 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">没有匹配关键词 <span className="text-primary-600">#{tagFilter}</span> 的词条</p>
           <button onClick={() => setTagFilter('')} className="mt-2 text-sm text-primary-500 hover:underline">清除筛选</button>
@@ -319,7 +319,7 @@ export default function KnowledgeBase({ productLines }: Props) {
             <div
               key={a.id}
               onClick={() => handleView(a)}
-              className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col gap-3 cursor-pointer"
+              className="bg-card rounded-2xl border border-border shadow-soft hover:shadow-md transition-shadow p-4 flex flex-col gap-3 cursor-pointer"
             >
               <div className="flex items-start gap-2">
                 {a.is_pinned && <StarIcon className="h-4 w-4 text-yellow-400 flex-shrink-0 mt-0.5" />}

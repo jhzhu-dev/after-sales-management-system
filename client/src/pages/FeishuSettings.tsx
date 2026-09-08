@@ -159,7 +159,7 @@ const FeishuSettings: React.FC = () => {
         )}
 
         {/* Config form */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-6 space-y-4">
           <h2 className="text-base font-semibold text-gray-900">应用配置</h2>
 
           <div className="grid grid-cols-2 gap-4">
@@ -220,7 +220,7 @@ const FeishuSettings: React.FC = () => {
         </div>
 
         {/* User sync */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-gray-900">{syncResult?.chatName || '飞书用户列表'}</h2>
           </div>

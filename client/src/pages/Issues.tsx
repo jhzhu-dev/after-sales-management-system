@@ -370,7 +370,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     { key: 'customer_name', label: '客户' },
     { key: 'module_category', label: '模块' },
     { key: 'description', label: '问题描述' },
-    { key: 'severity_label', label: '严重性' },
+    { key: 'severity_label', label: '紧急程度' },
     { key: 'status_label', label: '状态' },
     { key: 'assignee', label: '责任人' },
     { key: 'created_at', label: '创建时间' },
@@ -603,7 +603,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     },
     {
       key: 'severity' as keyof Issue,
-      title: <SortableHeader field="severity" title="严重性" />,
+      title: <SortableHeader field="severity" title="紧急程度" />,
       width: '80px',
       render: (value: string) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSeverityColor(value)}`}>
@@ -817,7 +817,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             <p className="text-sm text-gray-500 whitespace-nowrap">共 {upgradeTotal} 条</p>
           </div>
         </div>
-        <div ref={upgradeScrollRef} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-auto" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+        <div ref={upgradeScrollRef} className="bg-card rounded-2xl border border-border shadow-soft overflow-auto" style={{ maxHeight: 'calc(100vh - 240px)' }}>
           {upgradeLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -1073,7 +1073,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         )}
 
         {/* 筛选器 */}
-        <div className="bg-white rounded-lg shadow p-4 3xl:p-6 no-print">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 no-print">
           <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1140,17 +1140,17 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                严重性
+                紧急程度
               </label>
               <select
                 value={filters.severity || ''}
                 onChange={(e) => handleFilterChange('severity', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
-                <option value="">全部严重性</option>
-                <option value="low">低</option>
-                <option value="medium">中</option>
+                <option value="">全部紧急程度</option>
                 <option value="high">高</option>
+                <option value="medium">中</option>
+                <option value="low">低</option>
               </select>
             </div>
             <div>
@@ -1228,7 +1228,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>客户</th>
                 <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>模块</th>
                 <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>问题描述</th>
-                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>严重性</th>
+                <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>紧急程度</th>
                 <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>状态</th>
                 <th style={{padding:'4pt 6pt',textAlign:'left',fontWeight:'600'}}>创建时间</th>
               </tr>

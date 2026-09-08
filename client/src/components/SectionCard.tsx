@@ -13,7 +13,7 @@ interface SectionCardProps {
  */
 export default function SectionCard({ title, extra, children, className }: SectionCardProps) {
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 shadow p-4 3xl:p-6 mb-4 ${className ?? ''}`}>
+    <div className={`bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 mb-4 ${className ?? ''}`}>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
         {extra && <div className="flex items-center gap-2">{extra}</div>}

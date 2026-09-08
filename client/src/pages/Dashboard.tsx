@@ -92,7 +92,7 @@ export default function Dashboard() {
           <div className="h-10 bg-gray-200 rounded w-1/3"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 3xl:gap-6">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg shadow p-4 3xl:p-6">
+              <div key={i} className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6">
                 <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
                 <div className="h-8 bg-gray-200 rounded w-1/3"></div>
               </div>
@@ -207,8 +207,8 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               </ChartCard>
 
-              {/* 问题严重性分布 */}
-              <ChartCard title="问题严重性分布" description="按严重程度分类统计">
+              {/* 问题紧急程度分布 */}
+              <ChartCard title="问题紧急程度分布" description="按紧急程度分类统计">
                 <ResponsiveContainer width="100%" height={chartHeight}>
                   <BarChart data={stats.issueSeverityDistribution}>
                     <CartesianGrid strokeDasharray="3 3" />

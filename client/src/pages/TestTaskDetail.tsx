@@ -163,7 +163,7 @@ const TestTaskDetail: React.FC = () => {
 
         {msg && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">{msg}</div>}
 
-        <div className="bg-white rounded-lg shadow p-6 mb-4">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-6 mb-4">
           <div className="flex justify-between items-start mb-4">
             <div>
               <h1 className="text-xl font-bold text-gray-900">{data.task_code}</h1>
@@ -184,7 +184,7 @@ const TestTaskDetail: React.FC = () => {
             {field('模型名称', data.model_name)}
             {field('模型版本号', data.model_version)}
             {field('当前版本', data.current_version)}
-            {field('优先级别', <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getUrgencyColor(data.priority)}`}>{data.priority}</span>)}
+            {field('紧急程度', <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getUrgencyColor(data.priority)}`}>{data.priority}</span>)}
             {field('深圳需求人', data.shenzhen_requester_name)}
             {field('上海测试人', data.shanghai_tester)}
             {field('计划完成时间', data.planned_completion_date)}
@@ -201,7 +201,7 @@ const TestTaskDetail: React.FC = () => {
           { label: '测试场景', value: data.test_scenarios },
         ].map(({ label, value }) =>
           value ? (
-            <div key={label} className="bg-white rounded-lg shadow p-6 mb-4">
+            <div key={label} className="bg-card rounded-2xl border border-border shadow-soft p-6 mb-4">
               <dt className="text-xs text-gray-500 mb-1">{label}</dt>
               <dd className="text-sm text-gray-900 whitespace-pre-wrap">{value}</dd>
             </div>
@@ -210,7 +210,7 @@ const TestTaskDetail: React.FC = () => {
 
         {/* 测试总结（已填则展示） */}
         {data.test_summary && (
-          <div className="bg-white rounded-lg shadow p-6 mb-4">
+          <div className="bg-card rounded-2xl border border-border shadow-soft p-6 mb-4">
             <h2 className="text-base font-semibold text-gray-900 mb-2">测试总结</h2>
             <p className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 rounded-md p-3">{data.test_summary}</p>
           </div>
@@ -218,7 +218,7 @@ const TestTaskDetail: React.FC = () => {
 
         {/* 决策信息 */}
         {(data.status === '通过' || data.status === '不通过') && (
-          <div className="bg-white rounded-lg shadow p-6 mb-4">
+          <div className="bg-card rounded-2xl border border-border shadow-soft p-6 mb-4">
             <h2 className="text-base font-semibold text-gray-900 mb-2">决策信息</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {field('升级决策', data.upgrade_decision)}
@@ -230,7 +230,7 @@ const TestTaskDetail: React.FC = () => {
         )}
 
         {/* 附件 */}
-        <div className="bg-white rounded-lg shadow p-6 mb-4">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-6 mb-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-base font-semibold text-gray-900">附件</h2>
             <div className="flex items-center gap-2">
@@ -276,7 +276,7 @@ const TestTaskDetail: React.FC = () => {
 
         {/* 升级决策（已测试） */}
         {data.status === '已测试' && (
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card rounded-2xl border border-border shadow-soft p-6">
             <h2 className="text-base font-semibold text-gray-900 mb-4">升级决策</h2>
             <div className="space-y-4">
               <div>

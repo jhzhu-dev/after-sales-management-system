@@ -153,7 +153,7 @@ const OrderImport: React.FC = () => {
           <ArrowLeftIcon className="h-4 w-4 mr-1" /> 返回设备管理
         </button>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+        <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden mb-4">
           <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
             <h2 className="text-sm font-semibold text-gray-800">导入订单信息表</h2>
             <label className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
@@ -180,7 +180,7 @@ const OrderImport: React.FC = () => {
         {preview && (
           <>
             {/* 订单信息 */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+            <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden mb-4">
               <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
                 <h2 className="text-sm font-semibold text-gray-800">订单信息</h2>
               </div>
@@ -203,7 +203,7 @@ const OrderImport: React.FC = () => {
             </div>
 
             {/* 客户信息 */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+            <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden mb-4">
               <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
                 <h2 className="text-sm font-semibold text-gray-800">客户信息</h2>
                 <span className={`text-xs font-medium ${customer?.status === 'new' ? 'text-orange-600' : customer?.status === 'missing' ? 'text-red-600' : 'text-green-600'}`}>
@@ -247,7 +247,7 @@ const OrderImport: React.FC = () => {
             </div>
 
             {/* 设备清单 */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+            <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden mb-4">
               <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
                 <h2 className="text-sm font-semibold text-gray-800">设备清单（共 {devices.length} 台）</h2>
                 <p className="text-xs text-gray-400">型号已自动识别，请确认/编辑设备编码并填写序列号</p>

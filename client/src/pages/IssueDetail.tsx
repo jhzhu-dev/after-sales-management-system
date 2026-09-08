@@ -234,7 +234,7 @@ export default function IssueDetail() {
         </div>
 
         {/* 问题主标题卡片 */}
-        <div className="bg-white rounded-lg shadow border-l-4 border-l-blue-500 print:shadow-none print:border print:border-l-4">
+        <div className="bg-card rounded-2xl border border-border shadow-soft border-l-4 border-l-blue-500 print:shadow-none print:border print:border-l-4">
           <div className="px-6 py-4 flex items-start justify-between gap-4">
             <div className="flex items-start gap-3 flex-1 min-w-0">
               <div className="flex-shrink-0 mt-0.5">
@@ -249,7 +249,7 @@ export default function IssueDetail() {
                     {getStatusText(issue.status)}
                   </span>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getSeverityColor(issue.severity)}`}>
-                    严重程度：{getSeverityText(issue.severity)}
+                    紧急程度：{getSeverityText(issue.severity)}
                   </span>
                   <span className="text-sm text-gray-400 flex items-center">
                     <ClockIcon className="h-3.5 w-3.5 mr-1" />
@@ -268,7 +268,7 @@ export default function IssueDetail() {
         </div>
 
         {/* 基本信息横向网格卡片（设备信息 + 时间信息合并） */}
-        <div className="bg-white rounded-lg shadow print:shadow-none print:border">
+        <div className="bg-card rounded-2xl border border-border shadow-soft print:shadow-none print:border">
           <div className="px-6 py-3 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-gray-600 flex items-center gap-1.5">
               <DevicePhoneMobileIcon className="h-4 w-4" />
@@ -370,7 +370,7 @@ export default function IssueDetail() {
         </div>
 
         {/* 问题详情卡片 */}
-        <div className="bg-white rounded-lg shadow print:shadow-none print:border">
+        <div className="bg-card rounded-2xl border border-border shadow-soft print:shadow-none print:border">
           <div className="px-6 py-3 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-gray-600 flex items-center gap-1.5 print:text-xs">
               <ExclamationTriangleIcon className="h-4 w-4" />
@@ -429,7 +429,7 @@ export default function IssueDetail() {
         </div>
 
         {/* 处理流程时间线 - 不打印，去掉冗余外层包裹 */}
-        <div className="bg-white rounded-lg shadow print:hidden px-6 py-5">
+        <div className="bg-card rounded-2xl border border-border shadow-soft print:hidden px-6 py-5">
           <IssueLogTimeline issueId={id!} issueStatus={issue.status} onLogAdded={fetchIssue} />
         </div>
 

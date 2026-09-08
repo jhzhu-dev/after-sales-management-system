@@ -1111,7 +1111,7 @@ const DeviceDetail: React.FC = () => {
         </div>
 
         {/* 设备基本信息 */}
-        <div className="bg-white rounded-lg shadow p-4 3xl:p-6">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">基本信息</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 3xl:gap-6 print:grid-cols-2 print:gap-4">
             {/* 行1: 生产序列号 | 设备编码 | 客户 */}
@@ -1219,7 +1219,7 @@ const DeviceDetail: React.FC = () => {
 
         {/* 所属多合一 · 成员设备明细 */}
         {device.bundle_id && bundleDevices.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-4 3xl:p-6 mb-4">
+          <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 mb-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-medium text-gray-900">所属多合一 · 成员设备（{bundleDevices.length}）</h3>
               <Link to={`/bundles/${device.bundle_id_val || device.bundle_id}`} className="text-sm text-primary-600 hover:text-primary-700">查看多合一详情</Link>
@@ -1255,7 +1255,7 @@ const DeviceDetail: React.FC = () => {
 
         {/* 统计信息 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 3xl:gap-6">
-          <div className="bg-white rounded-lg shadow p-4 3xl:p-6">
+          <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
@@ -1270,7 +1270,7 @@ const DeviceDetail: React.FC = () => {
           </div>
 
 
-          <div className="bg-white rounded-lg shadow p-4 3xl:p-6">
+          <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-red-100 rounded-md flex items-center justify-center">
@@ -1290,7 +1290,7 @@ const DeviceDetail: React.FC = () => {
           </div>
 
           <div
-            className="bg-white rounded-lg shadow p-4 3xl:p-6 cursor-pointer hover:shadow-md transition-shadow border-2 border-transparent hover:border-green-300"
+            className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 cursor-pointer hover:shadow-md transition-shadow border-2 border-transparent hover:border-green-300"
             onClick={() => setActiveTab('documents' as any)}
           >
             <div className="flex items-center">
@@ -1308,7 +1308,7 @@ const DeviceDetail: React.FC = () => {
         </div>
 
         {/* 标签页导航 */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-card rounded-2xl border border-border shadow-soft">
           <div className="border-b border-gray-200 no-print">
             <nav className="-mb-px flex space-x-8 px-4 3xl:px-6">
               {[
@@ -1910,16 +1910,16 @@ const DeviceDetail: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">严重程度</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">紧急程度</label>
                     <select
                       name="severity"
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                     >
-                      <option value="">请选择严重程度</option>
-                      <option value="low">低</option>
-                      <option value="medium">中</option>
+                      <option value="">请选择紧急程度</option>
                       <option value="high">高</option>
+                      <option value="medium">中</option>
+                      <option value="low">低</option>
                     </select>
                   </div>
                   <div>

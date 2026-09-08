@@ -746,7 +746,7 @@ const BundleDetail: React.FC = () => {
         </div>
 
         {/* 基本信息卡片 */}
-        <div className="bg-white rounded-lg shadow p-4 3xl:p-6">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">基本信息</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* 行1: 多合一设备订单号 | 客户 | 设备数量 */}
@@ -854,7 +854,7 @@ const BundleDetail: React.FC = () => {
         </div>
 
         {/* Tab 栏 */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-card rounded-2xl border border-border shadow-soft">
           <div className="border-b border-gray-200 no-print">
             <nav className="flex -mb-px">
               <button
