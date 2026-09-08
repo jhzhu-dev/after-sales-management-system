@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { Button } from '../components/ui/button';
 import ProductForm from '../components/ProductForm';
 import { Product, ProductLine, ApiResponse } from '../types';
 import api, { productApi, productLineApi } from '../services/api';
@@ -143,13 +144,10 @@ const Products: React.FC = () => {
                         <p className="mt-1 text-sm text-gray-600">管理各产品线下的具体产品型号</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={handlePrint}
-                            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                        >
-                            <PrinterIcon className="h-4 w-4 mr-2" />
+                        <Button variant="outline" size="sm" onClick={handlePrint}>
+                            <PrinterIcon className="h-4 w-4" />
                             打印
-                        </button>
+                        </Button>
                         {/* 视图切换按钮 */}
                         <div className="flex items-center bg-gray-100 rounded-lg p-1">
                             <button
@@ -167,12 +165,9 @@ const Products: React.FC = () => {
                                 <ListBulletIcon className="h-5 w-5" />
                             </button>
                         </div>
-                        <button 
-                            onClick={handleAddProduct}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                        >
+                        <Button onClick={handleAddProduct}>
                             + 新增产品
-                        </button>
+                        </Button>
                     </div>
                 </div>
 

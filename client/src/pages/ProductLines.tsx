@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { Button } from '../components/ui/button';
 import ProductLineForm from '../components/ProductLineForm';
 import { ProductLine } from '../types';
 import { PencilIcon, TrashIcon, PrinterIcon, Squares2X2Icon, ListBulletIcon } from '@heroicons/react/24/outline';
@@ -132,13 +133,10 @@ const ProductLines: React.FC = () => {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={handlePrint}
-                            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                        >
-                            <PrinterIcon className="h-4 w-4 mr-2" />
+                        <Button variant="outline" size="sm" onClick={handlePrint}>
+                            <PrinterIcon className="h-4 w-4" />
                             打印
-                        </button>
+                        </Button>
                         {/* 视图切换按钮 */}
                         <div className="flex items-center bg-gray-100 rounded-lg p-1">
                             <button
@@ -156,12 +154,9 @@ const ProductLines: React.FC = () => {
                                 <ListBulletIcon className="h-5 w-5" />
                             </button>
                         </div>
-                        <button
-                            onClick={handleAddProductLine}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                        >
+                        <Button onClick={handleAddProductLine}>
                             + 新增产品线
-                        </button>
+                        </Button>
                     </div>
                 </div>
 

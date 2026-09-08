@@ -19,6 +19,7 @@ import {
     PrinterIcon
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
+import { Button } from '../components/ui/button';
 import VersionReleaseForm from '../components/VersionReleaseForm';
 import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
 import api, { versionReleaseApi, moduleTypeApi, productLineApi } from '../services/api';
@@ -279,13 +280,10 @@ const ReleaseLibrary: React.FC = () => {
                         <p className="text-gray-600 mt-1">管理各模块类型的正式发布版本</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={handlePrint}
-                            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                        >
-                            <PrinterIcon className="h-4 w-4 mr-2" />
+                        <Button variant="outline" size="sm" onClick={handlePrint}>
+                            <PrinterIcon className="h-4 w-4" />
                             打印
-                        </button>
+                        </Button>
                         {/* 视图切换按钮 */}
                         <div className="flex items-center bg-gray-100 rounded-lg p-1">
                             <button
@@ -304,13 +302,10 @@ const ReleaseLibrary: React.FC = () => {
                             </button>
                         </div>
                         {moduleTypes.length > 0 && (
-                            <button
-                                onClick={handleAddRelease}
-                                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                            >
+                            <Button onClick={handleAddRelease}>
                                 <PlusIcon className="h-5 w-5" />
                                 发布新版本
-                            </button>
+                            </Button>
                         )}
                     </div>
                 </div>
