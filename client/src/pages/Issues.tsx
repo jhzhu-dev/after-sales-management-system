@@ -774,9 +774,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <span>筛选</span>
               <span className="text-xs ml-2">{showUpgradeFilters ? '▲ 收起' : '▼ 展开'}</span>
             </button>
-            <div className="flex items-center gap-3">
-              <p className="text-sm text-gray-500 whitespace-nowrap">共 {upgradeTotal} 条</p>
-            </div>
           </div>
           {showUpgradeFilters && (
           <div className="flex flex-wrap items-center gap-3 p-2 3xl:p-3">
