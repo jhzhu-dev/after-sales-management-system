@@ -28,6 +28,7 @@ import { deviceApi, moduleApi, issueApi, versionReleaseApi, moduleVersionApi, de
 import api from '../services/api';
 import { formatDate } from '../utils';
 import Layout from '../components/Layout';
+import { Button } from '../components/ui/button';
 import ModuleForm from '../components/ModuleForm';
 import DeviceForm from '../components/DeviceForm';
 import UpgradeForm from '../components/UpgradeForm';
@@ -1095,13 +1096,7 @@ const DeviceDetail: React.FC = () => {
               <PrinterIcon className="h-4 w-4" />
               打印
             </button>
-            <button
-              onClick={handleEditDevice}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              <PencilIcon className="h-4 w-4" />
-              编辑设备
-            </button>
+            <Button onClick={handleEditDevice}><PencilIcon className="h-4 w-4" />编辑设备</Button>
           </div>
         </div>
 
@@ -1301,13 +1296,7 @@ const DeviceDetail: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">模块列表</h3>
-                  <button
-                    onClick={() => setShowModuleForm(true)}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-colors no-print"
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                    添加模块
-                  </button>
+                  <Button onClick={() => setShowModuleForm(true)}><PlusIcon className="h-4 w-4" />添加模块</Button>
                 </div>
                 <div className="flex flex-nowrap gap-4 overflow-x-auto pb-2 print:grid print:grid-cols-3 print:flex-wrap">
                   {modules.map((module) => (
@@ -1413,14 +1402,7 @@ const DeviceDetail: React.FC = () => {
                     </label>
                     <span className="text-sm text-gray-500">已选 {selectedDocIds.size} / {deviceDocuments.length}</span>
                     <div className="ml-auto flex gap-2">
-                      <button
-                        onClick={handleBatchDownloadDocs}
-                        disabled={selectedDocIds.size === 0 || batchDownloading}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <DocumentArrowDownIcon className="h-4 w-4" />
-                        {batchDownloading ? '下载中...' : '批量下载'}
-                      </button>
+                      <Button size="sm" onClick={handleBatchDownloadDocs} disabled={selectedDocIds.size === 0 || batchDownloading}><DocumentArrowDownIcon className="h-4 w-4" />{batchDownloading ? '下载中...' : '批量下载'}</Button>
                       <button
                         onClick={handleBatchDeleteDocs}
                         disabled={selectedDocIds.size === 0}
@@ -1927,12 +1909,7 @@ const DeviceDetail: React.FC = () => {
                   >
                     取消
                   </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    创建问题
-                  </button>
+                  <Button type="submit">创建问题</Button>
                 </div>
               </form>
             </div>
@@ -2364,13 +2341,7 @@ const DeviceDetail: React.FC = () => {
                     <DocumentIcon className="h-16 w-16 text-gray-500" />
                     <p className="text-gray-400 text-sm">{previewDoc.originalName}</p>
                     <p className="text-gray-500 text-xs">该文件类型不支持预览</p>
-                    <button
-                      onClick={() => handleDownloadDocument(previewDoc.docId)}
-                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm mt-2"
-                    >
-                      <DocumentArrowDownIcon className="h-4 w-4" />
-                      下载文件
-                    </button>
+                    <Button size="sm" className="mt-2" onClick={() => handleDownloadDocument(previewDoc.docId)}><DocumentArrowDownIcon className="h-4 w-4" />下载文件</Button>
                   </div>
                 )}
               </div>
