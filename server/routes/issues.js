@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const ossService = require('../services/oss-service');
 const feishuService = require('../services/feishu-service');
+const xlsx = require('xlsx');
 
 // ─── 问题附件上传配置 ──────────────────────────────────────────────────────────
 const issueUploadStorage = multer.diskStorage({
@@ -370,6 +371,9 @@ router.post('/', [
   body('contact_phone').optional().isString(),
   body('is_visit_required').optional().isBoolean(),
   body('visit_at').optional().isISO8601(),
+  body('feedback_time').optional().isString(),
+  body('feedback_no').optional().isString(),
+  body('is_first_occurrence').optional().isBoolean(),
   body('cost').optional().isFloat({ min: 0 }),
   body('attachments').optional().isArray(),
   body('module_id').optional().custom((value) => {
@@ -405,6 +409,9 @@ router.post('/', [
       contact_phone,
       is_visit_required = false,
       visit_at,
+      feedback_time,
+      feedback_no,
+      is_first_occurrence = false,
       attachments
     } = req.body;
 
@@ -430,9 +437,9 @@ router.post('/', [
       }
     }
 
-    const insertQuery = `
-      INSERT INTO issues (
-        id, device_id, module_id, custom_module_name, category, classification_id, description, severity, status, 
+    const insertQuery = `feedback_time, feedback_no, is_first_occurrence, attachments
+      )
+      VALUES (?, ?, ?, vice_id, module_id, custom_module_name, category, classification_id, description, severity, status, 
         assignee, contact_person, contact_phone, is_visit_required, visit_at, attachments
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -451,10 +458,13 @@ router.post('/', [
 
     // 处理JSON字段
     const attachmentsJson = attachments ? JSON.stringify(attachments) : null;
+    // 规范化反馈时间（datetime-local → MySQL DATETIME）
+    let ft = feedback_time || null;
+    if (ft) { ft = String(ft).replace('T', ' '); if (ft.length === 16) ft += ':00'; }
 
     await query(insertQuery, [
       issueId, device_id, processedModuleId, processedCustomModuleName, category, classification_id || null, description, severity, status,
-      assignee, contact_person, contact_phone, is_visit_required, visit_at || null, attachmentsJson
+      assignee, contact_person, contact_phone, is_visit_required, visit_at || null, ft, feedback_no || null, is_first_occurrence ? 1 : 0, attachmentsJson
     ]);
 
     // ── 两阶段上传：将 pending 附件移动到正式路径 issues/{issueId}/ ──
@@ -553,6 +563,9 @@ router.put('/:id', [
   body('contact_phone').optional().isString(),
   body('is_visit_required').optional().isBoolean(),
   body('visit_at').optional().isISO8601(),
+  body('feedback_time').optional().isString(),
+  body('feedback_no').optional().isString(),
+  body('is_first_occurrence').optional().isBoolean(),
   body('cost').optional().isFloat({ min: 0 }),
   body('attachments').optional().isArray(),
   body('resolution_description').optional().isString()
@@ -580,7 +593,7 @@ router.put('/:id', [
     // 读取更新前的旧值用于变更检测
     const oldIssue = (await query('SELECT status, assignee, assignee_open_id, device_id, module_id FROM issues WHERE id = ?', [id]))[0];
 
-    const allowedFields = ['description', 'severity', 'status', 'category', 'classification_id', 'assignee', 'assignee_open_id', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'attachments', 'resolution_description', 'resolved_at', 'module_id', 'custom_module_name', 'device_id'];
+    const allowedFields = ['description', 'severity', 'status', 'category', 'classification_id', 'assignee', 'assignee_open_id', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'feedback_time', 'feedback_no', 'is_first_occurrence', 'attachments', 'resolution_description', 'resolved_at', 'module_id', 'custom_module_name', 'device_id'];
     const updateFields = [];
     const updateValues = [];
 
@@ -848,6 +861,200 @@ router.patch('/batch/status', [
   } catch (error) {
     console.error('批量更新问题状态失败:', error);
     res.status(500).json({ success: false, error: '批量更新问题状态失败' });
+  }
+});
+
+// ─── 反馈单导入 ──────────────────────────────────────────────────────────────
+const importUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+
+function clean(v) {
+  if (v === undefined || v === null) return '';
+  return String(v).replace(/\r?\n/g, ' ').trim();
+}
+function excelDateStr(serial) {
+  if (serial === '' || serial === null || serial === undefined) return null;
+  let num = serial;
+  if (typeof serial === 'string' && /^\d+(\.\d+)?$/.test(serial.trim())) num = Number(serial);
+  if (typeof num === 'number' && num > 20000 && num < 80000) {
+    const d = xlsx.SSF.parse_date_code(num);
+    if (d) {
+      const pad = (n) => String(n).padStart(2, '0');
+      let s = `${d.y}-${pad(d.m)}-${pad(d.d)}`;
+      if (d.H) s += ` ${pad(d.H)}:${pad(d.M)}`;
+      return s;
+    }
+  }
+  const s = String(serial).trim().replace('T', ' ');
+  return s || null;
+}
+function mapSeverity(v) {
+  const s = clean(v).toLowerCase();
+  if (!s) return 'medium';
+  if (s.includes('严') || s.includes('高') || s === 'high') return 'high';
+  if (s.includes('轻') || s.includes('低') || s === 'low') return 'low';
+  return 'medium';
+}
+function mapStatus(v) {
+  const s = clean(v);
+  if (s.includes('已解决') || s === 'closed') return 'closed';
+  if (s.includes('处理中') || s.includes('进行中') || s === 'in_progress') return 'in_progress';
+  return 'open';
+}
+const CATEGORY_SET = ['硬件故障', '软件Bug', '操作咨询', '安装调试', '其他'];
+function mapCategory(v) {
+  const s = clean(v);
+  if (CATEGORY_SET.includes(s)) return s;
+  if (s.includes('硬件')) return '硬件故障';
+  if (s.includes('软件') || /bug/i.test(s)) return '软件Bug';
+  if (s.includes('操作')) return '操作咨询';
+  if (s.includes('安装')) return '安装调试';
+  return '其他';
+}
+function mapFirstOccurrence(v) {
+  const s = clean(v).toLowerCase();
+  return s === '1' || s === '首次' || s === '是' || s === 'true';
+}
+
+// POST /api/issues/import/preview — 解析反馈单模板，返回预览
+router.post('/import/preview', importUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, error: '请上传 Excel 文件' });
+
+    const tmpPath = path.join(require('os').tmpdir(), `issue-import-${Date.now()}.xlsx`);
+    fs.writeFileSync(tmpPath, req.file.buffer);
+    let wb;
+    try { wb = xlsx.readFile(tmpPath); } finally { fs.unlinkSync(tmpPath); }
+
+    const sheetName = wb.SheetNames.includes('Sheet1') ? 'Sheet1' : wb.SheetNames[0];
+    const rows = xlsx.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: '' });
+
+    let headerIdx = -1;
+    for (let i = 0; i < rows.length; i++) {
+      if (clean(rows[i] && rows[i][0]).includes('反馈时间')) { headerIdx = i; break; }
+    }
+    if (headerIdx < 0) return res.status(400).json({ success: false, error: '未识别到模板表头（反馈时间）' });
+
+    const header = rows[headerIdx];
+    const cols = {};
+    header.forEach((h, idx) => { cols[clean(h)] = idx; });
+
+    // 预载设备，按设备编码 / 设备ID 匹配
+    const devices = await query('SELECT id, device_code, name FROM devices');
+    const byCode = new Map();
+    const byId = new Map();
+    devices.forEach((d) => {
+      if (d.device_code) byCode.set(String(d.device_code).trim().toLowerCase(), d);
+      byId.set(String(d.id).trim(), d);
+    });
+
+    const get = (r, name) => { const idx = cols[name]; return idx === undefined ? '' : clean(r[idx]); };
+    const getRaw = (r, name) => { const idx = cols[name]; return idx === undefined ? '' : r[idx]; };
+
+    const resultRows = [];
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+      const r = rows[i] || [];
+      const desc = get(r, '问题描述');
+      const deviceCode = get(r, '设备编码');
+      let device = null;
+      if (deviceCode) device = byCode.get(deviceCode.toLowerCase()) || byId.get(deviceCode) || null;
+
+      const errors = [];
+      if (!desc) errors.push('问题描述为空');
+      if (!device) errors.push(deviceCode ? `未找到设备(${deviceCode})` : '设备编码为空');
+
+      const severity = mapSeverity(get(r, '严重程度'));
+      const status = mapStatus(get(r, '问题状态'));
+      if (!['low', 'medium', 'high'].includes(severity)) errors.push('严重程度无效');
+      if (!['open', 'in_progress', 'closed'].includes(status)) errors.push('问题状态无效');
+
+      resultRows.push({
+        rowIndex: i + 1,
+        feedback_time: excelDateStr(getRaw(r, '反馈时间')),
+        feedback_no: get(r, '反馈单号'),
+        type: get(r, '类型'),
+        customer: get(r, '客户/地区'),
+        region: get(r, '区域'),
+        device_type: get(r, '设备类型'),
+        device_code: deviceCode,
+        severity,
+        occurrence: get(r, '发生次数'),
+        description: desc,
+        assignee: get(r, '负责人'),
+        status,
+        category: mapCategory(get(r, '问题分类')),
+        note: get(r, '上海补充（处理记录）'),
+        is_first_occurrence: mapFirstOccurrence(get(r, '发生次数')),
+        device_id: device ? device.id : null,
+        device_name: device ? (device.name || device.id) : '',
+        errors,
+      });
+    }
+
+    const validCount = resultRows.filter((x) => x.errors.length === 0).length;
+    res.json({ success: true, data: { rows: resultRows, total: resultRows.length, validCount } });
+  } catch (error) {
+    console.error('解析反馈单失败:', error);
+    res.status(500).json({ success: false, error: '解析反馈单失败' });
+  }
+});
+
+// POST /api/issues/import/confirm — 批量创建问题
+router.post('/import/confirm', async (req, res) => {
+  try {
+    const rows = req.body.rows;
+    if (!Array.isArray(rows)) return res.status(400).json({ success: false, error: 'rows 必须为数组' });
+
+    // 仅要求「填写完成」：描述非空 且 能解析到设备（device_id 或可匹配的 device_code）
+    const importRows = rows.filter((r) => {
+      if (!r || !r.description || !String(r.description).trim()) return false;
+      const hasDevice = r.device_id || (r.device_code && String(r.device_code).trim());
+      return !!hasDevice;
+    });
+    if (importRows.length === 0) return res.status(400).json({ success: false, error: '没有可导入的有效行（请确认已填写问题描述并解析到设备）' });
+
+    // 按编码/ID 预载设备，用于重新解析用户手动填写的设备编码
+    const devices = await query('SELECT id, device_code, name FROM devices');
+    const byCode = new Map();
+    const byId = new Map();
+    devices.forEach((d) => {
+      if (d.device_code) byCode.set(String(d.device_code).trim().toLowerCase(), d);
+      byId.set(String(d.id).trim(), d);
+    });
+
+    let imported = 0;
+    const errors = [];
+    for (let i = 0; i < importRows.length; i++) {
+      const r = importRows[i];
+      try {
+        let deviceId = r.device_id || null;
+        if (!deviceId && r.device_code) {
+          const code = String(r.device_code).trim();
+          const dev = byCode.get(code.toLowerCase()) || byId.get(code);
+          deviceId = dev ? dev.id : null;
+        }
+        if (!deviceId) {
+          errors.push({ rowIndex: r.rowIndex, error: '未找到设备' });
+          continue;
+        }
+
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const issueId = `ISS${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}-${i + 1}`;
+        await query(
+          `INSERT INTO issues (id, device_id, description, severity, status, category, assignee, feedback_time, feedback_no, is_first_occurrence, resolution_description)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [issueId, deviceId, r.description, r.severity || 'medium', r.status || 'open', r.category || '其他', r.assignee || null, r.feedback_time, r.feedback_no || null, r.is_first_occurrence ? 1 : 0, r.note || null]
+        );
+        imported++;
+      } catch (e) {
+        errors.push({ rowIndex: r.rowIndex, error: e.message });
+      }
+    }
+
+    res.json({ success: true, data: { imported, failed: errors.length, errors } });
+  } catch (error) {
+    console.error('导入失败:', error);
+    res.status(500).json({ success: false, error: '导入失败' });
   }
 });
 
