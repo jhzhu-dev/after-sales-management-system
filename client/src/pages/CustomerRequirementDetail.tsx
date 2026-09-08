@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, TrashIcon, EyeIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
+import SectionCard from '../components/SectionCard';
 import { Button } from '../components/ui/button';
 import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
 import CustomerRequirementForm from '../components/CustomerRequirementForm';
@@ -26,16 +27,6 @@ const attUrl = (id: number, inline = false) => {
   const token = localStorage.getItem('auth_token');
   return `/api/customer-requirements/attachments/${id}/download?token=${token}${inline ? '&inline=1' : ''}`;
 };
-
-const SectionCard: React.FC<{ title: string; extra?: React.ReactNode; children: React.ReactNode }> = ({ title, extra, children }) => (
-  <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
-    <div className="flex items-center justify-between px-5 py-3 bg-gray-100 border-b border-gray-200">
-      <h2 className="text-sm font-semibold text-gray-800">{title}</h2>
-      {extra}
-    </div>
-    <div className="p-4 3xl:p-5">{children}</div>
-  </div>
-);
 
 const CustomerRequirementDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
