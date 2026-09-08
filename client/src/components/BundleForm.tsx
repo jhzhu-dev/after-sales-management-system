@@ -610,18 +610,18 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                   </div>
 
                   {showSearchDropdown && deviceSearch.trim() && (
-                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    <div className="absolute z-20 w-full mt-1 bg-popover border border-border rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                       {searchResults.length === 0 && !searchLoading && (
-                        <div className="px-3 py-2 text-xs text-gray-400 text-center">未找到匹配的设备</div>
+                        <div className="px-3 py-2 text-xs text-muted-foreground text-center">未找到匹配的设备</div>
                       )}
                       {searchResults.map(d => (
-                        <div key={d.id} onClick={() => addExistingDevice(d)} className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-blue-50 border-b last:border-b-0">
+                        <div key={d.id} onClick={() => addExistingDevice(d)} className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-muted border-b border-border last:border-b-0">
                           <div>
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-foreground">
                               {d.id}
                               {d.nickname && <span className="text-xs text-primary-600 ml-1.5">{d.nickname}</span>}
                             </div>
-                            <div className="text-xs text-gray-400">
+                            <div className="text-xs text-muted-foreground">
                               {d.product_line_name && <span>{d.product_line_name}</span>}
                               {d.product_name && <span> · {d.product_name}</span>}
                             </div>

@@ -357,9 +357,9 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
 
               {/* 下拉列表 */}
               {deviceDropdownOpen && !selectedDevice && (
-                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-xl shadow-2xl max-h-60 overflow-y-auto">
                   {devices.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-gray-500">
+                    <div className="px-4 py-3 text-sm text-muted-foreground">
                       {deviceLoading ? '搜索中...' : '未找到匹配设备'}
                     </div>
                   ) : (
@@ -368,10 +368,10 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
                         key={device.id}
                         type="button"
                         onMouseDown={e => { e.preventDefault(); handleDeviceSelect(device); }}
-                        className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors"
+                        className="w-full text-left px-4 py-2.5 hover:bg-muted border-b border-border last:border-0 transition-colors"
                       >
-                      <div className="text-sm font-medium text-gray-900">{device.nickname || [device.customer_name, device.product_name].filter(Boolean).join(' · ') || device.name}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">
+                      <div className="text-sm font-medium text-foreground">{device.nickname || [device.customer_name, device.product_name].filter(Boolean).join(' · ') || device.name}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
                           {[device.name, device.id, device.remote_code].filter(Boolean).join(' · ')}
                         </div>
                       </button>

@@ -626,17 +626,17 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 </div>
                 {errors.customer_id && <p className="text-red-500 text-xs mt-1">{errors.customer_id}</p>}
                 {showCustomerDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-1 bg-popover border border-border rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                     {filteredCustomers.map(c => (
                       <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)}
-                        className={`w-full text-left px-3 py-2 hover:bg-blue-50 text-sm ${formData.customer_id === c.id ? 'bg-blue-50 text-primary-700' : ''}`}>
+                        className={`w-full text-left px-3 py-2 hover:bg-muted text-sm text-foreground ${formData.customer_id === c.id ? 'bg-primary-50 text-primary-700' : ''}`}>
                         <span className="font-medium">{c.name}</span>
-                        <span className="text-gray-400 ml-2">({c.short_name})</span>
+                        <span className="text-muted-foreground ml-2">({c.short_name})</span>
                       </button>
                     ))}
-                    {filteredCustomers.length === 0 && <div className="px-3 py-2 text-sm text-gray-500">无匹配客户</div>}
+                    {filteredCustomers.length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">无匹配客户</div>}
                     <button type="button" onClick={() => { setShowNewCustomerForm(true); setShowCustomerDropdown(false); }}
-                      className="w-full text-left px-3 py-2 hover:bg-green-50 text-sm text-green-600 border-t border-gray-100 flex items-center gap-1">
+                      className="w-full text-left px-3 py-2 hover:bg-green-50 text-sm text-green-600 border-t border-border flex items-center gap-1">
                       <PlusIcon className="h-4 w-4" />新建客户
                     </button>
                   </div>

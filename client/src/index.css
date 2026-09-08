@@ -93,7 +93,7 @@ html.dark body {
   --foreground: #1c2833;
   --card: rgba(255, 255, 255, 0.92);
   --card-foreground: #1c2833;
-  --popover: rgba(255, 255, 255, 0.97);
+  --popover: rgba(255, 255, 255, 0.80);
   --popover-foreground: #1c2833;
   --primary: #3498db;
   --primary-foreground: #ffffff;
@@ -123,7 +123,7 @@ html.dark {
   --foreground: #e2e8f0;
   --card: rgba(28, 31, 41, 0.68);
   --card-foreground: #e2e8f0;
-  --popover: rgba(28, 31, 41, 0.96);
+  --popover: rgba(28, 31, 41, 0.72);
   --popover-foreground: #e2e8f0;
   --primary: #3b82f6;
   --primary-foreground: #ffffff;

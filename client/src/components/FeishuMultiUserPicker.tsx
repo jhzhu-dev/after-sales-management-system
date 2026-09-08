@@ -74,10 +74,10 @@ const FeishuMultiUserPicker: React.FC<FeishuMultiUserPickerProps> = ({
   };
 
   return (
-    <div className="border border-gray-200 rounded-md overflow-hidden">
+    <div className="bg-popover border border-border rounded-xl shadow-soft overflow-hidden">
       {/* 已选汇总 */}
       {value.length > 0 && (
-        <div className="flex flex-wrap gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+        <div className="flex flex-wrap gap-1 px-2 py-1.5 bg-muted border-b border-border">
           {value.map(id => {
             const u = users.find(u => u.open_id === id);
             if (!u) return null;
