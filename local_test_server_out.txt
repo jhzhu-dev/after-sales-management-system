@@ -1,0 +1,39 @@
+✅ 阿里云OSS服务已启用
+📦 Bucket: els-pub-04
+📂 基础路径: static/After-sales management system
+🚀 正在启动设备管理系统...
+🔗 正在连接MySQL数据库...
+✅ issue_logs.attachments 列已就绪
+✅ 数据库 'device_management' 创建成功
+✅ MySQL数据库连接成功!
+🔍 检查数据库表结构...
+✅ kb_articles.attachments 列已就绪
+✅ devices 表字段更新成功
+🔄 正在执行 Phase 4 数据库迁移...
+🔄 正在为 devices 表添加 product_version_id 字段...
+✅ product_version_id 字段添加成功
+✅ device_upgrades 表就绪
+✅ device_bundles 表就绪
+✅ 数据库表结构创建/更新成功
+✅ devices.product_version_id 字段已删除
+✅ feishu_config 表就绪
+✅ feishu_users 表就绪
+✅ feishu_notifications 表就绪
+🎉 数据库初始化完成!
+✅ SSL证书加载成功，HTTPS服务将启动
+✅ HTTP服务器启动成功!
+📊 本地HTTP访问地址: http://localhost:5000
+🌐 局域网访问地址 (HTTP):
+   1. http://172.26.224.1:5000
+   2. http://192.168.0.73:5000
+   3. http://192.168.0.172:5000
+   4. http://172.21.144.1:5000
+💡 按 Ctrl+C 停止服务
+
+✅ HTTPS服务器启动成功!
+🔒 本地HTTPS访问地址: https://localhost:5001
+🌐 局域网访问地址 (HTTPS):
+   1. https://172.26.224.1:5001
+   2. https://192.168.0.73:5001
+   3. https://192.168.0.172:5001
+   4. https://172.21.144.1:5001

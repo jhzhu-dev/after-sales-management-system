@@ -7,48 +7,6 @@ export interface FeishuUser {
   synced_at?: string;
 }
 
-// 系统对接
-export type IntegrationStatus = '洽谈中' | '对接中' | '已完成' | '暂停';
-
-export interface Integration {
-  id: number;
-  title: string;
-  customer_id?: number;
-  customer_name?: string;
-  customer_short_name?: string;
-  status: IntegrationStatus;
-  description?: string;
-  responsible_person?: string;
-  started_at?: string;
-  completed_at?: string;
-  device_count?: number;
-  log_count?: number;
-  devices?: IntegrationDevice[];
-  logs?: IntegrationLog[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface IntegrationDevice {
-  id: string;
-  nickname?: string;
-  device_code?: string;
-  status?: string;
-  product_name?: string;
-  customer_name?: string;
-  customer_short_name?: string;
-  added_at: string;
-}
-
-export interface IntegrationLog {
-  id: number;
-  integration_id: number;
-  content: string;
-  operator?: string;
-  attachments: Array<{ name: string; url: string; size?: number; type?: string }>;
-  created_at: string;
-}
-
 // 客户类型
 export interface Customer {
   id: number;
@@ -624,4 +582,137 @@ export interface DeviceBundleFormData {
   merchant_id?: string;
   merchant_password?: string;
   factory_docs_complete?: boolean;
+}
+
+// ==================== 客户需求登记 ====================
+
+export type RequirementType = '接口对接' | '功能定制' | '输出结果定制';
+export type RequirementStatus = '待评估' | '评估中' | '已评估待开发' | '开发中' | '已开发待测试' | '测试中' | '已测试待发布' | '已发布' | '废弃';
+
+export interface CustomerRequirementAttachment {
+  id: number;
+  requirement_id: number;
+  status?: string | null;
+  file_name: string;
+  original_name: string;
+  file_path: string;
+  file_size?: number;
+  file_type?: string;
+  uploaded_by?: string;
+  created_at: string;
+}
+
+export interface CustomerRequirementLog {
+  id: number;
+  requirement_id: number;
+  from_status: string | null;
+  to_status: string;
+  operator: string;
+  remark?: string;
+  created_at: string;
+}
+
+export interface CustomerRequirement {
+  id: number;
+  req_code: string;
+  customer_id: number;
+  customer_name?: string;
+  customer_short_name?: string;
+  requirement_type: RequirementType;
+  proposed_date: string;
+  urgency: '低' | '普通' | '高' | '紧急';
+  status: RequirementStatus;
+  description: string;
+  publish_version?: string | null;
+  publish_time?: string | null;
+  deprecated_reason?: string | null;
+  remarks?: string | null;
+  created_by: string;
+  created_at: string;
+  updated_by?: string | null;
+  updated_at: string;
+  device_names?: string;
+  device_count?: number;
+  device_ids?: string[];
+  devices?: { id: string; name?: string; nickname?: string | null }[];
+  attachments?: CustomerRequirementAttachment[];
+  logs?: CustomerRequirementLog[];
+}
+
+export interface CustomerRequirementFormData {
+  customer_id: number;
+  requirement_type: RequirementType;
+  proposed_date: string;
+  urgency: '低' | '普通' | '高' | '紧急';
+  description: string;
+  remarks?: string;
+  device_ids: string[];
+}
+
+// ==================== 测试管理 ====================
+
+export type TestTaskStatus = '测试中' | '已测试' | '通过' | '不通过';
+export type TestTaskPriority = '低' | '普通' | '高' | '紧急';
+export type UpgradeDecision = '待定' | '升级' | '不升级';
+
+export interface TestTaskAttachment {
+  id: number;
+  task_id: number;
+  category: '测试反馈单' | '测试报告' | '其他';
+  file_name: string;
+  original_name: string;
+  file_path: string;
+  file_size?: number;
+  file_type?: string;
+  uploaded_by?: string;
+  created_at: string;
+}
+
+export interface TestTask {
+  id: number;
+  task_code: string;
+  product_id: number;
+  product_name?: string;
+  product_model?: string;
+  model_name?: string | null;
+  model_version?: string | null;
+  current_version?: string | null;
+  upgrade_content?: string | null;
+  model_features?: string | null;
+  test_focus?: string | null;
+  test_requirements?: string | null;
+  vehicle_requirements?: string | null;
+  test_scenarios?: string | null;
+  planned_completion_date?: string | null;
+  priority: TestTaskPriority;
+  shenzhen_requester?: string | null;
+  shenzhen_requester_name?: string | null;
+  shanghai_tester?: string | null;
+  test_summary?: string | null;
+  status: TestTaskStatus;
+  upgrade_decision: UpgradeDecision;
+  decision_note?: string | null;
+  decided_by?: string | null;
+  decided_at?: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  attachments?: TestTaskAttachment[];
+}
+
+export interface TestTaskFormData {
+  product_id: number;
+  model_name?: string;
+  model_version?: string;
+  upgrade_content?: string;
+  model_features?: string;
+  test_focus?: string;
+  test_requirements?: string;
+  vehicle_requirements?: string;
+  test_scenarios?: string;
+  planned_completion_date?: string;
+  priority: TestTaskPriority;
+  shenzhen_requester?: string;
+  shenzhen_requester_name: string;
+  shanghai_tester?: string;
 }

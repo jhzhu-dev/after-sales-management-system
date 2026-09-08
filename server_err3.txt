@@ -1,0 +1,6 @@
+❌ 数据库查询失败: Duplicate column name 'attachments'
+SQL: ALTER TABLE issue_logs ADD COLUMN attachments JSON
+Params: []
+❌ 数据库查询失败: Duplicate column name 'attachments'
+SQL: ALTER TABLE kb_articles ADD COLUMN attachments JSON
+Params: []

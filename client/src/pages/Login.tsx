@@ -29,8 +29,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white rounded-2xl shadow-lg w-full max-w-sm p-8">
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="glass-strong rounded-3xl w-full max-w-sm p-8">
         {/* Logo / 标题 */}
         <div className="text-center mb-8">
           <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">售后登记系统</h1>
@@ -53,7 +53,7 @@ export default function Login() {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className="apple-input w-full"
               placeholder="请输入用户名"
             />
           </div>
@@ -74,7 +74,7 @@ export default function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="apple-input w-full pr-10"
                 placeholder="请输入密码"
               />
               <button
@@ -101,7 +101,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            className="apple-btn apple-btn-primary w-full py-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? '登录中...' : '登录'}
           </button>

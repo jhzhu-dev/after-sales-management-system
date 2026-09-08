@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import PrivateRoute from './components/PrivateRoute';
 
 const Login = React.lazy(() => import('./pages/Login'));
@@ -17,12 +18,15 @@ const ProductDetail = React.lazy(() => import('./pages/ProductDetail'));
 const Products = React.lazy(() => import('./pages/Products'));
 const BundleDetail = React.lazy(() => import('./pages/BundleDetail'));
 const FeishuSettings = React.lazy(() => import('./pages/FeishuSettings'));
-const Integrations = React.lazy(() => import('./pages/Integrations'));
-const IntegrationDetail = React.lazy(() => import('./pages/IntegrationDetail'));
+const CustomerRequirements = React.lazy(() => import('./pages/CustomerRequirements'));
+const CustomerRequirementDetail = React.lazy(() => import('./pages/CustomerRequirementDetail'));
+const TestTasks = React.lazy(() => import('./pages/TestTasks'));
+const TestTaskDetail = React.lazy(() => import('./pages/TestTaskDetail'));
 
 function App() {
   return (
     <AuthProvider>
+      <ThemeProvider>
       <Router>
         <div className="App">
           <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">加载中...</div>}>
@@ -46,12 +50,15 @@ function App() {
               <Route path="/upgrades" element={<Navigate to="/issues" replace />} />
               <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
               <Route path="/feishu-settings" element={<PrivateRoute><FeishuSettings /></PrivateRoute>} />
-              <Route path="/integrations" element={<PrivateRoute><Integrations /></PrivateRoute>} />
-              <Route path="/integrations/:id" element={<PrivateRoute><IntegrationDetail /></PrivateRoute>} />
+              <Route path="/customer-requirements" element={<PrivateRoute><CustomerRequirements /></PrivateRoute>} />
+              <Route path="/customer-requirements/:id" element={<PrivateRoute><CustomerRequirementDetail /></PrivateRoute>} />
+              <Route path="/test-tasks" element={<PrivateRoute><TestTasks /></PrivateRoute>} />
+              <Route path="/test-tasks/:id" element={<PrivateRoute><TestTaskDetail /></PrivateRoute>} />
             </Routes>
           </React.Suspense>
         </div>
       </Router>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

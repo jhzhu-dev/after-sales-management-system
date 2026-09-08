@@ -437,6 +437,161 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+    // ==================== Phase 6: 客户需求登记 与 测试管理 ====================
+    // 依赖 customers / devices / products / product_versions
+
+    // 需求主表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS customer_requirements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        req_code VARCHAR(50) NOT NULL UNIQUE COMMENT '需求编号（服务端自动生成：XQ-YYYYMMDD-NN，唯一）',
+        customer_id INT NOT NULL COMMENT '客户名称',
+        requirement_type ENUM('接口对接','功能定制','输出结果定制') NOT NULL COMMENT '需求分类',
+        proposed_date DATE NOT NULL COMMENT '需求提出日期（区别于系统登记时间，必填）',
+        urgency ENUM('低','普通','高','紧急') DEFAULT '普通' COMMENT '紧急程度',
+        status ENUM('待评估','评估中','已评估待开发','开发中','已开发待测试','测试中','已测试待发布','已发布','废弃')
+               DEFAULT '待评估' COMMENT '当前状态',
+        description TEXT NOT NULL COMMENT '需求详情描述',
+        publish_version VARCHAR(50) NULL COMMENT '发布版本号（状态=已发布时必填）',
+        publish_time DATETIME NULL COMMENT '发布时间（状态=已发布时必填）',
+        deprecated_reason TEXT NULL COMMENT '废弃原因（状态=废弃时必填）',
+        remarks TEXT NULL COMMENT '备注（需求变更时写入原需求编号等信息）',
+        created_by VARCHAR(100) NOT NULL COMMENT '登记人（登录用户自动带入）',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '登记时间',
+        updated_by VARCHAR(100) NULL COMMENT '最后更新人',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+        FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
+        INDEX idx_customer (customer_id),
+        INDEX idx_status (status),
+        INDEX idx_urgency (urgency),
+        INDEX idx_requirement_type (requirement_type),
+        INDEX idx_proposed_date (proposed_date),
+        INDEX idx_publish_time (publish_time)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 需求-设备关联表（多对多）
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS customer_requirement_devices (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        requirement_id INT NOT NULL,
+        device_id VARCHAR(50) NOT NULL,
+        UNIQUE KEY uq_req_device (requirement_id, device_id),
+        FOREIGN KEY (requirement_id) REFERENCES customer_requirements(id) ON DELETE CASCADE,
+        FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 需求附件表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS customer_requirement_attachments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        requirement_id INT NOT NULL,
+        status VARCHAR(50) NULL COMMENT '所属阶段（对应需求状态）',
+        file_name VARCHAR(255) NOT NULL COMMENT '存储文件名',
+        original_name VARCHAR(255) NOT NULL COMMENT '原始文件名',
+        file_path VARCHAR(500) NOT NULL,
+        file_size INT,
+        file_type VARCHAR(50) COMMENT '文件类型（扩展名/MIME）',
+        uploaded_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (requirement_id) REFERENCES customer_requirements(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 需求状态变更日志表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS customer_requirement_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        requirement_id INT NOT NULL,
+        from_status VARCHAR(50) NULL COMMENT '原状态（首次为NULL）',
+        to_status VARCHAR(50) NOT NULL COMMENT '新状态',
+        operator VARCHAR(100) NOT NULL COMMENT '操作人',
+        remark TEXT COMMENT '备注',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '变更时间',
+        FOREIGN KEY (requirement_id) REFERENCES customer_requirements(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 测试任务主表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS test_tasks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        task_code VARCHAR(50) NOT NULL UNIQUE COMMENT '任务编号（服务端自动生成：T-YYYYMMDD-NN）',
+        product_id INT NOT NULL COMMENT '对应产品',
+        model_name VARCHAR(255) COMMENT '模型名称',
+        model_version VARCHAR(100) COMMENT '模型版本号',
+        current_version VARCHAR(100) COMMENT '当前版本（读取产品最新版本快照）',
+        upgrade_content TEXT COMMENT '升级内容',
+        model_features TEXT COMMENT '模型特点',
+        test_focus TEXT COMMENT '测试要点',
+        test_requirements TEXT COMMENT '测试要求',
+        vehicle_requirements VARCHAR(255) COMMENT '车型要求',
+        test_scenarios TEXT COMMENT '测试场景',
+        planned_completion_date DATE COMMENT '计划完成时间',
+        priority ENUM('低','普通','高','紧急') DEFAULT '普通' COMMENT '优先级别',
+        shenzhen_requester VARCHAR(64) COMMENT '深圳需求人（飞书 open_id；飞书不可用回退文本，二者其一必填）',
+        shenzhen_requester_name VARCHAR(255) COMMENT '深圳需求人显示名（冗余，列表/详情展示用；必填）',
+        shanghai_tester VARCHAR(100) COMMENT '上海测试人（手工文本录入）',
+        test_summary TEXT COMMENT '测试总结（上海填写）',
+        status ENUM('测试中','已测试','通过','不通过') DEFAULT '测试中' COMMENT '任务状态',
+        upgrade_decision ENUM('待定','升级','不升级') DEFAULT '待定' COMMENT '升级决策',
+        decision_note TEXT COMMENT '决策说明（否→不替换说明；作废原因等）',
+        decided_by VARCHAR(100) COMMENT '决策操作人',
+        decided_at DATETIME NULL COMMENT '决策时间',
+        created_by VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+        INDEX idx_product (product_id),
+        INDEX idx_status (status),
+        INDEX idx_priority (priority),
+        INDEX idx_tester (shanghai_tester)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 测试任务附件表
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS test_task_attachments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        task_id INT NOT NULL,
+        category ENUM('测试反馈单','测试报告','其他') DEFAULT '其他',
+        file_name VARCHAR(255) NOT NULL,
+        original_name VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        file_size INT,
+        file_type VARCHAR(50),
+        uploaded_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES test_tasks(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 迁移：客户需求 / 测试任务 新增列（幂等，兼容已建表但缺列的旧库）
+    try {
+      const [reqCols] = await pool.execute("SHOW COLUMNS FROM customer_requirements LIKE 'proposed_date'");
+      if (reqCols.length === 0) {
+        await pool.execute("ALTER TABLE customer_requirements ADD COLUMN proposed_date DATE NOT NULL AFTER requirement_type");
+        console.log('✅ customer_requirements.proposed_date 字段添加成功');
+      }
+    } catch (e) { console.warn('⚠️ customer_requirements.proposed_date 迁移警告:', e.message); }
+
+    try {
+      const [nameCols] = await pool.execute("SHOW COLUMNS FROM test_tasks LIKE 'shenzhen_requester_name'");
+      if (nameCols.length === 0) {
+        await pool.execute("ALTER TABLE test_tasks ADD COLUMN shenzhen_requester_name VARCHAR(255) AFTER shenzhen_requester");
+        console.log('✅ test_tasks.shenzhen_requester_name 字段添加成功');
+      }
+    } catch (e) { console.warn('⚠️ test_tasks.shenzhen_requester_name 迁移警告:', e.message); }
+
+    try {
+      const [attStatusCols] = await pool.execute("SHOW COLUMNS FROM customer_requirement_attachments LIKE 'status'");
+      if (attStatusCols.length === 0) {
+        await pool.execute("ALTER TABLE customer_requirement_attachments ADD COLUMN status VARCHAR(50) NULL COMMENT '所属阶段（对应需求状态）' AFTER requirement_id");
+        console.log('✅ customer_requirement_attachments.status 字段添加成功');
+      }
+    } catch (e) { console.warn('⚠️ customer_requirement_attachments.status 迁移警告:', e.message); }
+
     // ==================== Schema Migrations ====================
 
     // 迁移：将设备类型改为产品线

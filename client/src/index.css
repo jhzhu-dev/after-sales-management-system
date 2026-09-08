@@ -2,6 +2,516 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========== 全局主题：浅色 / 深色 ========== */
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+  background-color: #0b1220;
+}
+
+body {
+  min-height: 100vh;
+  background-color: #f4f6fb;
+  background-image:
+    radial-gradient(1200px 600px at 8% -10%, rgba(59, 130, 246, 0.10), transparent 60%),
+    radial-gradient(1000px 560px at 100% 0%, rgba(147, 197, 253, 0.14), transparent 55%),
+    linear-gradient(180deg, #fbfcfe 0%, #f4f6fb 100%);
+  background-attachment: fixed;
+  color: #1f2937;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+html.dark body {
+  background-color: #0b1220;
+  background-image:
+    radial-gradient(1200px 600px at 8% -10%, rgba(59, 130, 246, 0.16), transparent 60%),
+    radial-gradient(1000px 560px at 100% 0%, rgba(99, 102, 241, 0.12), transparent 55%),
+    linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
+  background-attachment: fixed;
+  color: #e2e8f0;
+}
+
+/* Apple 风格设计令牌 */
+:root {
+  --apple-surface: rgba(255, 255, 255, 0.72);
+  --apple-surface-strong: rgba(255, 255, 255, 0.86);
+  --apple-surface-muted: rgba(255, 255, 255, 0.55);
+  --apple-border: rgba(17, 24, 39, 0.06);
+  --apple-border-strong: rgba(17, 24, 39, 0.10);
+  --apple-shadow: 0 1px 2px rgba(17, 24, 39, 0.04), 0 8px 24px rgba(17, 24, 39, 0.06);
+  --apple-shadow-lg: 0 2px 4px rgba(17, 24, 39, 0.04), 0 16px 48px rgba(17, 24, 39, 0.10);
+  --apple-blur: 20px;
+}
+
+html.dark {
+  --apple-surface: rgba(28, 31, 41, 0.72);
+  --apple-surface-strong: rgba(28, 31, 41, 0.86);
+  --apple-surface-muted: rgba(28, 31, 41, 0.55);
+  --apple-border: rgba(255, 255, 255, 0.08);
+  --apple-border-strong: rgba(255, 255, 255, 0.12);
+  --apple-shadow: 0 1px 2px rgba(0, 0, 0, 0.30), 0 8px 24px rgba(0, 0, 0, 0.40);
+  --apple-shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.30), 0 16px 48px rgba(0, 0, 0, 0.50);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ========== Apple 风格组件层 ========== */
+@layer components {
+  .glass {
+    background-color: var(--apple-surface);
+    border: 1px solid var(--apple-border);
+    backdrop-filter: blur(var(--apple-blur));
+    -webkit-backdrop-filter: blur(var(--apple-blur));
+  }
+
+  .glass-strong {
+    background-color: var(--apple-surface-strong);
+    border: 1px solid var(--apple-border);
+    backdrop-filter: blur(var(--apple-blur));
+    -webkit-backdrop-filter: blur(var(--apple-blur));
+    box-shadow: var(--apple-shadow);
+  }
+
+  .apple-card {
+    border-radius: 1.25rem;
+    background-color: var(--apple-surface);
+    border: 1px solid var(--apple-border);
+    box-shadow: var(--apple-shadow);
+    backdrop-filter: blur(var(--apple-blur));
+    -webkit-backdrop-filter: blur(var(--apple-blur));
+  }
+
+  .apple-btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-all;
+    background-color: var(--apple-surface-strong);
+    border: 1px solid var(--apple-border);
+    box-shadow: var(--apple-shadow);
+    color: inherit;
+  }
+
+  .apple-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--apple-shadow-lg);
+  }
+
+  .apple-btn:active {
+    transform: translateY(0);
+  }
+
+  .apple-btn-primary {
+    @apply text-white;
+    background-image: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+    border: none;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+  }
+
+  .apple-btn-primary:hover {
+    box-shadow: 0 6px 22px rgba(37, 99, 235, 0.45);
+  }
+
+  .apple-input {
+    @apply rounded-xl px-3 py-2 text-sm transition-all;
+    background-color: var(--apple-surface-muted);
+    border: 1px solid var(--apple-border-strong);
+    color: inherit;
+  }
+
+  .apple-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+    background-color: var(--apple-surface);
+  }
+}
+
+/* 焦点环（无障碍） */
+:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.7);
+  outline-offset: 1px;
+}
+
+/* 深色：背景表面（卡片 / 表格 / 弹窗 / 页面底） */
+html.dark .bg-white {
+  background-color: #1f2937;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #0b1220;
+}
+
+html.dark .bg-gray-100 {
+  background-color: #111827;
+}
+
+html.dark .bg-gray-200 {
+  background-color: #374151;
+}
+
+/* 深色：文本颜色 */
+html.dark .text-gray-100,
+html.dark .text-gray-200 {
+  color: #1f2937;
+}
+
+html.dark .text-gray-300 {
+  color: #cbd5e1;
+}
+
+html.dark .text-gray-400 {
+  color: #9ca3af;
+}
+
+html.dark .text-gray-500 {
+  color: #9ca3af;
+}
+
+html.dark .text-gray-600 {
+  color: #b0b7c3;
+}
+
+html.dark .text-gray-700 {
+  color: #cbd5e1;
+}
+
+html.dark .text-gray-800 {
+  color: #e2e8f0;
+}
+
+html.dark .text-gray-900 {
+  color: #f1f5f9;
+}
+
+/* 深色：边框 / 分隔线 */
+html.dark .border-gray-100,
+html.dark .border-gray-200 {
+  border-color: #374151;
+}
+
+html.dark .border-gray-300 {
+  border-color: #4b5563;
+}
+
+html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #374151;
+}
+
+html.dark .divide-gray-300 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #4b5563;
+}
+
+/* 深色：hover 态 */
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-100:hover {
+  background-color: #111827;
+}
+
+html.dark .hover\:bg-gray-200:hover,
+html.dark .hover\:bg-white:hover {
+  background-color: #374151;
+}
+
+html.dark .hover\:text-gray-700:hover,
+html.dark .hover\:text-gray-900:hover {
+  color: #f1f5f9;
+}
+
+/* 深色：浅色强调背景（选中/悬停高亮、状态标签、提示条）转为深色半透明色 */
+html.dark .bg-blue-50,
+html.dark .hover\:bg-blue-50:hover,
+html.dark .hover\:bg-blue-100:hover,
+html.dark .bg-blue-100 {
+  background-color: rgba(59, 130, 246, 0.16);
+}
+
+html.dark .bg-green-50,
+html.dark .hover\:bg-green-50:hover,
+html.dark .hover\:bg-green-100:hover,
+html.dark .bg-green-100 {
+  background-color: rgba(34, 197, 94, 0.16);
+}
+
+html.dark .bg-red-50,
+html.dark .hover\:bg-red-50:hover,
+html.dark .hover\:bg-red-100:hover,
+html.dark .bg-red-100 {
+  background-color: rgba(239, 68, 68, 0.16);
+}
+
+html.dark .bg-yellow-50,
+html.dark .bg-yellow-100 {
+  background-color: rgba(234, 179, 8, 0.16);
+}
+
+html.dark .bg-orange-50,
+html.dark .hover\:bg-orange-50:hover,
+html.dark .bg-orange-100 {
+  background-color: rgba(249, 115, 22, 0.16);
+}
+
+html.dark .bg-purple-50,
+html.dark .hover\:bg-purple-50:hover,
+html.dark .hover\:bg-purple-100:hover,
+html.dark .bg-purple-100,
+html.dark .hover\:bg-purple-200:hover {
+  background-color: rgba(168, 85, 247, 0.16);
+}
+
+html.dark .bg-indigo-50,
+html.dark .bg-indigo-100 {
+  background-color: rgba(99, 102, 241, 0.16);
+}
+
+html.dark .bg-cyan-50,
+html.dark .bg-cyan-100 {
+  background-color: rgba(6, 182, 212, 0.16);
+}
+
+html.dark .bg-teal-50,
+html.dark .bg-teal-100 {
+  background-color: rgba(20, 184, 166, 0.16);
+}
+
+html.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.16);
+}
+
+html.dark .bg-pink-100 {
+  background-color: rgba(236, 72, 153, 0.16);
+}
+
+/* 深色：强调文本提亮，保证在深色强调背景上可读 */
+html.dark .text-blue-600,
+html.dark .text-blue-700,
+html.dark .text-blue-800,
+html.dark .hover\:text-blue-800:hover {
+  color: #93c5fd;
+}
+
+html.dark .text-green-600,
+html.dark .text-green-700,
+html.dark .text-green-800 {
+  color: #86efac;
+}
+
+html.dark .text-red-600,
+html.dark .text-red-700,
+html.dark .text-red-800,
+html.dark .hover\:text-red-600:hover {
+  color: #fca5a5;
+}
+
+html.dark .text-yellow-600,
+html.dark .text-yellow-700,
+html.dark .text-yellow-800 {
+  color: #fde047;
+}
+
+html.dark .text-orange-600,
+html.dark .text-orange-700,
+html.dark .text-orange-800 {
+  color: #fdba74;
+}
+
+html.dark .text-purple-600,
+html.dark .text-purple-700,
+html.dark .text-purple-800 {
+  color: #d8b4fe;
+}
+
+html.dark .text-indigo-600 {
+  color: #a5b4fc;
+}
+
+html.dark .text-cyan-600 {
+  color: #67e8f9;
+}
+
+html.dark .text-teal-700 {
+  color: #5eead4;
+}
+
+html.dark .text-pink-700 {
+  color: #f9a8d4;
+}
+
+html.dark .text-amber-600 {
+  color: #fcd34d;
+}
+
+/* 深色：强调边框 */
+html.dark .border-blue-200,
+html.dark .border-blue-300,
+html.dark .border-blue-400 {
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+html.dark .border-green-200 {
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+html.dark .border-red-200,
+html.dark .border-red-300 {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+html.dark .border-purple-200,
+html.dark .border-purple-300 {
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+html.dark .border-orange-200 {
+  border-color: rgba(249, 115, 22, 0.4);
+}
+
+html.dark .border-yellow-300 {
+  border-color: rgba(234, 179, 8, 0.4);
+}
+
+/* 主题切换控件在深色下的激活态 */
+html.dark .bg-white.shadow-sm {
+  background-color: #374151;
+}
+
+/* 深色下原生表单控件底色 */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #1f2937;
+  color: #e2e8f0;
+  border-color: #374151;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #6b7280;
+}
+
+/* 深色下滚动条 */
+html.dark ::-webkit-scrollbar-track {
+  background: #111827;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+/* 打印时重置为浅色，保证深色模式下打印仍然白纸黑字 */
+@media print {
+  html.dark body {
+    background: #fff !important;
+    color: #111827;
+  }
+
+  html.dark .bg-white,
+  html.dark .bg-gray-50,
+  html.dark .bg-gray-100,
+  html.dark .bg-gray-200 {
+    background-color: #fff;
+  }
+
+  html.dark .text-gray-300,
+  html.dark .text-gray-400,
+  html.dark .text-gray-500,
+  html.dark .text-gray-600,
+  html.dark .text-gray-700,
+  html.dark .text-gray-800,
+  html.dark .text-gray-900 {
+    color: #111827;
+  }
+
+  html.dark .border-gray-100,
+  html.dark .border-gray-200,
+  html.dark .border-gray-300 {
+    border-color: #e5e7eb;
+  }
+
+  /* 打印时恢复强调色为浅色主题，避免深色模式下打印文字过浅 */
+  html.dark .bg-blue-50,
+  html.dark .bg-blue-100,
+  html.dark .bg-green-50,
+  html.dark .bg-green-100,
+  html.dark .bg-red-50,
+  html.dark .bg-red-100,
+  html.dark .bg-yellow-50,
+  html.dark .bg-yellow-100,
+  html.dark .bg-orange-50,
+  html.dark .bg-orange-100,
+  html.dark .bg-purple-50,
+  html.dark .bg-purple-100,
+  html.dark .bg-indigo-100,
+  html.dark .bg-cyan-100,
+  html.dark .bg-teal-100,
+  html.dark .bg-amber-50,
+  html.dark .bg-pink-100 {
+    background-color: transparent;
+  }
+
+  html.dark .text-blue-600,
+  html.dark .text-blue-700,
+  html.dark .text-blue-800 {
+    color: #2563eb;
+  }
+
+  html.dark .text-green-600,
+  html.dark .text-green-700,
+  html.dark .text-green-800 {
+    color: #16a34a;
+  }
+
+  html.dark .text-red-600,
+  html.dark .text-red-700,
+  html.dark .text-red-800 {
+    color: #dc2626;
+  }
+
+  html.dark .text-yellow-700,
+  html.dark .text-yellow-800 {
+    color: #a16207;
+  }
+
+  html.dark .text-orange-600,
+  html.dark .text-orange-700,
+  html.dark .text-orange-800 {
+    color: #ea580c;
+  }
+
+  html.dark .text-purple-600,
+  html.dark .text-purple-700,
+  html.dark .text-purple-800 {
+    color: #9333ea;
+  }
+
+  html.dark .text-indigo-600 {
+    color: #4f46e5;
+  }
+
+  html.dark .text-cyan-600 {
+    color: #0891b2;
+  }
+
+  html.dark .text-teal-700 {
+    color: #0f766e;
+  }
+
+  html.dark .text-pink-700 {
+    color: #be185d;
+  }
+
+  html.dark .text-amber-600 {
+    color: #d97706;
+  }
+}
+
 /* 打印样式 */
 @media print {
   /* 隐藏不需要打印的元素 */

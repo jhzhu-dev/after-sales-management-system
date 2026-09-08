@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { cn } from '../utils';
 
-interface Column<T> {
+export interface Column<T> {
   key: keyof T;
   title: string | React.ReactNode;
   render?: (value: any, record: T) => React.ReactNode;
@@ -98,7 +98,7 @@ export default function DataTable<T extends Record<string, any>>({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow">
+      <div className="apple-card">
         <div className="p-4 3xl:p-6">
           <div className="animate-pulse">
             <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
@@ -114,10 +114,10 @@ export default function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div className={cn('bg-white rounded-lg shadow', className)}>
+    <div className={cn('apple-card overflow-hidden', className)}>
       <div ref={scrollRef} className={(scrollable || onLoadMore) ? 'overflow-auto' : 'overflow-x-auto'} style={(scrollable || onLoadMore) ? { maxHeight: 'calc(100vh - 240px)' } : undefined}>
         <table className="min-w-full divide-y divide-gray-200" style={fixedLayout ? { tableLayout: 'fixed' } : undefined}>
-          <thead className="bg-gray-50 sticky top-0 z-10">
+          <thead className="bg-gray-50/70 backdrop-blur sticky top-0 z-10">
             <tr>
               {columns.map((column) => (
                 <th
@@ -193,7 +193,7 @@ export default function DataTable<T extends Record<string, any>>({
       </div>
 
       {pagination && (
-        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <div className="bg-transparent px-4 py-3 flex items-center justify-between border-t border-gray-200/70 dark:border-white/10 sm:px-6">
           <div className="flex-1 flex justify-between sm:hidden">
             <button
               onClick={() => pagination.onChange(pagination.current - 1, pagination.pageSize)}

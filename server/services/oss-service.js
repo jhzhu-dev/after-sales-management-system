@@ -330,6 +330,14 @@ class OSSService {
         return `${base}/integrations/${params.integrationId}/${params.fileName}`;
       }
 
+      case 'customer-requirement-attachments': {
+        return `${base}/customer-requirements/${params.requirementId}/${params.fileName}`;
+      }
+
+      case 'test-task-attachments': {
+        return `${base}/test-tasks/${params.taskId}/${params.fileName}`;
+      }
+
       default:
         throw new Error(`buildPathByType: 未知路径类型 "${type}"`);
     }

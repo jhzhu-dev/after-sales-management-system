@@ -1,0 +1,129 @@
+
+> device-management-client@1.0.0 start
+> react-scripts start
+
+Starting the development server...
+
+Compiled with warnings.
+
+[eslint] 
+src\components\BundleForm.tsx
+  Line 1:1:    Unexpected Unicode BOM (Byte Order Mark)                                                                                                        unicode-bom
+  Line 113:6:  React Hook useEffect has missing dependencies: 'bundle', 'isEdit', and 'loadBundleDevices'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\DeviceDetail.tsx
+  Line 13:3:    'EyeSlashIcon' is defined but never used                                                                                                                                                            @typescript-eslint/no-unused-vars
+  Line 26:81:   'DeviceUpgrade' is defined but never used                                                                                                                                                           @typescript-eslint/no-unused-vars
+  Line 91:10:   'showPassword' is assigned a value but never used                                                                                                                                                   @typescript-eslint/no-unused-vars
+  Line 91:24:   'setShowPassword' is assigned a value but never used                                                                                                                                                @typescript-eslint/no-unused-vars
+  Line 99:10:   'sopTemplate' is assigned a value but never used                                                                                                                                                    @typescript-eslint/no-unused-vars
+  Line 112:10:  'docUploading' is assigned a value but never used                                                                                                                                                   @typescript-eslint/no-unused-vars
+  Line 112:24:  'setDocUploading' is assigned a value but never used                                                                                                                                                @typescript-eslint/no-unused-vars
+  Line 114:10:  'docUploadProgress' is assigned a value but never used                                                                                                                                              @typescript-eslint/no-unused-vars
+  Line 564:6:   React Hook useEffect has missing dependencies: 'fetchDevice', 'fetchDeviceDocuments', 'fetchDeviceUpgrades', 'fetchIssues', and 'fetchModules'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 567:9:   'handleEditModule' is assigned a value but never used                                                                                                                                               @typescript-eslint/no-unused-vars
+  Line 572:9:   'handleDeleteModule' is assigned a value but never used                                                                                                                                             @typescript-eslint/no-unused-vars
+  Line 753:9:   'handleAddIssue' is assigned a value but never used                                                                                                                                                 @typescript-eslint/no-unused-vars
+  Line 757:9:   'handleResolveIssue' is assigned a value but never used                                                                                                                                             @typescript-eslint/no-unused-vars
+
+src\pages\Devices.tsx
+  Line 1:1:    Unexpected Unicode BOM (Byte Order Mark)               unicode-bom
+  Line 1:51:   'useRef' is defined but never used                     @typescript-eslint/no-unused-vars
+  Line 59:10:  'pagination' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  Line 65:10:  'bundlePagination' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  Line 365:9:  'handlePageChange' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+WARNING in [eslint] 
+src\components\BundleForm.tsx
+  Line 1:1:    Unexpected Unicode BOM (Byte Order Mark)                                                                                                        unicode-bom
+  Line 113:6:  React Hook useEffect has missing dependencies: 'bundle', 'isEdit', and 'loadBundleDevices'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\DeviceDetail.tsx
+  Line 13:3:    'EyeSlashIcon' is defined but never used                                                                                                                                                            @typescript-eslint/no-unused-vars
+  Line 26:81:   'DeviceUpgrade' is defined but never used                                                                                                                                                           @typescript-eslint/no-unused-vars
+  Line 91:10:   'showPassword' is assigned a value but never used                                                                                                                                                   @typescript-eslint/no-unused-vars
+  Line 91:24:   'setShowPassword' is assigned a value but never used                                                                                                                                                @typescript-eslint/no-unused-vars
+  Line 99:10:   'sopTemplate' is assigned a value but never used                                                                                                                                                    @typescript-eslint/no-unused-vars
+  Line 112:10:  'docUploading' is assigned a value but never used                                                                                                                                                   @typescript-eslint/no-unused-vars
+  Line 112:24:  'setDocUploading' is assigned a value but never used                                                                                                                                                @typescript-eslint/no-unused-vars
+  Line 114:10:  'docUploadProgress' is assigned a value but never used                                                                                                                                              @typescript-eslint/no-unused-vars
+  Line 564:6:   React Hook useEffect has missing dependencies: 'fetchDevice', 'fetchDeviceDocuments', 'fetchDeviceUpgrades', 'fetchIssues', and 'fetchModules'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 567:9:   'handleEditModule' is assigned a value but never used                                                                                                                                               @typescript-eslint/no-unused-vars
+  Line 572:9:   'handleDeleteModule' is assigned a value but never used                                                                                                                                             @typescript-eslint/no-unused-vars
+  Line 753:9:   'handleAddIssue' is assigned a value but never used                                                                                                                                                 @typescript-eslint/no-unused-vars
+  Line 757:9:   'handleResolveIssue' is assigned a value but never used                                                                                                                                             @typescript-eslint/no-unused-vars
+
+src\pages\Devices.tsx
+  Line 1:1:    Unexpected Unicode BOM (Byte Order Mark)               unicode-bom
+  Line 1:51:   'useRef' is defined but never used                     @typescript-eslint/no-unused-vars
+  Line 59:10:  'pagination' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  Line 65:10:  'bundlePagination' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  Line 365:9:  'handlePageChange' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+webpack compiled with 1 warning
+No issues found.
+Compiling...
+Compiled with warnings.
+
+[eslint] 
+src\components\BundleForm.tsx
+  Line 1:1:    Unexpected Unicode BOM (Byte Order Mark)                                                                                                        unicode-bom
+  Line 115:6:  React Hook useEffect has missing dependencies: 'bundle', 'isEdit', and 'loadBundleDevices'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\DeviceDetail.tsx
+  Line 13:3:    'EyeSlashIcon' is defined but never used                                                                                                                                                            @typescript-eslint/no-unused-vars
+  Line 26:81:   'DeviceUpgrade' is defined but never used                                                                                                                                                           @typescript-eslint/no-unused-vars
+  Line 91:10:   'showPassword' is assigned a value but never used                                                                                                                                                   @typescript-eslint/no-unused-vars
+  Line 91:24:   'setShowPassword' is assigned a value but never used                                                                                                                                                @typescript-eslint/no-unused-vars
+  Line 99:10:   'sopTemplate' is assigned a value but never used                                                                                                                                                    @typescript-eslint/no-unused-vars
+  Line 112:10:  'docUploading' is assigned a value but never used                                                                                                                                                   @typescript-eslint/no-unused-vars
+  Line 112:24:  'setDocUploading' is assigned a value but never used                                                                                                                                                @typescript-eslint/no-unused-vars
+  Line 114:10:  'docUploadProgress' is assigned a value but never used                                                                                                                                              @typescript-eslint/no-unused-vars
+  Line 564:6:   React Hook useEffect has missing dependencies: 'fetchDevice', 'fetchDeviceDocuments', 'fetchDeviceUpgrades', 'fetchIssues', and 'fetchModules'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 567:9:   'handleEditModule' is assigned a value but never used                                                                                                                                               @typescript-eslint/no-unused-vars
+  Line 572:9:   'handleDeleteModule' is assigned a value but never used                                                                                                                                             @typescript-eslint/no-unused-vars
+  Line 753:9:   'handleAddIssue' is assigned a value but never used                                                                                                                                                 @typescript-eslint/no-unused-vars
+  Line 757:9:   'handleResolveIssue' is assigned a value but never used                                                                                                                                             @typescript-eslint/no-unused-vars
+
+src\pages\Devices.tsx
+  Line 1:1:    Unexpected Unicode BOM (Byte Order Mark)               unicode-bom
+  Line 1:51:   'useRef' is defined but never used                     @typescript-eslint/no-unused-vars
+  Line 59:10:  'pagination' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  Line 65:10:  'bundlePagination' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  Line 365:9:  'handlePageChange' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+WARNING in [eslint] 
+src\components\BundleForm.tsx
+  Line 1:1:    Unexpected Unicode BOM (Byte Order Mark)                                                                                                        unicode-bom
+  Line 115:6:  React Hook useEffect has missing dependencies: 'bundle', 'isEdit', and 'loadBundleDevices'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\DeviceDetail.tsx
+  Line 13:3:    'EyeSlashIcon' is defined but never used                                                                                                                                                            @typescript-eslint/no-unused-vars
+  Line 26:81:   'DeviceUpgrade' is defined but never used                                                                                                                                                           @typescript-eslint/no-unused-vars
+  Line 91:10:   'showPassword' is assigned a value but never used                                                                                                                                                   @typescript-eslint/no-unused-vars
+  Line 91:24:   'setShowPassword' is assigned a value but never used                                                                                                                                                @typescript-eslint/no-unused-vars
+  Line 99:10:   'sopTemplate' is assigned a value but never used                                                                                                                                                    @typescript-eslint/no-unused-vars
+  Line 112:10:  'docUploading' is assigned a value but never used                                                                                                                                                   @typescript-eslint/no-unused-vars
+  Line 112:24:  'setDocUploading' is assigned a value but never used                                                                                                                                                @typescript-eslint/no-unused-vars
+  Line 114:10:  'docUploadProgress' is assigned a value but never used                                                                                                                                              @typescript-eslint/no-unused-vars
+  Line 564:6:   React Hook useEffect has missing dependencies: 'fetchDevice', 'fetchDeviceDocuments', 'fetchDeviceUpgrades', 'fetchIssues', and 'fetchModules'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 567:9:   'handleEditModule' is assigned a value but never used                                                                                                                                               @typescript-eslint/no-unused-vars
+  Line 572:9:   'handleDeleteModule' is assigned a value but never used                                                                                                                                             @typescript-eslint/no-unused-vars
+  Line 753:9:   'handleAddIssue' is assigned a value but never used                                                                                                                                                 @typescript-eslint/no-unused-vars
+  Line 757:9:   'handleResolveIssue' is assigned a value but never used                                                                                                                                             @typescript-eslint/no-unused-vars
+
+src\pages\Devices.tsx
+  Line 1:1:    Unexpected Unicode BOM (Byte Order Mark)               unicode-bom
+  Line 1:51:   'useRef' is defined but never used                     @typescript-eslint/no-unused-vars
+  Line 59:10:  'pagination' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  Line 65:10:  'bundlePagination' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  Line 365:9:  'handlePageChange' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+webpack compiled with 1 warning
+No issues found.

@@ -37,7 +37,7 @@ export default function StatsCard({
   className 
 }: StatsCardProps) {
   return (
-    <div className={cn('bg-white rounded-lg shadow p-5 3xl:p-6', className)}>
+    <div className={cn('apple-card p-5 3xl:p-6', className)}>
       <div className="flex items-center">
         <div className="flex-shrink-0">
           {icon && (
