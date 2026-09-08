@@ -79,6 +79,7 @@ export default function Devices() {
   }));
   const [deviceCustomerFilter, setDeviceCustomerFilter] = useState<string>('');
   const [deviceIssueFilter, setDeviceIssueFilter] = useState<string>('');
+  const [includeBundleDevices, setIncludeBundleDevices] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showBundleFilters, setShowBundleFilters] = useState(false);
   const [bundleFilters, setBundleFilters] = useState({
@@ -160,8 +161,10 @@ export default function Devices() {
   const applyFilters = useCallback(() => {
     let filtered = [...allDevices];
 
-    // 单台设备列表：排除已绑定多合一的设备
-    filtered = filtered.filter(d => !d.bundle_id);
+    // 单台设备列表：默认排除已绑定多合一的设备；开启「包含多合一设备」后展示全部
+    if (!includeBundleDevices) {
+      filtered = filtered.filter(d => !d.bundle_id);
+    }
 
     // 产品线过滤
     if (filters.type) {
@@ -198,7 +201,7 @@ export default function Devices() {
       total: filtered.length,
       pages: 1
     });
-  }, [allDevices, filters, deviceCustomerFilter, deviceIssueFilter, sortField, sortOrder]);
+  }, [allDevices, filters, deviceCustomerFilter, deviceIssueFilter, includeBundleDevices, sortField, sortOrder]);
 
   // 初始数据获取
   useEffect(() => {
@@ -505,7 +508,7 @@ export default function Devices() {
 
   // 打印用：全量过滤结果（不切分页）
   const allFilteredDevices = (() => {
-    let filtered = [...allDevices].filter(d => !d.bundle_id);
+    let filtered = includeBundleDevices ? [...allDevices] : [...allDevices].filter(d => !d.bundle_id);
     if (filters.type) filtered = filtered.filter(d => d.product_line_name === filters.type);
     if (deviceCustomerFilter) filtered = filtered.filter(d => String(d.customer_id || '') === deviceCustomerFilter);
     if (deviceIssueFilter === 'has') filtered = filtered.filter(d => Number(d.open_issues || 0) > 0);
@@ -724,6 +727,23 @@ export default function Devices() {
         </span>
       ),
       width: '280px'
+    },
+    {
+      key: 'bundle_code' as keyof Device,
+      title: '所属多合一',
+      render: (_value: any, record: Device) => {
+        if (!record.bundle_id || !(record as any).bundle_code) return <span className="text-gray-300">—</span>;
+        return (
+          <Link
+            to={`/bundles/${record.bundle_id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 hover:bg-purple-200"
+          >
+            {(record as any).bundle_code}
+          </Link>
+        );
+      },
+      width: '120px'
     },
     {
       key: 'customer_name' as keyof Device,
@@ -1096,15 +1116,9 @@ export default function Devices() {
                 新建多合一设备
               </Button>
             ))}
-            <Button variant="outline" size="sm" onClick={() => navigate('/order-import')}>
-              导入订单表
-            </Button>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
-              <span className="absolute -top-2 left-2 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-primary-700 bg-blue-100 rounded border border-primary-200">
-                全局搜索
-              </span>
               <input
                 type="text"
                 placeholder="全局搜索设备..."
@@ -1247,7 +1261,7 @@ export default function Devices() {
             <span className="text-xs">{showFilters ? '▲ 收起' : '▼ 展开'}</span>
           </button>
           {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4 p-2 3xl:p-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4 p-2 3xl:p-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 产品线
@@ -1290,11 +1304,23 @@ export default function Devices() {
               />
             </div>
             <div className="flex items-end">
+              <label className="flex items-center gap-2 h-10 px-1 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={includeBundleDevices}
+                  onChange={(e) => { setVisibleCount(20); setIncludeBundleDevices(e.target.checked); }}
+                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
+                />
+                <span className="text-sm text-gray-700">包含多合一设备</span>
+              </label>
+            </div>
+            <div className="flex items-end">
               <button
                 onClick={() => {
                   setFilters(prev => ({ ...prev, page: 1, limit: 20, search: '', type: '', status: '' }));
                   setDeviceCustomerFilter('');
                   setDeviceIssueFilter('');
+                  setIncludeBundleDevices(false);
                   setVisibleCount(20);
                 }}
                 className="w-full h-10 px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
@@ -1305,6 +1331,15 @@ export default function Devices() {
           </div>
           )}
         </div>
+
+        {selectedDevices.length > 0 && (
+          <div className="mb-4 flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print">
+            <span className="text-sm text-blue-800">已选 {selectedDevices.length} 台</span>
+            <Button size="sm" variant="outline" onClick={handleExport}>导出选中</Button>
+            <Button size="sm" variant="outline" onClick={handlePrint}>打印选中</Button>
+            <button onClick={() => setSelectedDevices([])} className="text-sm text-gray-500 hover:text-gray-700">取消选择</button>
+          </div>
+        )}
 
         {/* 数据表格 */}
         <DataTable
@@ -1421,6 +1456,15 @@ export default function Devices() {
           )}
         </div>
 
+        {selectedBundles.length > 0 && (
+          <div className="mb-4 flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print">
+            <span className="text-sm text-blue-800">已选 {selectedBundles.length} 个多合一</span>
+            <Button size="sm" variant="outline" onClick={handleBundleExport}>导出选中</Button>
+            <Button size="sm" variant="outline" onClick={handlePrint}>打印选中</Button>
+            <button onClick={() => setSelectedBundles([])} className="text-sm text-gray-500 hover:text-gray-700">取消选择</button>
+          </div>
+        )}
+
         {/* 多合一设备数据表格 */}
         <DataTable
           data={filteredBundles.slice(0, visibleBundleCount)}
@@ -1486,6 +1530,7 @@ export default function Devices() {
               device={editingDevice}
               onClose={handleCloseDeviceForm}
               onSubmit={handleDeviceSubmit}
+              onImported={fetchAllDevices}
             />
           )
         }
