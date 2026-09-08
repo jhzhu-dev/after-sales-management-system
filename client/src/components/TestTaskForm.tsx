@@ -4,6 +4,7 @@ import SearchableSelect, { SearchableSelectOption } from './SearchableSelect';
 import { testTaskApi, productApi, feishuApi } from '../services/api';
 import { Button } from '../components/ui/button';
 import { TestTask, TestTaskFormData, Product, FeishuUser } from '../types';
+import { getUrgencyColor } from '../utils';
 
 interface TestTaskFormProps {
   testTask?: TestTask | null;
@@ -11,7 +12,7 @@ interface TestTaskFormProps {
   onSubmit: (data: TestTaskFormData) => Promise<void>;
 }
 
-const PRIORITIES = ['低', '普通', '高', '紧急'];
+const PRIORITIES = ['高', '中', '低'];
 
 const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit }) => {
   const isEdit = !!testTask?.id;
@@ -27,7 +28,7 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
     vehicle_requirements: '',
     test_scenarios: '',
     planned_completion_date: '',
-    priority: '普通',
+    priority: '中',
     shenzhen_requester: '',
     shenzhen_requester_name: '',
     shanghai_tester: '',
@@ -107,7 +108,7 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
+      <div className="relative z-10 bg-card rounded-2xl border border-border shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">{isEdit ? '编辑测试任务单' : '新建测试任务单'}</h3>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600"><XMarkIcon className="h-6 w-6" /></button>
@@ -123,10 +124,23 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
               {errors.product_id && <p className="mt-1 text-xs text-red-500">{errors.product_id}</p>}
             </div>
             <div>
-              <label className={labelCls}>优先级别 <span className="text-red-500">*</span></label>
-              <select value={form.priority} onChange={e => set('priority', e.target.value)} className={inputCls}>
-                {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
+              <label className={labelCls}>紧急程度 <span className="text-red-500">*</span></label>
+              <div className="flex flex-wrap gap-2">
+                {PRIORITIES.map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => set('priority', p)}
+                    className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                      form.priority === p
+                        ? `${getUrgencyColor(p)} border-transparent ring-2 ring-primary-500/50 ring-offset-1`
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400 hover:text-primary-600'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <label className={labelCls}>模型名称</label>

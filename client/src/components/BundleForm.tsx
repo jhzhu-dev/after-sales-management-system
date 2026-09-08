@@ -364,7 +364,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4">
         <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[92vh] overflow-y-auto">
+        <div className="relative bg-card rounded-2xl border border-border shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto">
           <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
             <h3 className="text-lg font-medium text-gray-900">
               {isEdit ? '编辑多合一设备' : '新建多合一设备'}

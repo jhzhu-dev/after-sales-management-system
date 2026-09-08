@@ -12,7 +12,7 @@ interface CustomerRequirementFormProps {
 }
 
 const REQ_TYPES: RequirementType[] = ['接口对接', '功能定制', '输出结果定制'];
-const URGENCIES = ['低', '中', '高'] as const;
+const URGENCIES = ['高', '中', '低'] as const;
 
 const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requirement, onClose, onSubmit }) => {
   const isEdit = !!requirement?.id;
@@ -125,7 +125,7 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
+      <div className="relative z-10 bg-card rounded-2xl border border-border shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">{isEdit ? '编辑需求' : '新增需求'}</h3>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">

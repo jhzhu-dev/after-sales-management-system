@@ -388,7 +388,7 @@ export default function KnowledgeBase({ productLines }: Props) {
       {/* 详情弹窗 */}
       {detail && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+          <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto">
             <div className="flex items-start justify-between p-5 border-b sticky top-0 bg-white z-10">
               <div className="flex-1 pr-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -500,7 +500,7 @@ export default function KnowledgeBase({ productLines }: Props) {
       {/* 新增 / 编辑弹窗 */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-white z-10">
               <h2 className="text-lg font-bold text-gray-900">{editId ? '编辑词条' : '新增知识词条'}</h2>
               <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">

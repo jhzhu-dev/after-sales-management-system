@@ -247,7 +247,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
       newErrors.description = '请输入问题描述';
     }
     if (!formData.severity) {
-      newErrors.severity = '请选择严重性';
+      newErrors.severity = '请选择紧急程度';
     }
     if (!formData.status) {
       newErrors.status = '请选择状态';
@@ -293,7 +293,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+      <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
           <h3 className="text-lg font-medium text-gray-900">
             {issue ? '编辑问题' : '新增问题'}
@@ -446,10 +446,10 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
             )}
           </div>
 
-          {/* 严重性 */}
+          {/* 紧急程度 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              严重性 <span className="text-red-500">*</span>
+              紧急程度 <span className="text-red-500">*</span>
             </label>
             <select
               name="severity"
@@ -459,9 +459,9 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
                 errors.severity ? 'border-red-500' : 'border-gray-300'
               }`}
             >
-              <option value="low">低</option>
-              <option value="medium">中</option>
               <option value="high">高</option>
+              <option value="medium">中</option>
+              <option value="low">低</option>
             </select>
             {errors.severity && (
               <p className="mt-1 text-sm text-red-600">{errors.severity}</p>

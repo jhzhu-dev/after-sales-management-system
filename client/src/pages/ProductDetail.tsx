@@ -719,7 +719,7 @@ const ProductDetail: React.FC = () => {
                             {/* 新增模块配置表单对话框 */}
                             {showModuleForm && (
                                 <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 flex items-center justify-center p-4">
-                                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-4 3xl:p-6">
+                                    <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-2xl w-full p-4 3xl:p-6">
                                         <h3 className="text-lg font-bold text-gray-900 mb-4">新增模块配置</h3>
 
                                         <div className="space-y-4">
@@ -824,7 +824,7 @@ const ProductDetail: React.FC = () => {
                 <div className="fixed inset-0 z-50 overflow-y-auto">
                     <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
                         <div className="fixed inset-0 bg-gray-500/75 transition-opacity" onClick={resetUploadForm} />
-                        <div className="relative bg-white rounded-xl shadow-xl transform transition-all sm:max-w-lg sm:w-full mx-auto">
+                        <div className="relative bg-card rounded-2xl border border-border shadow-2xl transform transition-all sm:max-w-lg sm:w-full mx-auto">
                             {/* 弹窗头部 */}
                             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                                 <h3 className="text-lg font-semibold text-gray-900">上传产品文档</h3>

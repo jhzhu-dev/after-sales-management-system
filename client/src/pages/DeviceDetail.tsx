@@ -1660,7 +1660,7 @@ const DeviceDetail: React.FC = () => {
       {/* 模块版本历史弹窗 */}
       {showModuleVersionHistory && selectedModuleForVersion && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
+          <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
                 {selectedModuleForVersion.module_type} - 版本历史
@@ -1728,7 +1728,7 @@ const DeviceDetail: React.FC = () => {
       {/* 版本更新弹窗 (重构) */}
       {showVersionUpdateForm && selectedModuleForVersion && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="px-4 py-3 3xl:px-6 3xl:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h3 className="text-lg font-bold text-gray-900">
                 {(selectedModuleForVersion as any).current_version ? '版本更新登记' : '设置出厂版本'} - {selectedModuleForVersion.module_type}
@@ -1876,7 +1876,7 @@ const DeviceDetail: React.FC = () => {
       {/* 添加问题弹窗 */}
       {showIssueForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-md w-full mx-4">
             <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">添加问题</h3>
               <button
@@ -1966,7 +1966,7 @@ const DeviceDetail: React.FC = () => {
       {/* 解决问题弹窗 */}
       {showResolveForm && selectedIssueForResolve && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-md w-full mx-4">
             <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">解决问题</h3>
               <button
@@ -2038,7 +2038,7 @@ const DeviceDetail: React.FC = () => {
       {/* 设备出厂资料上传弹窗 (批量) */}
       {showDocUploadModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
+          <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 3xl:px-6 3xl:py-4 border-b border-gray-200 bg-green-50">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <ArrowUpTrayIcon className="h-5 w-5 text-green-600" />
@@ -2248,7 +2248,7 @@ const DeviceDetail: React.FC = () => {
 
       {/* 后台上传进度悬浮面板 */}
       {bgUpload && (
-        <div className={`fixed bottom-6 right-6 z-50 bg-white rounded-2xl shadow-2xl border w-80 overflow-hidden ${bgUpload.failedFiles?.length ? 'border-yellow-300' : 'border-gray-200'}`}>
+        <div className={`fixed bottom-6 right-6 z-50 bg-card rounded-2xl border border-border shadow-2xl w-80 overflow-hidden ${bgUpload.failedFiles?.length ? 'border-yellow-300' : 'border-gray-200'}`}>
           <div
             className={`h-1.5 transition-all duration-300 ${bgUpload.error ? 'bg-red-500' : bgUpload.done ? (bgUpload.failedFiles?.length ? 'bg-yellow-400' : 'bg-green-500') : 'bg-primary-500'}`}
             style={{ width: `${bgUpload.progress}%` }}
