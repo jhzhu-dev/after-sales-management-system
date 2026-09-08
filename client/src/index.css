@@ -238,6 +238,19 @@ html.dark {
   outline-offset: 1px;
 }
 
+/* 弹窗/对话框：背景轻度模糊（毛玻璃遮罩） */
+.fixed.inset-0.bg-black\/50,
+.fixed.inset-0.bg-black\/40,
+.fixed.inset-0.bg-black\/75,
+.fixed.inset-0.bg-black\/85,
+.absolute.inset-0.bg-black\/50,
+.absolute.inset-0.bg-black\/40,
+.absolute.inset-0.bg-black\/75,
+.fixed.inset-0.bg-gray-500\/75 {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
 /* 深色：背景表面（卡片 / 表格 / 弹窗 / 页面底） */
 html.dark .bg-white {
   background-color: #1f2937;
