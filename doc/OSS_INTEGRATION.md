@@ -59,8 +59,8 @@ JWT_EXPIRES_IN=7d
 PORT=5000
 NODE_ENV=development
 
-# 前端配置
-REACT_APP_API_URL=http://localhost:5000/api
+# 前端配置（Vite 构建时读取，放在 client/.env 中）
+VITE_API_URL=http://localhost:5000/api
 
 # 阿里云OSS配置
 USE_OSS_STORAGE=true

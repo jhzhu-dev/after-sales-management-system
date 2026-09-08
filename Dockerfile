@@ -1,5 +1,5 @@
-# 多阶段构建 - 前端构建阶段
-FROM node:18-alpine AS frontend-builder
+# 多阶段构建 - 前端构建阶段（Vite 需要 Node 20+）
+FROM node:20-alpine AS frontend-builder
 WORKDIR /app/client
 
 # 复制前端依赖文件

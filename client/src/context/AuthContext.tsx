@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 const TOKEN_KEY = 'auth_token';
 const USERNAME_KEY = 'auth_username';
 const ROLE_KEY = 'auth_role';
-const API_BASE = process.env.REACT_APP_API_URL || '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);

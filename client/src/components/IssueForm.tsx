@@ -409,7 +409,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               />
             )}
             {/* 调试信息 */}
-            {process.env.NODE_ENV === 'development' && (
+            {import.meta.env.DEV && (
               <div className="mt-1 text-xs text-gray-500">
                 调试: 找到 {modules.length} 个模块
                 {modules.length > 0 && (

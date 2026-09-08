@@ -3,8 +3,8 @@ import Layout from '../components/Layout';
 import { feishuApi } from '../services/api';
 import { FeishuUser } from '../types';
 
-const MOCK_MODE = process.env.REACT_APP_FEISHU_MOCK === 'true';
-const BACKEND_BASE = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+const MOCK_MODE = import.meta.env.VITE_FEISHU_MOCK === 'true';
+const BACKEND_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
 
 const FeishuSettings: React.FC = () => {
   const [config, setConfig] = useState({
