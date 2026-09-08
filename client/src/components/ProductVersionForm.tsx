@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Button } from '../components/ui/button';
 import { XMarkIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, DocumentIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { ProductVersion, ProductVersionFormData, ProductVersionDocument } from '../types';
 import { productVersionApi } from '../services/api';
@@ -374,13 +375,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                         >
                             取消
                         </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                        >
-                            {loading ? '保存中...' : (version ? '更新' : '创建')}
-                        </button>
+                        <Button type="submit" disabled={loading}>{loading ? '保存中...' : (version ? '更新' : '创建')}</Button>
                     </div>
                 </form>
             </div>

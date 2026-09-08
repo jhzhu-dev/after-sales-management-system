@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Button } from '../components/ui/button';
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { Device, DeviceFormData, Customer, FeishuUser } from '../types';
 import { productLineApi, customerApi, productApi, productModuleApi, feishuApi } from '../services/api';
@@ -785,13 +786,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
             >
               取消
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? '保存中...' : (device ? '更新' : '新增')}
-            </button>
+            <Button type="submit" disabled={loading}>{loading ? '保存中...' : (device ? '更新' : '新增')}</Button>
           </div>
         </form>
       </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, TrashIcon, EyeIcon, PencilIcon } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
+import { Button } from '../components/ui/button';
 import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
 import TestTaskForm from '../components/TestTaskForm';
 import TestSummaryForm from '../components/TestSummaryForm';
@@ -301,9 +302,7 @@ const TestTaskDetail: React.FC = () => {
                 </div>
               )}
               <div className="flex justify-end">
-                <button onClick={handleDecision} disabled={submittingDecision} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
-                  {submittingDecision ? '提交中...' : '提交决策'}
-                </button>
+                <Button onClick={handleDecision} disabled={submittingDecision}>{submittingDecision ? '提交中...' : '提交决策'}</Button>
               </div>
             </div>
           </div>

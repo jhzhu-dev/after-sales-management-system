@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Button } from '../components/ui/button';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { ProductLine } from '../types';
 
@@ -259,13 +260,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
             >
               取消
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
-            >
-              {loading ? '提交中...' : (product ? '保存' : '创建')}
-            </button>
+            <Button type="submit" disabled={loading}>{loading ? '提交中...' : (product ? '保存' : '创建')}</Button>
           </div>
         </form>
       </div>

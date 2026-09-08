@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Button } from '../components/ui/button';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { DeviceUpgradeFormData, Device, FeishuUser } from '../types';
 import { deviceApi, feishuApi } from '../services/api';
@@ -196,13 +197,7 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
                         >
                             取消
                         </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50"
-                        >
-                            {loading ? '正在保存...' : '确认登记'}
-                        </button>
+                        <Button type="submit" disabled={loading} className="flex-1">{loading ? '正在保存...' : '确认登记'}</Button>
                     </div>
                 </form>
             </div>

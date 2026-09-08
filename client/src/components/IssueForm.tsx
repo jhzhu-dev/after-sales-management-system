@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Button } from '../components/ui/button';
 import { XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Issue, IssueFormData, FeishuUser, IssueClassification } from '../types';
 import { deviceApi, moduleApi, feishuApi, issueClassificationApi } from '../services/api';
@@ -641,13 +642,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
             >
               取消
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? '保存中...' : '保存'}
-            </button>
+            <Button type="submit" disabled={loading}>{loading ? '保存中...' : '保存'}</Button>
           </div>
         </form>
       </div>

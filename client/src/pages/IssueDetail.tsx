@@ -16,6 +16,7 @@ import {
 import { Issue, IssueFormData } from '../types';
 import { issueApi } from '../services/api';
 import Layout from '../components/Layout';
+import { Button } from '../components/ui/button';
 import IssueForm from '../components/IssueForm';
 import IssueLogTimeline from '../components/IssueLogTimeline';
 import { formatDate, getStatusColor, getSeverityColor } from '../utils';
@@ -158,12 +159,7 @@ export default function IssueDetail() {
       <Layout>
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
           <div className="text-gray-500 text-lg">问题不存在或已被删除</div>
-          <button
-            onClick={() => navigate('/issues')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            返回售后问题管理
-          </button>
+          <Button onClick={() => navigate('/issues')}>返回售后问题管理</Button>
         </div>
       </Layout>
     );
@@ -233,13 +229,7 @@ export default function IssueDetail() {
                 解决问题
               </button>
             )}
-            <button
-              onClick={handleEdit}
-              className="flex items-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              <PencilIcon className="h-4 w-4 mr-1.5" />
-              编辑
-            </button>
+            <Button size="sm" onClick={handleEdit}><PencilIcon className="h-4 w-4" />编辑</Button>
           </div>
         </div>
 
@@ -445,14 +435,8 @@ export default function IssueDetail() {
                   解决
                 </button>
               )}
-              <button
-                onClick={handleEdit}
-                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                title="编辑问题"
-              >
-                <PencilIcon className="h-4 w-4 mr-1" />
-                编辑
-              </button>
+              <Button size="sm" onClick={handleEdit} title="编辑问题"><PencilIcon className="h-4 w-4" />编辑
+              </Button>
             </div>
           </div>
         </div>

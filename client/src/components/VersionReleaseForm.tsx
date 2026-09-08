@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Button } from '../components/ui/button';
 import { XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { productLineApi } from '../services/api';
 
@@ -493,13 +494,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
             >
               取消
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
-            >
-              {loading ? (versionRelease ? '更新中...' : '发布中...') : (versionRelease ? '保存修改' : '确认发布')}
-            </button>
+            <Button type="submit" disabled={loading}>{loading ? (versionRelease ? '更新中...' : '发布中...') : (versionRelease ? '保存修改' : '确认发布')}</Button>
           </div>
         </form>
       </div>
