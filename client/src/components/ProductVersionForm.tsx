@@ -4,6 +4,7 @@ import { XMarkIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, DocumentIcon, TrashIcon,
 import { ProductVersion, ProductVersionFormData, ProductVersionDocument } from '../types';
 import { productVersionApi } from '../services/api';
 import AttachmentViewer, { Attachment } from './AttachmentViewer';
+import Select from './Select';
 
 interface ProductVersionFormProps {
     productId: number;
@@ -206,15 +207,12 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-                            <select
+                            <Select
                                 value={formData.status}
-                                onChange={(e) => handleChange('status', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
-                            >
-                                {VERSION_STATUS_OPTIONS.map(opt => (
-                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                            </select>
+                                onChange={(v) => handleChange('status', v)}
+                                options={VERSION_STATUS_OPTIONS.map(opt => ({ value: opt.value, label: opt.label }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">发布日期</label>
@@ -329,15 +327,12 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">上传附件/文档</label>
                         <div className="mb-2">
-                            <select
+                            <Select
                                 value={uploadCategory}
-                                onChange={(e) => setUploadCategory(e.target.value)}
-                                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary-500/40"
-                            >
-                                {DOC_CATEGORIES.map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                ))}
-                            </select>
+                                onChange={(v) => setUploadCategory(v)}
+                                options={DOC_CATEGORIES.map(cat => ({ value: cat, label: cat }))}
+                                className="px-3 py-1.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/40"
+                            />
                         </div>
                         <div
                             className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${dragOver ? 'border-primary-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}`}

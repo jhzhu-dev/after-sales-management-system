@@ -16,6 +16,7 @@ import { StarIcon } from '@heroicons/react/24/solid';
 import { kbArticleApi, moduleTypeApi } from '../services/api';
 import { KbArticle } from '../types';
 import AttachmentViewer, { Attachment } from './AttachmentViewer';
+import Select from './Select';
 
 const CAT_PALETTE = [
   'bg-blue-100 text-blue-700',
@@ -268,22 +269,20 @@ export default function KnowledgeBase({ productLines }: Props) {
               className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
             />
           </div>
-          <select
+          <Select
             value={catFilter}
-            onChange={e => setCatFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-          >
-            <option value="">全部分类</option>
-            {moduleTypes.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
-          </select>
-          <select
+            onChange={v => setCatFilter(v)}
+            placeholder="全部分类"
+            options={[{ value: '', label: '全部分类' }, ...moduleTypes.map(m => ({ value: m.name, label: m.name }))]}
+            className="px-3 py-2 border border-gray-300 rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+          />
+          <Select
             value={plFilter}
-            onChange={e => setPlFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-          >
-            <option value="">全部产品线</option>
-            {productLines.map(pl => <option key={pl.id} value={String(pl.id)}>{pl.name}</option>)}
-          </select>
+            onChange={v => setPlFilter(v)}
+            placeholder="全部产品线"
+            options={[{ value: '', label: '全部产品线' }, ...productLines.map(pl => ({ value: String(pl.id), label: pl.name }))]}
+            className="px-3 py-2 border border-gray-300 rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+          />
           <div className="flex-1" />
           {tagFilter && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-primary-200 text-primary-700 rounded-lg text-xs font-medium">
@@ -527,25 +526,23 @@ export default function KnowledgeBase({ productLines }: Props) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">分类</label>
-                  <select
+                  <Select
                     value={form.category}
-                    onChange={e => f('category', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-                  >
-                    <option value="">请选择模块</option>
-                    {moduleTypes.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
-                  </select>
+                    onChange={v => f('category', v)}
+                    placeholder="请选择模块"
+                    options={[{ value: '', label: '请选择模块' }, ...moduleTypes.map(m => ({ value: m.name, label: m.name }))]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">产品线</label>
-                  <select
+                  <Select
                     value={form.product_line_id}
-                    onChange={e => f('product_line_id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-                  >
-                    <option value="">通用</option>
-                    {productLines.map(pl => <option key={pl.id} value={String(pl.id)}>{pl.name}</option>)}
-                  </select>
+                    onChange={v => f('product_line_id', v)}
+                    placeholder="通用"
+                    options={[{ value: '', label: '通用' }, ...productLines.map(pl => ({ value: String(pl.id), label: pl.name }))]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                  />
                 </div>
               </div>
 

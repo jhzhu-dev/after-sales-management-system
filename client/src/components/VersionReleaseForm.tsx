@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/ui/button';
 import { XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { productLineApi } from '../services/api';
+import Select from './Select';
 
 interface ModuleType {
   id: number;
@@ -268,30 +269,19 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
               </label>
             </div>
             {categoryMode === 'select' ? (
-              <select
-                name="category"
+              <Select
                 value={formData.category}
-                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="">不选择分类</option>
-                {productLines.length > 0 && (
-                  <optgroup label="按产品线">
-                    {productLines.map(pl => (
-                      <option key={`pl-${pl.id}`} value={pl.name}>{pl.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {existingCategories.filter(c => !productLines.some(pl => pl.name === c)).length > 0 && (
-                  <optgroup label="已有分类">
-                    {existingCategories
-                      .filter(c => !productLines.some(pl => pl.name === c))
-                      .map(c => (
-                        <option key={`cat-${c}`} value={c}>{c}</option>
-                      ))}
-                  </optgroup>
-                )}
-              </select>
+                onChange={(v) => setFormData(prev => ({ ...prev, category: v }))}
+                placeholder="不选择分类"
+                options={[
+                  { value: '', label: '不选择分类' },
+                  ...(productLines.length > 0 ? productLines.map(pl => ({ value: pl.name, label: `【按产品线】${pl.name}` })) : []),
+                  ...existingCategories
+                    .filter(c => !productLines.some(pl => pl.name === c))
+                    .map(c => ({ value: c, label: `【已有分类】${c}` })),
+                ]}
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+              />
             ) : (
               <input
                 type="text"

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import SearchableSelect, { SearchableSelectOption } from './SearchableSelect';
+import Select from './Select';
 import { customerRequirementApi, customerApi, deviceApi } from '../services/api';
 import { Button } from '../components/ui/button';
 import { CustomerRequirement, CustomerRequirementFormData, Customer, Device, RequirementType, RequirementUrgency } from '../types';
@@ -147,9 +148,7 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">需求分类 <span className="text-red-500">*</span></label>
-              <select value={requirementType} onChange={e => setRequirementType(e.target.value as RequirementType)} className={inputCls}>
-                {REQ_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <Select value={requirementType} onChange={v => setRequirementType(v as RequirementType)} options={REQ_TYPES.map(t => ({ value: t, label: t }))} className={inputCls} />
             </div>
 
             <div>
@@ -160,9 +159,7 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">紧急程度</label>
-              <select value={urgency} onChange={e => setUrgency(e.target.value as any)} className={inputCls}>
-                {URGENCIES.map(u => <option key={u} value={u}>{u}</option>)}
-              </select>
+              <Select value={urgency} onChange={v => setUrgency(v as any)} options={URGENCIES.map(u => ({ value: u, label: u }))} className={inputCls} />
             </div>
           </div>
 

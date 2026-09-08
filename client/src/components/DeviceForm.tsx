@@ -4,6 +4,7 @@ import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { Device, DeviceFormData, Customer, FeishuUser } from '../types';
 import { productLineApi, customerApi, productApi, productModuleApi, feishuApi } from '../services/api';
 import FeishuMultiUserPicker from './FeishuMultiUserPicker';
+import Select from './Select';
 
 interface DeviceFormProps {
   device?: Device | null;
@@ -430,32 +431,26 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   <label className="block text-xs font-medium text-gray-700 mb-1">客户</label>
                   {(device as any).bundle_id ? (
                     <>
-                      <select
+                      <Select
                         value={formData.customer_id || ''}
                         disabled
-                        className="w-full px-3 py-1.5 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700 appearance-none"
-                      >
-                        <option value="">请选择客户</option>
-                        {customers.map(c => (
-                          <option key={c.id} value={c.id}>{c.name} ({c.short_name})</option>
-                        ))}
-                      </select>
+                        placeholder="请选择客户"
+                        options={customers.map(c => ({ value: c.id, label: `${c.name} (${c.short_name})` }))}
+                        className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-700 disabled:opacity-60"
+                      />
                       <p className="text-xs text-gray-400 mt-1">该设备属于多合一设备，请在多合一设备编辑中修改客户</p>
                     </>
                   ) : (
-                    <select
+                    <Select
                       value={formData.customer_id || ''}
-                      onChange={e => {
-                        const v = e.target.value ? parseInt(e.target.value) : undefined;
-                        setFormData(prev => ({ ...prev, customer_id: v }));
+                      onChange={(v) => {
+                        const val = v ? parseInt(v) : undefined;
+                        setFormData(prev => ({ ...prev, customer_id: val }));
                       }}
-                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm appearance-none"
-                    >
-                      <option value="">请选择客户</option>
-                      {customers.map(c => (
-                        <option key={c.id} value={c.id}>{c.name} ({c.short_name})</option>
-                      ))}
-                    </select>
+                      placeholder="请选择客户"
+                      options={customers.map(c => ({ value: c.id, label: `${c.name} (${c.short_name})` }))}
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
+                    />
                   )}
                 </div>
 
@@ -478,17 +473,12 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 {/* 状态 */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">状态 <span className="text-red-500">*</span></label>
-                  <select
+                  <Select
                     value={formData.status}
-                    onChange={(e) => handleChange('status', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
-                  >
-                    <option value="生产中">生产中</option>
-                    <option value="已发货">已发货</option>
-                    <option value="使用中(正常)">使用中(正常)</option>
-                    <option value="使用中(异常)">使用中(异常)</option>
-                    <option value="已停用">已停用</option>
-                  </select>
+                    onChange={(v) => handleChange('status', v)}
+                    options={[{ value: '生产中', label: '生产中' }, { value: '已发货', label: '已发货' }, { value: '使用中(正常)', label: '使用中(正常)' }, { value: '使用中(异常)', label: '使用中(异常)' }, { value: '已停用', label: '已停用' }]}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
+                  />
                 </div>
 
                 {/* 远程码 */}
@@ -645,17 +635,12 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">状态 <span className="text-red-500">*</span></label>
-                <select
+                <Select
                   value={formData.status}
-                  onChange={(e) => handleChange('status', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
-                >
-                  <option value="生产中">生产中</option>
-                  <option value="已发货">已发货</option>
-                  <option value="使用中(正常)">使用中(正常)</option>
-                  <option value="使用中(异常)">使用中(异常)</option>
-                  <option value="已停用">已停用</option>
-                </select>
+                  onChange={(v) => handleChange('status', v)}
+                  options={[{ value: '生产中', label: '生产中' }, { value: '已发货', label: '已发货' }, { value: '使用中(正常)', label: '使用中(正常)' }, { value: '使用中(异常)', label: '使用中(异常)' }, { value: '已停用', label: '已停用' }]}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
+                />
               </div>
 
               {/* 新建客户内联表单 */}
@@ -676,31 +661,25 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
               {/* Row 4: 产品线 | 产品型号 | 备注 */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">产品线 <span className="text-red-500">*</span></label>
-                <select
+                <Select
                   value={formData.product_line_id}
-                  onChange={(e) => handleChange('product_line_id', e.target.value ? parseInt(e.target.value) : '')}
-                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.product_line_id ? 'border-red-500' : 'border-gray-300'}`}
-                >
-                  <option value="">请选择产品线</option>
-                  {productLines.map((pl) => (
-                    <option key={pl.id} value={pl.id}>{pl.name}</option>
-                  ))}
-                </select>
+                  onChange={(v) => handleChange('product_line_id', v ? parseInt(v) : '')}
+                  placeholder="请选择产品线"
+                  options={[{ value: '', label: '请选择产品线' }, ...productLines.map((pl) => ({ value: pl.id, label: pl.name }))]}
+                  className={`w-full px-3 py-1.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.product_line_id ? 'border-red-500' : 'border-gray-300'}`}
+                />
                 {errors.product_line_id && <p className="text-red-500 text-xs mt-1">{errors.product_line_id}</p>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">产品型号</label>
-                <select
+                <Select
                   value={formData.product_id || ''}
-                  onChange={(e) => handleChange('product_id', e.target.value ? parseInt(e.target.value) : undefined)}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
+                  onChange={(v) => handleChange('product_id', v ? parseInt(v) : undefined)}
+                  placeholder={products.length === 0 ? '请先选产品线' : '请选择产品型号'}
+                  options={[{ value: '', label: products.length === 0 ? '请先选产品线' : '请选择产品型号' }, ...products.map((p) => ({ value: p.id, label: `${p.name}${p.model ? ` (${p.model})` : ''}` }))]}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                   disabled={products.length === 0}
-                >
-                  <option value="">{products.length === 0 ? '请先选产品线' : '请选择产品型号'}</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}{p.model ? ` (${p.model})` : ''}</option>
-                  ))}
-                </select>
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">备注</label>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import SearchableSelect, { SearchableSelectOption } from './SearchableSelect';
+import Select from './Select';
 import { testTaskApi, productApi, feishuApi } from '../services/api';
 import { Button } from '../components/ui/button';
 import { TestTask, TestTaskFormData, Product, FeishuUser } from '../types';
@@ -153,14 +154,13 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
             <div>
               <label className={labelCls}>深圳需求人 <span className="text-red-500">*</span></label>
               {feishuUsers.length > 0 ? (
-                <select
+                <Select
                   value={form.shenzhen_requester || ''}
-                  onChange={e => handleRequesterSelect(e.target.value)}
+                  onChange={v => handleRequesterSelect(v)}
+                  placeholder="选择需求人"
+                  options={[{ value: '', label: '选择需求人' }, ...feishuUsers.map(u => ({ value: u.open_id, label: `${u.name}${u.department ? ` · ${u.department}` : ''}` }))]}
                   className={inputCls}
-                >
-                  <option value="">选择需求人</option>
-                  {feishuUsers.map(u => <option key={u.open_id} value={u.open_id}>{u.name}{u.department ? ` · ${u.department}` : ''}</option>)}
-                </select>
+                />
               ) : (
                 <input value={form.shenzhen_requester_name} onChange={e => set('shenzhen_requester_name', e.target.value)} className={inputCls} placeholder="请输入深圳需求人姓名" />
               )}

@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
+import Select from '../components/Select';
 import { formatDate } from '../utils';
 import { moduleTypeApi, customerApi, sopTemplateApi, feishuApi, issueClassificationApi } from '../services/api';
 import { ModuleType, Customer, SOPTemplate, SOPTemplateItem, FeishuUser, IssueClassification } from '../types';
@@ -584,18 +585,13 @@ export default function Settings() {
                           请先在《飞书设置》中同步员工名单，同步后可在此处选择关联负责人
                         </p>
                       ) : (
-                        <select
+                        <Select
                           value={moduleTypeForm.feishu_user_open_id}
-                          onChange={(e) => setModuleTypeForm({ ...moduleTypeForm, feishu_user_open_id: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent text-sm"
-                        >
-                          <option value="">不关联（选填）</option>
-                          {feishuUsers.map(u => (
-                            <option key={u.open_id} value={u.open_id}>
-                              {u.name}{u.department ? ' · ' + u.department : ''}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={v => setModuleTypeForm({ ...moduleTypeForm, feishu_user_open_id: v })}
+                          placeholder="不关联（选填）"
+                          options={[{ value: '', label: '不关联（选填）' }, ...feishuUsers.map(u => ({ value: u.open_id, label: `${u.name}${u.department ? ' · ' + u.department : ''}` }))]}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500/40 focus:border-transparent text-sm"
+                        />
                       )}
                     </div>
 

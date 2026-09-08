@@ -5,6 +5,7 @@ import { customerApi, deviceApi, bundleApi, productLineApi, productApi, productM
 import { Button } from '../components/ui/button';
 import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 import SearchableSelect from './SearchableSelect';
+import Select from './Select';
 
 interface BundleFormProps {
   bundle?: DeviceBundle | null;
@@ -486,30 +487,18 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-0.5">产品线 <span className="text-red-500">*</span></label>
-                        <select value={row.product_line_id} onChange={e => handleProductLineChange(row.key, e.target.value ? parseInt(e.target.value) : '')} className={selectCls}>
-                          <option value="">选择产品线</option>
-                          {productLines.map(pl => (<option key={pl.id} value={pl.id}>{pl.name}</option>))}
-                        </select>
+                        <Select value={row.product_line_id} onChange={v => handleProductLineChange(row.key, v ? parseInt(v) : '')} placeholder="选择产品线" options={[{ value: '', label: '选择产品线' }, ...productLines.map(pl => ({ value: pl.id, label: pl.name }))]} className={selectCls} />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-0.5">产品型号</label>
-                        <select value={row.product_id} onChange={e => handleProductChange(row.key, e.target.value ? parseInt(e.target.value) : '')} disabled={!row.product_line_id} className={`${selectCls} disabled:bg-gray-100`}>
-                          <option value="">选择产品</option>
-                          {row.products.map(p => (<option key={p.id} value={p.id}>{p.name}{p.model ? ` (${p.model})` : ''}</option>))}
-                        </select>
+                        <Select value={row.product_id} onChange={v => handleProductChange(row.key, v ? parseInt(v) : '')} disabled={!row.product_line_id} placeholder="选择产品" options={[{ value: '', label: '选择产品' }, ...row.products.map(p => ({ value: p.id, label: `${p.name}${p.model ? ` (${p.model})` : ''}` }))]} className={`${selectCls} disabled:bg-gray-100`} />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-0.5">状态</label>
-                        <select value={row.status} onChange={e => updateNewDeviceRow(row.key, 'status', e.target.value)} className={selectCls}>
-                          <option value="生产中">生产中</option>
-                          <option value="已发货">已发货</option>
-                          <option value="使用中(正常)">使用中(正常)</option>
-                          <option value="使用中(异常)">使用中(异常)</option>
-                          <option value="已停用">已停用</option>
-                        </select>
+                        <Select value={row.status} onChange={v => updateNewDeviceRow(row.key, 'status', v)} options={[{ value: '生产中', label: '生产中' }, { value: '已发货', label: '已发货' }, { value: '使用中(正常)', label: '使用中(正常)' }, { value: '使用中(异常)', label: '使用中(异常)' }, { value: '已停用', label: '已停用' }]} className={selectCls} />
                       </div>
                     </div>
 

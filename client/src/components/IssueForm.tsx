@@ -5,6 +5,7 @@ import { Issue, IssueFormData, FeishuUser, IssueClassification } from '../types'
 import { deviceApi, moduleApi, feishuApi, issueClassificationApi } from '../services/api';
 import api from '../services/api';
 import FeishuMultiUserPicker from './FeishuMultiUserPicker';
+import Select from './Select';
 
 interface UploadedAttachment {
   name: string;
@@ -390,21 +391,14 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
             <label className="block text-sm font-medium text-gray-700 mb-2">
               模块
             </label>
-            <select
-              name="module_id"
+            <Select
               value={formData.module_id || ''}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+              onChange={v => handleInputChange({ target: { name: 'module_id', value: v } } as any)}
+              placeholder="请选择模块（可选）"
+              options={[{ value: '', label: '请选择模块（可选）' }, ...modules.map(module => ({ value: module.id, label: module.name })), { value: 'custom', label: '其他（自定义）' }]}
+              className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               disabled={!formData.device_id}
-            >
-              <option value="">请选择模块（可选）</option>
-              {modules.map(module => (
-                <option key={module.id} value={module.id}>
-                  {module.name}
-                </option>
-              ))}
-              <option value="custom">其他（自定义）</option>
-            </select>
+            />
             {formData.module_id === 'custom' && (
               <input
                 type="text"
@@ -451,18 +445,14 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
             <label className="block text-sm font-medium text-gray-700 mb-2">
               紧急程度 <span className="text-red-500">*</span>
             </label>
-            <select
-              name="severity"
+            <Select
               value={formData.severity}
-              onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
+              onChange={v => handleInputChange({ target: { name: 'severity', value: v } } as any)}
+              options={[{ value: 'high', label: '高' }, { value: 'medium', label: '中' }, { value: 'low', label: '低' }]}
+              className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
                 errors.severity ? 'border-red-500' : 'border-gray-300'
               }`}
-            >
-              <option value="high">高</option>
-              <option value="medium">中</option>
-              <option value="low">低</option>
-            </select>
+            />
             {errors.severity && (
               <p className="mt-1 text-sm text-red-600">{errors.severity}</p>
             )}
@@ -473,18 +463,14 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
             <label className="block text-sm font-medium text-gray-700 mb-2">
               状态 <span className="text-red-500">*</span>
             </label>
-            <select
-              name="status"
+            <Select
               value={formData.status}
-              onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
+              onChange={v => handleInputChange({ target: { name: 'status', value: v } } as any)}
+              options={[{ value: 'open', label: '待处理' }, { value: 'in_progress', label: '处理中' }, { value: 'closed', label: '已解决' }]}
+              className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
                 errors.status ? 'border-red-500' : 'border-gray-300'
               }`}
-            >
-              <option value="open">待处理</option>
-              <option value="in_progress">处理中</option>
-              <option value="closed">已解决</option>
-            </select>
+            />
             {errors.status && (
               <p className="mt-1 text-sm text-red-600">{errors.status}</p>
             )}
@@ -496,20 +482,13 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 问题分类
               </label>
-              <select
-                name="classification_id"
+              <Select
                 value={formData.classification_id ?? ''}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  classification_id: e.target.value ? parseInt(e.target.value) : undefined
-                }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="">不设置</option>
-                {classifications.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                onChange={(v) => setFormData(prev => ({ ...prev, classification_id: v ? parseInt(v) : undefined }))}
+                placeholder="不设置"
+                options={[{ value: '', label: '不设置' }, ...classifications.map(c => ({ value: c.id, label: c.name }))]}
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+              />
             </div>
           )}
 

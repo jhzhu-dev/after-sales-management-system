@@ -8,6 +8,7 @@ import api from '../services/api';
 import { PlusIcon, TrashIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, DocumentIcon, XMarkIcon, PrinterIcon, CheckCircleIcon, PencilIcon, EyeIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import ProductVersionForm from '../components/ProductVersionForm';
 import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
+import Select from '../components/Select';
 
 const DOC_TYPES = ['规格书', '使用说明', '用户手册', '其他'] as const;
 
@@ -902,15 +903,12 @@ const ProductDetail: React.FC = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         文档类型 <span className="text-red-500">*</span>
                                     </label>
-                                    <select
+                                    <Select
                                         value={uploadDocType}
-                                        onChange={(e) => setUploadDocType(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent text-sm"
-                                    >
-                                        {DOC_TYPES.map((type) => (
-                                            <option key={type} value={type}>{type}</option>
-                                        ))}
-                                    </select>
+                                        onChange={(v) => setUploadDocType(v)}
+                                        options={DOC_TYPES.map((type) => ({ value: type, label: type }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500/40 focus:border-transparent text-sm"
+                                    />
                                 </div>
 
                                 {/* 上传者 */}

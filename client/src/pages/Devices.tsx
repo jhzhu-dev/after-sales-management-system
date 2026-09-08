@@ -9,6 +9,7 @@ import DeviceForm from '../components/DeviceForm';
 import BundleForm from '../components/BundleForm';
 import ExportButton from '../components/ExportButton';
 import SearchableSelect from '../components/SearchableSelect';
+import Select from '../components/Select';
 import { Button } from '../components/ui/button';
 import { exportToExcel } from '../utils/exportUtils';
 import { formatDate, getStatusColor } from '../utils';
@@ -79,6 +80,7 @@ export default function Devices() {
   const [deviceCustomerFilter, setDeviceCustomerFilter] = useState<string>('');
   const [deviceIssueFilter, setDeviceIssueFilter] = useState<string>('');
   const [deviceCodeFilter, setDeviceCodeFilter] = useState<string>('');
+  const [showFilters, setShowFilters] = useState(false);
   const [bundleFilters, setBundleFilters] = useState({
     page: 1,
     limit: 10,
@@ -1143,29 +1145,21 @@ export default function Devices() {
             <div className="flex flex-wrap items-end gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">产品线</label>
-                <select
+                <Select
                   value={filters.type || ''}
-                  onChange={(e) => handleFilterChange('type', e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-                >
-                  <option value="">全部产品线</option>
-                  {productLines.map(pl => <option key={pl.id} value={pl.name}>{pl.name}</option>)}
-                </select>
+                  onChange={(v) => handleFilterChange('type', v)}
+                  placeholder="全部产品线"
+                  options={[{ value: '', label: '全部产品线' }, ...productLines.map(pl => ({ value: pl.name, label: pl.name }))]}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-                <select
+                <Select
                   value={filters.status || ''}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-                >
-                  <option value="">全部状态</option>
-                  <option value="生产中">生产中</option>
-                  <option value="已发货">已发货</option>
-                  <option value="使用中(正常)">使用中(正常)</option>
-                  <option value="使用中(异常)">使用中(异常)</option>
-                  <option value="已停用">已停用</option>
-                </select>
+                  onChange={(v) => handleFilterChange('status', v)}
+                  placeholder="全部状态"
+                  options={[{ value: '', label: '全部状态' }, { value: '生产中', label: '生产中' }, { value: '已发货', label: '已发货' }, { value: '使用中(正常)', label: '使用中(正常)' }, { value: '使用中(异常)', label: '使用中(异常)' }, { value: '已停用', label: '已停用' }]}
+                />
               </div>
               <button
                 onClick={() => { handleFilterChange('type', ''); handleFilterChange('status', ''); }}
@@ -1250,24 +1244,27 @@ export default function Devices() {
         {!globalSearch && viewMode === 'devices' && (
         <>
         {/* 筛选器 */}
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 no-print relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-10">
+          <button
+            type="button"
+            onClick={() => setShowFilters(f => !f)}
+            className="flex items-center justify-between w-full px-2 py-1.5 text-sm font-medium text-gray-700 hover:text-primary-600"
+          >
+            <span>筛选</span>
+            <span className="text-xs">{showFilters ? '▲ 收起' : '▼ 展开'}</span>
+          </button>
+          {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4 p-2 3xl:p-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 产品线
               </label>
-              <select
+              <Select
                 value={filters.type || ''}
-                onChange={(e) => handleFilterChange('type', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="">全部产品线</option>
-                {productLines.map((productLine) => (
-                  <option key={productLine.id} value={productLine.name}>
-                    {productLine.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => handleFilterChange('type', v)}
+                placeholder="全部产品线"
+                options={[{ value: '', label: '全部产品线' }, ...productLines.map((productLine) => ({ value: productLine.name, label: productLine.name }))]}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">客户</label>
@@ -1292,30 +1289,21 @@ export default function Devices() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 状态
               </label>
-              <select
+              <Select
                 value={filters.status || ''}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="">全部状态</option>
-                <option value="生产中">生产中</option>
-                <option value="已发货">已发货</option>
-                <option value="使用中(正常)">使用中(正常)</option>
-                <option value="使用中(异常)">使用中(异常)</option>
-                <option value="已停用">已停用</option>
-              </select>
+                onChange={(v) => handleFilterChange('status', v)}
+                placeholder="全部状态"
+                options={[{ value: '', label: '全部状态' }, { value: '生产中', label: '生产中' }, { value: '已发货', label: '已发货' }, { value: '使用中(正常)', label: '使用中(正常)' }, { value: '使用中(异常)', label: '使用中(异常)' }, { value: '已停用', label: '已停用' }]}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">待解决问题</label>
-              <select
+              <Select
                 value={deviceIssueFilter}
-                onChange={(e) => { setVisibleCount(20); setDeviceIssueFilter(e.target.value); }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="">全部</option>
-                <option value="has">有待解决问题</option>
-                <option value="none">无待解决问题</option>
-              </select>
+                onChange={(v) => { setVisibleCount(20); setDeviceIssueFilter(v); }}
+                placeholder="全部"
+                options={[{ value: '', label: '全部' }, { value: 'has', label: '有待解决问题' }, { value: 'none', label: '无待解决问题' }]}
+              />
             </div>
             <div className="flex items-end">
               <button
@@ -1332,6 +1320,7 @@ export default function Devices() {
               </button>
             </div>
           </div>
+          )}
         </div>
 
         {/* 数据表格 */}
@@ -1409,30 +1398,21 @@ export default function Devices() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-              <select
+              <Select
                 value={bundleFilters.status}
-                onChange={(e) => setBundleFilters(prev => ({ ...prev, status: e.target.value, page: 1 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="">全部</option>
-                <option value="生产中">生产中</option>
-                <option value="已发货">已发货</option>
-                <option value="使用中(正常)">使用中(正常)</option>
-                <option value="使用中(异常)">使用中(异常)</option>
-                <option value="已停用">已停用</option>
-              </select>
+                onChange={(v) => setBundleFilters(prev => ({ ...prev, status: v, page: 1 }))}
+                placeholder="全部"
+                options={[{ value: '', label: '全部' }, { value: '生产中', label: '生产中' }, { value: '已发货', label: '已发货' }, { value: '使用中(正常)', label: '使用中(正常)' }, { value: '使用中(异常)', label: '使用中(异常)' }, { value: '已停用', label: '已停用' }]}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">待解决问题</label>
-              <select
+              <Select
                 value={bundleFilters.issueStatus}
-                onChange={(e) => setBundleFilters(prev => ({ ...prev, issueStatus: e.target.value, page: 1 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="">全部</option>
-                <option value="has">有待解决问题</option>
-                <option value="none">无待解决问题</option>
-              </select>
+                onChange={(v) => setBundleFilters(prev => ({ ...prev, issueStatus: v, page: 1 }))}
+                placeholder="全部"
+                options={[{ value: '', label: '全部' }, { value: 'has', label: '有待解决问题' }, { value: 'none', label: '无待解决问题' }]}
+              />
             </div>
             <div className="flex items-end">
               <button

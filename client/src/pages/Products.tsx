@@ -3,6 +3,7 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import ProductForm from '../components/ProductForm';
+import Select from '../components/Select';
 import { Product, ProductLine, ApiResponse } from '../types';
 import api, { productApi, productLineApi } from '../services/api';
 import { PencilIcon, TrashIcon, PrinterIcon, Squares2X2Icon, ListBulletIcon } from '@heroicons/react/24/outline';
@@ -181,16 +182,12 @@ const Products: React.FC = () => {
                 <div className="bg-white p-4 rounded-lg shadow mb-6 flex items-center space-x-4 no-print">
                     <div className="flex items-center space-x-2">
                         <label className="text-sm font-medium text-gray-700">筛选产品线:</label>
-                        <select
+                        <Select
                             value={productLineId || ''}
-                            onChange={handleLineChange}
-                            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary-500/40"
-                        >
-                            <option value="">全部产品线</option>
-                            {productLines.map(line => (
-                                <option key={line.id} value={line.id}>{line.name}</option>
-                            ))}
-                        </select>
+                            onChange={v => handleLineChange({ target: { value: v } } as any)}
+                            options={[{ value: '', label: '全部产品线' }, ...productLines.map(line => ({ value: line.id, label: line.name }))]}
+                            className="border border-gray-300 rounded-xl px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary-500/40"
+                        />
                     </div>
                 </div>
 

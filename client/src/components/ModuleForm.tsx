@@ -3,6 +3,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Module, ModuleFormData } from '../types';
 import api, { moduleTypeApi } from '../services/api';
 import { Button } from '../components/ui/button';
+import Select from './Select';
 
 interface ModuleFormProps {
   module?: Module | null;
@@ -115,40 +116,27 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
             <label className="block text-sm font-medium text-gray-700 mb-1">
               模块类型 *
             </label>
-            <select
-              name="type_id"
+            <Select
               value={formData.type_id}
-              onChange={handleInputChange}
-              required
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
-            >
-              <option value="">请选择模块类型</option>
-              {moduleTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </select>
+              onChange={v => handleInputChange({ target: { name: 'type_id', value: v } } as any)}
+              placeholder="请选择模块类型"
+              options={[{ value: '', label: '请选择模块类型' }, ...moduleTypes.map((type) => ({ value: type.id, label: type.name }))]}
+              className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               初始版本
             </label>
-            <select
-              name="version_id"
+            <Select
               value={formData.version_id || ''}
-              onChange={handleInputChange}
+              onChange={v => handleInputChange({ target: { name: 'version_id', value: v } } as any)}
+              placeholder={loadingVersions ? '加载中...' : '请选择版本（可选）'}
+              options={[{ value: '', label: loadingVersions ? '加载中...' : '请选择版本（可选）' }, ...versions.map((version) => ({ value: version.id, label: `${version.version_number} - ${version.title || ''}` }))]}
+              className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
               disabled={!formData.type_id || loadingVersions}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-            >
-              <option value="">{loadingVersions ? '加载中...' : '请选择版本（可选）'}</option>
-              {versions.map((version) => (
-                <option key={version.id} value={version.id}>
-                  {version.version_number} - {version.title || ''}
-                </option>
-              ))}
-            </select>
+            />
             {!formData.type_id && (
               <p className="mt-1 text-xs text-gray-500">请先选择模块类型</p>
             )}
@@ -158,17 +146,12 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
             <label className="block text-sm font-medium text-gray-700 mb-1">
               状态 *
             </label>
-            <select
-              name="status"
+            <Select
               value={formData.status}
-              onChange={handleInputChange}
-              required
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
-            >
-              <option value="正常">正常</option>
-              <option value="异常">异常</option>
-              <option value="维护中">维护中</option>
-            </select>
+              onChange={v => handleInputChange({ target: { name: 'status', value: v } } as any)}
+              options={[{ value: '正常', label: '正常' }, { value: '异常', label: '异常' }, { value: '维护中', label: '维护中' }]}
+              className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
+            />
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">

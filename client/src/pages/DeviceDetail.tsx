@@ -33,6 +33,7 @@ import ModuleForm from '../components/ModuleForm';
 import DeviceForm from '../components/DeviceForm';
 import UpgradeForm from '../components/UpgradeForm';
 import SOPChecklistSection from '../components/SOPChecklistSection';
+import Select from '../components/Select';
 
 // ─── 出厂资料文件树 ───────────────────────────────────────────────────────────
 interface DocTreeNode {
@@ -87,6 +88,8 @@ const DeviceDetail: React.FC = () => {
   const [showDeviceForm, setShowDeviceForm] = useState(false);
   const [showVersionUpdateForm, setShowVersionUpdateForm] = useState(false);
   const [showIssueForm, setShowIssueForm] = useState(false);
+  const [issueFormSeverity, setIssueFormSeverity] = useState('');
+  const [issueFormModuleId, setIssueFormModuleId] = useState('');
   const [showResolveForm, setShowResolveForm] = useState(false);
   const [selectedIssueForResolve, setSelectedIssueForResolve] = useState<Issue | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -762,6 +765,8 @@ const DeviceDetail: React.FC = () => {
 
   // 问题处理函数
   const handleAddIssue = () => {
+    setIssueFormSeverity('');
+    setIssueFormModuleId('');
     setShowIssueForm(true);
   };
 
@@ -1892,9 +1897,9 @@ const DeviceDetail: React.FC = () => {
                 const formData = new FormData(e.target as HTMLFormElement);
                 const data = {
                   description: formData.get('description') as string,
-                  severity: formData.get('severity') as string,
+                  severity: issueFormSeverity,
                   assignee: formData.get('assignee') as string,
-                  module_id: formData.get('module_id') as string || undefined
+                  module_id: issueFormModuleId || undefined
                 };
                 handleIssueSubmit(data);
               }}>
@@ -1911,16 +1916,13 @@ const DeviceDetail: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">紧急程度</label>
-                    <select
-                      name="severity"
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
-                    >
-                      <option value="">请选择紧急程度</option>
-                      <option value="high">高</option>
-                      <option value="medium">中</option>
-                      <option value="low">低</option>
-                    </select>
+                    <Select
+                      value={issueFormSeverity}
+                      onChange={(v) => setIssueFormSeverity(v)}
+                      placeholder="请选择紧急程度"
+                      options={[{ value: '', label: '请选择紧急程度' }, { value: 'high', label: '高' }, { value: 'medium', label: '中' }, { value: 'low', label: '低' }]}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">负责人</label>
@@ -1934,17 +1936,13 @@ const DeviceDetail: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">相关模块（可选）</label>
-                    <select
-                      name="module_id"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
-                    >
-                      <option value="">设备级别问题</option>
-                      {modules.map((module) => (
-                        <option key={module.id} value={module.id.toString()}>
-                          {module.module_type}
-                        </option>
-                      ))}
-                    </select>
+                    <Select
+                      value={issueFormModuleId}
+                      onChange={(v) => setIssueFormModuleId(v)}
+                      placeholder="设备级别问题"
+                      options={[{ value: '', label: '设备级别问题' }, ...modules.map((module) => ({ value: module.id.toString(), label: module.module_type || '' }))]}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
+                    />
                   </div>
                 </div>
                 <div className="flex justify-end space-x-3 mt-6">
@@ -2181,19 +2179,16 @@ const DeviceDetail: React.FC = () => {
                   资料分类 <span className="text-red-500">*</span>
                 </label>
                 {deviceDocCategories.length > 0 && (
-                  <select
+                  <Select
                     value={docUploadCategory}
-                    onChange={(e) => {
-                      setDocUploadCategory(e.target.value);
-                      if (e.target.value) setDocUploadNewCategory('');
+                    onChange={(v) => {
+                      setDocUploadCategory(v);
+                      if (v) setDocUploadNewCategory('');
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm mb-2"
-                  >
-                    <option value="">-- 选择已有分类 --</option>
-                    {deviceDocCategories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                    placeholder="-- 选择已有分类 --"
+                    options={[{ value: '', label: '-- 选择已有分类 --' }, ...deviceDocCategories.map(cat => ({ value: cat, label: cat }))]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm mb-2"
+                  />
                 )}
                 <input
                   type="text"

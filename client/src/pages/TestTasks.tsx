@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import DataTable, { Column } from '../components/DataTable';
 import SearchableSelect, { SearchableSelectOption } from '../components/SearchableSelect';
+import Select from '../components/Select';
 import TestTaskForm from '../components/TestTaskForm';
 import { testTaskApi, productApi } from '../services/api';
 import { TestTask, TestTaskFormData, Product } from '../types';
@@ -28,6 +29,7 @@ const TestTasks: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [editing, setEditing] = useState<TestTask | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -119,24 +121,28 @@ const TestTasks: React.FC = () => {
 
         {successMsg && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">{successMsg}</div>}
 
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3 relative z-20">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 mb-4 relative z-20">
+          <button
+            type="button"
+            onClick={() => setShowFilters(f => !f)}
+            className="flex items-center justify-between w-full px-2 py-1.5 text-sm font-medium text-gray-700 hover:text-primary-600"
+          >
+            <span>筛选</span>
+            <span className="text-xs">{showFilters ? '▲ 收起' : '▼ 展开'}</span>
+          </button>
+          {showFilters && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-2">
           <div>
             <label className="block text-xs text-gray-500 mb-1">产品</label>
             <SearchableSelect value={filters.product_id} onChange={v => setFilters(f => ({ ...f, product_id: v, page: 1 }))} options={productOptions} placeholder="全部产品" />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">状态</label>
-            <select value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value, page: 1 }))} className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm">
-              <option value="">全部</option>
-              {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <Select value={filters.status} onChange={v => setFilters(f => ({ ...f, status: v, page: 1 }))} placeholder="全部" options={STATUSES.map(s => ({ value: s, label: s }))} />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">优先级</label>
-            <select value={filters.priority} onChange={e => setFilters(f => ({ ...f, priority: e.target.value, page: 1 }))} className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm">
-              <option value="">全部</option>
-              {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
+            <Select value={filters.priority} onChange={v => setFilters(f => ({ ...f, priority: v, page: 1 }))} placeholder="全部" options={PRIORITIES.map(p => ({ value: p, label: p }))} />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">上海测试人</label>
@@ -157,6 +163,8 @@ const TestTasks: React.FC = () => {
               <input type="text" value={filters.search} onChange={e => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))} placeholder="任务编号 / 模型 / 需求人" className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40" />
             </div>
           </div>
+          </div>
+          )}
         </div>
 
         <DataTable

@@ -4,6 +4,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { DeviceUpgradeFormData, Device, FeishuUser } from '../types';
 import { deviceApi, feishuApi } from '../services/api';
 import FeishuUserPicker from './FeishuUserPicker';
+import Select from './Select';
 
 interface UpgradeFormProps {
     deviceId: string;
@@ -89,35 +90,24 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
                     {!deviceId && (
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">选择设备 *</label>
-                            <select
-                                name="device_id"
+                            <Select
                                 value={formData.device_id}
-                                onChange={handleChange}
-                                required
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-                            >
-                                <option value="">请选择要升级的设备</option>
-                                {devices.map(d => (
-                                    <option key={d.id} value={d.id}>{d.id} - {d.name}</option>
-                                ))}
-                            </select>
+                                onChange={v => handleChange({ target: { name: 'device_id', value: v } } as any)}
+                                placeholder="请选择要升级的设备"
+                                options={[{ value: '', label: '请选择要升级的设备' }, ...devices.map(d => ({ value: d.id, label: `${d.id} - ${d.name}` }))]}
+                                className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                            />
                         </div>
                     )}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">升级类型 *</label>
-                            <select
-                                name="upgrade_type"
+                            <Select
                                 value={formData.upgrade_type}
-                                onChange={handleChange}
-                                required
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-                            >
-                                <option value="软件更新">软件更新</option>
-                                <option value="硬件升级">硬件升级</option>
-                                <option value="系统优化">系统优化</option>
-                                <option value="其他">其他</option>
-                            </select>
+                                onChange={v => handleChange({ target: { name: 'upgrade_type', value: v } } as any)}
+                                options={[{ value: '软件更新', label: '软件更新' }, { value: '硬件升级', label: '硬件升级' }, { value: '系统优化', label: '系统优化' }, { value: '其他', label: '其他' }]}
+                                className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">执行人 *</label>

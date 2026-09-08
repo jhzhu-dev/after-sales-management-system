@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import DataTable, { Column } from '../components/DataTable';
 import SearchableSelect, { SearchableSelectOption } from '../components/SearchableSelect';
+import Select from '../components/Select';
 import CustomerRequirementForm from '../components/CustomerRequirementForm';
 import { customerRequirementApi, customerApi } from '../services/api';
 import { CustomerRequirement, CustomerRequirementFormData, Customer } from '../types';
@@ -34,6 +35,7 @@ const CustomerRequirements: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [editing, setEditing] = useState<CustomerRequirement | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -147,31 +149,32 @@ const CustomerRequirements: React.FC = () => {
         )}
 
         {/* 筛选区 */}
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3 relative z-20">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 mb-4 relative z-20">
+          <button
+            type="button"
+            onClick={() => setShowFilters(f => !f)}
+            className="flex items-center justify-between w-full px-2 py-1.5 text-sm font-medium text-gray-700 hover:text-primary-600"
+          >
+            <span>筛选</span>
+            <span className="text-xs">{showFilters ? '▲ 收起' : '▼ 展开'}</span>
+          </button>
+          {showFilters && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-2">
           <div>
             <label className="block text-xs text-gray-500 mb-1">客户</label>
             <SearchableSelect value={filters.customer_id} onChange={v => setFilters(f => ({ ...f, customer_id: v, page: 1 }))} options={customerOptions} placeholder="全部客户" />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">分类</label>
-            <select value={filters.requirement_type} onChange={e => setFilters(f => ({ ...f, requirement_type: e.target.value, page: 1 }))} className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm">
-              <option value="">全部</option>
-              {REQ_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <Select value={filters.requirement_type} onChange={v => setFilters(f => ({ ...f, requirement_type: v, page: 1 }))} placeholder="全部" options={REQ_TYPES.map(t => ({ value: t, label: t }))} />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">紧急程度</label>
-            <select value={filters.urgency} onChange={e => setFilters(f => ({ ...f, urgency: e.target.value, page: 1 }))} className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm">
-              <option value="">全部</option>
-              {URGENCIES.map(u => <option key={u} value={u}>{u}</option>)}
-            </select>
+            <Select value={filters.urgency} onChange={v => setFilters(f => ({ ...f, urgency: v, page: 1 }))} placeholder="全部" options={URGENCIES.map(u => ({ value: u, label: u }))} />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">状态</label>
-            <select value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value, page: 1 }))} className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm">
-              <option value="">全部</option>
-              {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <Select value={filters.status} onChange={v => setFilters(f => ({ ...f, status: v, page: 1 }))} placeholder="全部" options={STATUSES.map(s => ({ value: s, label: s }))} />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">提出日期起</label>
@@ -194,6 +197,8 @@ const CustomerRequirements: React.FC = () => {
               />
             </div>
           </div>
+          </div>
+          )}
         </div>
 
         {/* 列表 */}

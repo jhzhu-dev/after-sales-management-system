@@ -8,6 +8,7 @@ import { Button } from '../components/ui/button';
 import KnowledgeBase from '../components/KnowledgeBase';
 import DataTable from '../components/DataTable';
 import SearchableSelect from '../components/SearchableSelect';
+import Select from '../components/Select';
 import IssueForm from '../components/IssueForm';
 import ExportButton from '../components/ExportButton';
 import { exportToExcel } from '../utils/exportUtils';
@@ -55,6 +56,7 @@ export default function Issues() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedIssues, setSelectedIssues] = useState<number[]>([]);
   const [showIssueForm, setShowIssueForm] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [moduleTypes, setModuleTypes] = useState<Array<{id: number, name: string}>>([]);
 
   // 从实际问题数据中派生模块选项（含自定义模块名）
@@ -773,37 +775,27 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 onChange={e => setUpgradeFilters(f => ({ ...f, search: e.target.value }))}
               />
             </div>
-            <select
-              className="bg-gray-50 border-none rounded-lg py-2 pl-3 pr-8 focus:ring-2 focus:ring-primary-500/40"
+            <Select
               value={upgradeFilters.module_type}
-              onChange={e => setUpgradeFilters(f => ({ ...f, module_type: e.target.value }))}
-            >
-              <option value="">所有模块类型</option>
-              <option value="机械">机械</option>
-              <option value="电气">电气</option>
-              <option value="上位机">上位机</option>
-              <option value="服务器">服务器</option>
-              <option value="视觉">视觉</option>
-            </select>
-            <select
-              className="bg-gray-50 border-none rounded-lg py-2 pl-3 pr-8 focus:ring-2 focus:ring-primary-500/40"
+              onChange={v => setUpgradeFilters(f => ({ ...f, module_type: v }))}
+              placeholder="所有模块类型"
+              options={[{ value: '', label: '所有模块类型' }, { value: '机械', label: '机械' }, { value: '电气', label: '电气' }, { value: '上位机', label: '上位机' }, { value: '服务器', label: '服务器' }, { value: '视觉', label: '视觉' }]}
+              className="min-w-40 bg-card border border-border rounded-xl py-2 pl-3 pr-8 text-sm focus:ring-2 focus:ring-primary-500/40"
+            />
+            <Select
               value={upgradeFilters.version_type}
-              onChange={e => setUpgradeFilters(f => ({ ...f, version_type: e.target.value }))}
-            >
-              <option value="">所有版本类型</option>
-              <option value="factory">出厂版本</option>
-              <option value="update">更新版本</option>
-            </select>
-            <select
-              className="bg-gray-50 border-none rounded-lg py-2 pl-3 pr-8 focus:ring-2 focus:ring-primary-500/40"
+              onChange={v => setUpgradeFilters(f => ({ ...f, version_type: v }))}
+              placeholder="所有版本类型"
+              options={[{ value: '', label: '所有版本类型' }, { value: 'factory', label: '出厂版本' }, { value: 'update', label: '更新版本' }]}
+              className="min-w-40 bg-card border border-border rounded-xl py-2 pl-3 pr-8 text-sm focus:ring-2 focus:ring-primary-500/40"
+            />
+            <Select
               value={upgradeFilters.customer}
-              onChange={e => setUpgradeFilters(f => ({ ...f, customer: e.target.value }))}
-            >
-              <option value="">所有客户</option>
-              {customers.map(c => (
-                <option key={c.id} value={c.name}>{c.name}</option>
-              ))}
-            </select>
+              onChange={v => setUpgradeFilters(f => ({ ...f, customer: v }))}
+              placeholder="所有客户"
+              options={[{ value: '', label: '所有客户' }, ...customers.map(c => ({ value: c.name, label: c.name }))]}
+              className="min-w-40 bg-card border border-border rounded-xl py-2 pl-3 pr-8 text-sm focus:ring-2 focus:ring-primary-500/40"
+            />
             <div className="flex-1"></div>
             <ExportButton
               onExport={handleExportUpgrades}
@@ -1072,8 +1064,17 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         )}
 
         {/* 筛选器 */}
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 no-print relative z-20">
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-20">
+          <button
+            type="button"
+            onClick={() => setShowFilters(f => !f)}
+            className="flex items-center justify-between w-full px-2 py-1.5 text-sm font-medium text-gray-700 hover:text-primary-600"
+          >
+            <span>筛选</span>
+            <span className="text-xs">{showFilters ? '▲ 收起' : '▼ 展开'}</span>
+          </button>
+          {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4 p-2 3xl:p-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 搜索
@@ -1101,82 +1102,58 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 产品线
               </label>
-              <select
+              <Select
                 value={filters.device_type || ''}
-                onChange={(e) => handleFilterChange('device_type', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="">全部产品线</option>
-                {productLines.map((productLine) => (
-                  <option key={productLine.id} value={productLine.name}>
-                    {productLine.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => handleFilterChange('device_type', v)}
+                placeholder="全部产品线"
+                options={[{ value: '', label: '全部产品线' }, ...productLines.map((productLine) => ({ value: productLine.name, label: productLine.name }))]}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 模块类型
               </label>
-              <select
+              <Select
                 value={filters.module || ''}
-                onChange={(e) => handleFilterChange('module', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="">全部模块</option>
-                {allModuleOptions.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => handleFilterChange('module', v)}
+                placeholder="全部模块"
+                options={[{ value: '', label: '全部模块' }, ...allModuleOptions.map((name) => ({ value: name, label: name }))]}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 紧急程度
               </label>
-              <select
+              <Select
                 value={filters.severity || ''}
-                onChange={(e) => handleFilterChange('severity', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="">全部紧急程度</option>
-                <option value="high">高</option>
-                <option value="medium">中</option>
-                <option value="low">低</option>
-              </select>
+                onChange={(v) => handleFilterChange('severity', v)}
+                placeholder="全部紧急程度"
+                options={[{ value: '', label: '全部紧急程度' }, { value: 'high', label: '高' }, { value: 'medium', label: '中' }, { value: 'low', label: '低' }]}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 状态
               </label>
-              <select
+              <Select
                 value={filters.status || ''}
-                onChange={(e) => {
-                  console.log('状态筛选器变化:', e.target.value);
-                  handleFilterChange('status', e.target.value);
+                onChange={(v) => {
+                  console.log('状态筛选器变化:', v);
+                  handleFilterChange('status', v);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="">全部状态</option>
-                <option value="open">待处理</option>
-                <option value="in_progress">处理中</option>
-                <option value="closed">已解决</option>
-              </select>
+                placeholder="全部状态"
+                options={[{ value: '', label: '全部状态' }, { value: 'open', label: '待处理' }, { value: 'in_progress', label: '处理中' }, { value: 'closed', label: '已解决' }]}
+              />
             </div>
             {classifications.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">分类</label>
-                <select
+                <Select
                   value={filters.classification_id || ''}
-                  onChange={(e) => handleFilterChange('classification_id', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-                >
-                  <option value="">全部分类</option>
-                  {classifications.map(c => (
-                    <option key={c.id} value={String(c.id)}>{c.name}</option>
-                  ))}
-                </select>
+                  onChange={(v) => handleFilterChange('classification_id', v)}
+                  placeholder="全部分类"
+                  options={[{ value: '', label: '全部分类' }, ...classifications.map(c => ({ value: String(c.id), label: c.name }))]}
+                />
               </div>
             )}
             <div className="flex items-end">
@@ -1188,6 +1165,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               </button>
             </div>
           </div>
+          )}
         </div>
 
         {/* 数据表格 */}

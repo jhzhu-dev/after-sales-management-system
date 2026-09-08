@@ -25,6 +25,7 @@ import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import BundleForm from '../components/BundleForm';
 import ExportButton from '../components/ExportButton';
+import Select from '../components/Select';
 import { exportToExcel } from '../utils/exportUtils';
 import { formatDate, getStatusColor } from '../utils';
 
@@ -1282,19 +1283,16 @@ const BundleDetail: React.FC = () => {
                   资料分类 <span className="text-red-500">*</span>
                 </label>
                 {docCategories.length > 0 && (
-                  <select
+                  <Select
                     value={docUploadCategory}
-                    onChange={(e) => {
-                      setDocUploadCategory(e.target.value);
-                      if (e.target.value) setDocUploadNewCategory('');
+                    onChange={(v) => {
+                      setDocUploadCategory(v);
+                      if (v) setDocUploadNewCategory('');
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm mb-2"
-                  >
-                    <option value="">-- 选择已有分类 --</option>
-                    {docCategories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                    placeholder="-- 选择已有分类 --"
+                    options={[{ value: '', label: '-- 选择已有分类 --' }, ...docCategories.map(cat => ({ value: cat, label: cat }))]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm mb-2"
+                  />
                 )}
                 <input
                   type="text"

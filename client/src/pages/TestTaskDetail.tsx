@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
 import TestTaskForm from '../components/TestTaskForm';
 import TestSummaryForm from '../components/TestSummaryForm';
+import Select from '../components/Select';
 import { testTaskApi } from '../services/api';
 import { TestTask, TestTaskFormData } from '../types';
 import { formatDate, getUrgencyColor } from '../utils';
@@ -234,11 +235,7 @@ const TestTaskDetail: React.FC = () => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-base font-semibold text-gray-900">附件</h2>
             <div className="flex items-center gap-2">
-              <select value={category} onChange={e => setCategory(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded-md text-sm">
-                <option value="测试反馈单">测试反馈单</option>
-                <option value="测试报告">测试报告</option>
-                <option value="其他">其他</option>
-              </select>
+              <Select value={category} onChange={v => setCategory(v)} options={[{ value: '测试反馈单', label: '测试反馈单' }, { value: '测试报告', label: '测试报告' }, { value: '其他', label: '其他' }]} className="px-2 py-1.5 border border-border rounded-xl text-sm" />
               <label className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
                 <ArrowUpTrayIcon className="h-4 w-4 mr-1" />
                 {uploading ? '上传中...' : '上传附件'}

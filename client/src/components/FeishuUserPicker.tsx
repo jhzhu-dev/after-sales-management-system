@@ -1,5 +1,6 @@
 import React from 'react';
 import { FeishuUser } from '../types';
+import Select from './Select';
 
 interface FeishuUserPickerProps {
   users: FeishuUser[];
@@ -29,8 +30,7 @@ const FeishuUserPicker: React.FC<FeishuUserPickerProps> = ({
 }) => {
   if (!users || users.length === 0) return null;
 
-  const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const openId = e.target.value;
+  const handleSelect = (openId: string) => {
     if (!openId) {
       onChange('', '');
       onNotifyChange(false);
@@ -45,20 +45,14 @@ const FeishuUserPicker: React.FC<FeishuUserPickerProps> = ({
   return (
     <div className="space-y-2">
       {/* 员工下拉选择 */}
-      <select
+      <Select
         value={value}
         onChange={handleSelect}
         disabled={disabled}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 disabled:bg-gray-100 disabled:cursor-not-allowed"
-      >
-        <option value="">{placeholder}</option>
-        {users.map(u => (
-          <option key={u.open_id} value={u.open_id}>
-            {u.name}
-            {u.department ? ` · ${u.department}` : ''}
-          </option>
-        ))}
-      </select>
+        placeholder={placeholder}
+        options={[{ value: '', label: placeholder }, ...users.map(u => ({ value: u.open_id, label: u.department ? `${u.name} · ${u.department}` : u.name }))]}
+        className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 disabled:bg-gray-100 disabled:cursor-not-allowed"
+      />
 
       {/* 通知勾选框 */}
       <label

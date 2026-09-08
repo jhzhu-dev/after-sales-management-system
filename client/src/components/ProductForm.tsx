@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import Select from './Select';
 import { ProductLine } from '../types';
 
 interface Product {
@@ -133,22 +134,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
             <label className="block text-sm font-medium text-gray-700 mb-1">
               所属产品线 <span className="text-red-500">*</span>
             </label>
-            <select
-              name="product_line_id"
+            <Select
               value={formData.product_line_id}
-              onChange={handleInputChange}
+              onChange={v => handleInputChange({ target: { name: 'product_line_id', value: v } } as any)}
+              placeholder="请选择产品线"
+              options={[{ value: '', label: '请选择产品线' }, ...productLines.filter(line => line.is_active).map(line => ({ value: line.id, label: `${line.name} (${line.code})` }))]}
+              className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${errors.product_line_id ? 'border-red-500' : 'border-gray-300'} ${product ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               disabled={!!product}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
-                errors.product_line_id ? 'border-red-500' : 'border-gray-300'
-              } ${product ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-            >
-              <option value="">请选择产品线</option>
-              {productLines.filter(line => line.is_active).map(line => (
-                <option key={line.id} value={line.id}>
-                  {line.name} ({line.code})
-                </option>
-              ))}
-            </select>
+            />
             {errors.product_line_id && (
               <p className="mt-1 text-sm text-red-500">{errors.product_line_id}</p>
             )}
