@@ -769,7 +769,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             <button
               type="button"
               onClick={() => setShowUpgradeFilters(f => !f)}
-              className="flex items-center text-sm font-medium text-gray-700 hover:text-primary-600"
+              className="flex items-center justify-between w-full text-sm font-medium text-gray-700 hover:text-primary-600"
             >
               <span>筛选</span>
               <span className="text-xs ml-2">{showUpgradeFilters ? '▲ 收起' : '▼ 展开'}</span>
