@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Button } from '../components/ui/button';
 import { IssueLog } from '../types';
 import { ClockIcon, UserIcon, PlusIcon, XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import api from '../services/api';
@@ -141,22 +142,9 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-900">处理记录</h3>
         {issueStatus !== 'closed' && (
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-          >
-            {showForm ? (
-              <>
-                <XMarkIcon className="h-4 w-4 mr-1" />
-                取消
-              </>
-            ) : (
-              <>
-                <PlusIcon className="h-4 w-4 mr-1" />
-                添加处理记录
-              </>
-            )}
-          </button>
+          <Button size="sm" onClick={() => setShowForm(!showForm)}>
+            {showForm ? (<><XMarkIcon className="h-4 w-4" />取消</>) : (<><PlusIcon className="h-4 w-4" />添加处理记录</>)}
+          </Button>
         )}
       </div>
 
@@ -240,16 +228,9 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
               >
                 取消
               </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {submitting
-                  ? (uploadingCount > 0 ? `上传附件中 (${uploadingCount})…` : '提交中…')
-                  : '提交'
-                }
-              </button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? (uploadingCount > 0 ? `上传附件中 (${uploadingCount})…` : '提交中…') : '提交'}
+              </Button>
             </div>
           </form>
         </div>

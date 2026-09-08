@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Button } from '../components/ui/button';
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -293,13 +294,7 @@ export default function KnowledgeBase({ productLines }: Props) {
             </span>
           )}
           <span className="text-sm text-gray-400">共 {displayedArticles.length} 条</span>
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-          >
-            <PlusIcon className="h-4 w-4 mr-1.5" />
-            新增词条
-          </button>
+          <Button onClick={openCreate}><PlusIcon className="h-4 w-4" />新增词条</Button>
         </div>
       </div>
 
@@ -680,13 +675,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                 >
                   取消
                 </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {saving ? '保存中...' : (editId ? '更新词条' : '创建词条')}
-                </button>
+                <Button type="submit" disabled={saving}>{saving ? '保存中...' : (editId ? '更新词条' : '创建词条')}</Button>
               </div>
             </form>
           </div>
