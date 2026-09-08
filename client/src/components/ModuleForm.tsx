@@ -120,7 +120,7 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
               value={formData.type_id}
               onChange={handleInputChange}
               required
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
             >
               <option value="">请选择模块类型</option>
               {moduleTypes.map((type) => (
@@ -140,7 +140,7 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
               value={formData.version_id || ''}
               onChange={handleInputChange}
               disabled={!formData.type_id || loadingVersions}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               <option value="">{loadingVersions ? '加载中...' : '请选择版本（可选）'}</option>
               {versions.map((version) => (
@@ -163,7 +163,7 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
               value={formData.status}
               onChange={handleInputChange}
               required
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
             >
               <option value="正常">正常</option>
               <option value="异常">异常</option>

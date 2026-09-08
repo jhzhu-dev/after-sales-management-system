@@ -28,6 +28,9 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
     severity: 'medium',
     status: 'open',
     assignee: '',
+    feedback_time: '',
+    feedback_no: '',
+    is_first_occurrence: false,
     notes: ''
   });
   const [devices, setDevices] = useState<Array<{id: string, name: string, device_code: string, customer_name: string, product_name: string, remote_code: string, nickname: string}>>([]); 
@@ -91,6 +94,9 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
         status: issue.status || 'open',
         classification_id: issue.classification_id || undefined,
         assignee: issue.assignee || '',
+        feedback_time: (issue as any).feedback_time || '',
+        feedback_no: (issue as any).feedback_no || '',
+        is_first_occurrence: !!(issue as any).is_first_occurrence,
         notes: issue.resolution_description || ''
       });
       // 编辑模式下不恢复飞书通知状态（每次创建才触发通知）
@@ -341,7 +347,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
                     className="flex-1 bg-transparent outline-none text-sm text-gray-900 placeholder-gray-400"
                   />
                   {deviceLoading && (
-                    <svg className="animate-spin h-4 w-4 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-4 w-4 text-primary-500 flex-shrink-0" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
@@ -388,7 +394,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               name="module_id"
               value={formData.module_id || ''}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               disabled={!formData.device_id}
             >
               <option value="">请选择模块（可选）</option>
@@ -406,7 +412,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
                 value={formData.custom_module_name || ''}
                 onChange={handleInputChange}
                 placeholder="请输入自定义模块名称"
-                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               />
             )}
             {/* 调试信息 */}
@@ -430,7 +436,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               value={formData.description}
               onChange={handleInputChange}
               rows={4}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
                 errors.description ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="请详细描述问题..."
@@ -449,7 +455,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               name="severity"
               value={formData.severity}
               onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
                 errors.severity ? 'border-red-500' : 'border-gray-300'
               }`}
             >
@@ -471,7 +477,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               name="status"
               value={formData.status}
               onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
                 errors.status ? 'border-red-500' : 'border-gray-300'
               }`}
             >
@@ -497,7 +503,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
                   ...prev,
                   classification_id: e.target.value ? parseInt(e.target.value) : undefined
                 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
                 <option value="">不设置</option>
                 {classifications.map(c => (
@@ -517,9 +523,45 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               name="assignee"
               value={formData.assignee}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               placeholder="请输入登记人"
             />
+          </div>
+
+          {/* 反馈信息 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">反馈时间</label>
+              <input
+                type="datetime-local"
+                name="feedback_time"
+                value={formData.feedback_time}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">反馈单号</label>
+              <input
+                type="text"
+                name="feedback_no"
+                value={formData.feedback_no}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                placeholder="请输入反馈单号"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={formData.is_first_occurrence}
+                  onChange={e => setFormData(prev => ({ ...prev, is_first_occurrence: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
+                />
+                <span className="text-sm font-medium text-gray-700">是否首次发生</span>
+              </label>
+            </div>
           </div>
 
           {/* 通知模块处理人 */}
@@ -536,12 +578,12 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
                       setNotifyOpenIds(pinnedOpenIds);
                     }
                   }}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
                 />
                 <span className="text-sm font-medium text-gray-700">
                   通知相关人员处理
                   {pinnedOpenIds.length > 0 && (
-                    <span className="ml-1.5 text-xs font-normal text-blue-600">
+                    <span className="ml-1.5 text-xs font-normal text-primary-600">
                       （模块关联负责人将置顶）
                     </span>
                   )}
@@ -566,7 +608,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               <PaperClipIcon className="h-4 w-4" /> 附件
             </label>
             <div
-              className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors bg-gray-50 cursor-pointer"
+              className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-primary-400 transition-colors bg-gray-50 cursor-pointer"
               onClick={() => fileInputRef.current?.click()}
             >
               <input
@@ -613,7 +655,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
                       href={att.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-blue-700 hover:underline truncate max-w-[85%]"
+                      className="flex items-center gap-1.5 text-primary-700 hover:underline truncate max-w-[85%]"
                       onClick={e => e.stopPropagation()}
                     >
                       <PaperClipIcon className="h-3.5 w-3.5 flex-shrink-0" />

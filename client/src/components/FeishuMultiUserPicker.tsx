@@ -58,7 +58,7 @@ const FeishuMultiUserPicker: React.FC<FeishuMultiUserPickerProps> = ({
           checked={checked}
           onChange={() => toggle(u.open_id)}
           disabled={disabled}
-          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
+          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40 disabled:cursor-not-allowed"
         />
         <span className="flex-1 text-sm text-gray-800">
           {u.name}
@@ -91,7 +91,7 @@ const FeishuMultiUserPicker: React.FC<FeishuMultiUserPickerProps> = ({
                   <button
                     type="button"
                     onClick={() => onChange(value.filter(i => i !== id))}
-                    className="ml-0.5 text-blue-500 hover:text-blue-800 leading-none"
+                    className="ml-0.5 text-primary-500 hover:text-primary-700 leading-none"
                     aria-label={`取消 ${u.name}`}
                   >
                     ×
@@ -146,7 +146,7 @@ const FeishuMultiUserPicker: React.FC<FeishuMultiUserPickerProps> = ({
           <button
             type="button"
             onClick={() => onChange(users.map(u => u.open_id))}
-            className="text-xs text-blue-600 hover:text-blue-800"
+            className="text-xs text-primary-600 hover:text-primary-700"
           >
             全选
           </button>

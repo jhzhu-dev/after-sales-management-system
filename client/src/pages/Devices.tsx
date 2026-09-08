@@ -78,6 +78,7 @@ export default function Devices() {
   }));
   const [deviceCustomerFilter, setDeviceCustomerFilter] = useState<string>('');
   const [deviceIssueFilter, setDeviceIssueFilter] = useState<string>('');
+  const [deviceCodeFilter, setDeviceCodeFilter] = useState<string>('');
   const [bundleFilters, setBundleFilters] = useState({
     page: 1,
     limit: 10,
@@ -170,6 +171,11 @@ export default function Devices() {
       filtered = filtered.filter(device => String(device.customer_id || '') === deviceCustomerFilter);
     }
 
+    // 设备编码过滤
+    if (deviceCodeFilter) {
+      filtered = filtered.filter(device => (device.device_code || '').toLowerCase().includes(deviceCodeFilter.toLowerCase()));
+    }
+
     // 待解决问题过滤
     if (deviceIssueFilter === 'has') {
       filtered = filtered.filter(device => Number(device.open_issues || 0) > 0);
@@ -195,7 +201,7 @@ export default function Devices() {
       total: filtered.length,
       pages: 1
     });
-  }, [allDevices, filters, deviceCustomerFilter, deviceIssueFilter, sortField, sortOrder]);
+  }, [allDevices, filters, deviceCustomerFilter, deviceCodeFilter, deviceIssueFilter, sortField, sortOrder]);
 
   // 初始数据获取
   useEffect(() => {
@@ -344,6 +350,7 @@ export default function Devices() {
     );
     if (filters.type) result = result.filter(d => d.product_line_name === filters.type);
     if (deviceCustomerFilter) result = result.filter(d => String(d.customer_id || '') === deviceCustomerFilter);
+    if (deviceCodeFilter) result = result.filter(d => (d.device_code || '').toLowerCase().includes(deviceCodeFilter.toLowerCase()));
     if (deviceIssueFilter === 'has') result = result.filter(d => Number(d.open_issues || 0) > 0);
     if (deviceIssueFilter === 'none') result = result.filter(d => Number(d.open_issues || 0) === 0);
     if (filters.status) result = result.filter(d => d.status === filters.status);
@@ -504,6 +511,7 @@ export default function Devices() {
   const allFilteredDevices = (() => {
     let filtered = [...allDevices].filter(d => !d.bundle_id);
     if (filters.type) filtered = filtered.filter(d => d.product_line_name === filters.type);
+    if (deviceCodeFilter) filtered = filtered.filter(d => (d.device_code || '').toLowerCase().includes(deviceCodeFilter.toLowerCase()));
     if (deviceCustomerFilter) filtered = filtered.filter(d => String(d.customer_id || '') === deviceCustomerFilter);
     if (deviceIssueFilter === 'has') filtered = filtered.filter(d => Number(d.open_issues || 0) > 0);
     if (deviceIssueFilter === 'none') filtered = filtered.filter(d => Number(d.open_issues || 0) === 0);
@@ -643,16 +651,16 @@ export default function Devices() {
     const isActive = sortField === field;
     return (
       <div
-        className="flex items-center space-x-1 cursor-pointer hover:text-blue-600 select-none"
+        className="flex items-center space-x-1 cursor-pointer hover:text-primary-600 select-none"
         onClick={() => handleSort(field)}
       >
         <span>{title}</span>
         <div className="flex flex-col">
           <ChevronUpIcon
-            className={`h-3 w-3 ${isActive && sortOrder === 'asc' ? 'text-blue-600' : 'text-gray-400'}`}
+            className={`h-3 w-3 ${isActive && sortOrder === 'asc' ? 'text-primary-600' : 'text-gray-400'}`}
           />
           <ChevronDownIcon
-            className={`h-3 w-3 -mt-1 ${isActive && sortOrder === 'desc' ? 'text-blue-600' : 'text-gray-400'}`}
+            className={`h-3 w-3 -mt-1 ${isActive && sortOrder === 'desc' ? 'text-primary-600' : 'text-gray-400'}`}
           />
         </div>
       </div>
@@ -668,7 +676,7 @@ export default function Devices() {
             type="checkbox"
             checked={selectedDevices.length === filteredDevices.length && filteredDevices.length > 0}
             onChange={handleSelectAllDevices}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
           />
         </div>
       ),
@@ -678,7 +686,7 @@ export default function Devices() {
             type="checkbox"
             checked={selectedDevices.includes(record.id)}
             onChange={() => handleSelectDevice(record.id)}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
           />
         </div>
       ),
@@ -690,7 +698,7 @@ export default function Devices() {
       render: (value: string, record: Device) => (
         <Link
           to={`/devices/${value}`}
-          className="text-blue-600 hover:text-blue-800 font-medium"
+          className="text-primary-600 hover:text-primary-700 font-medium"
         >
           {value}
         </Link>
@@ -706,7 +714,7 @@ export default function Devices() {
             {value}{record.id ? <span className="text-gray-400 font-normal"> · {record.id.slice(-4)}</span> : ''}
           </div>
           {record.nickname && (
-            <div className="text-xs text-blue-600 font-medium">{record.nickname}</div>
+            <div className="text-xs text-primary-600 font-medium">{record.nickname}</div>
           )}
         </div>
       ),
@@ -741,7 +749,7 @@ export default function Devices() {
       render: (value: string) => {
         if (!value) return <span className="text-gray-300">—</span>;
         const display = value.includes(' ') ? value : value.replace(/(\d{3})(?=\d)/g, '$1 ');
-        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-white text-blue-600 border border-blue-200">{display}</span>;
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-white text-primary-600 border border-primary-200">{display}</span>;
       },
       width: '130px'
     },
@@ -832,7 +840,7 @@ export default function Devices() {
         <div className="flex items-center space-x-2">
           <Link
             to={`/devices/${record.id}`}
-            className="text-blue-600 hover:text-blue-800"
+            className="text-primary-600 hover:text-primary-700"
             title="查看详情"
           >
             <EyeIcon className="h-4 w-4" />
@@ -861,13 +869,13 @@ export default function Devices() {
     const isActive = bundleSortField === field;
     return (
       <div
-        className="flex items-center space-x-1 cursor-pointer hover:text-blue-600 select-none"
+        className="flex items-center space-x-1 cursor-pointer hover:text-primary-600 select-none"
         onClick={() => handleBundleSort(field)}
       >
         <span>{title}</span>
         <div className="flex flex-col">
-          <ChevronUpIcon className={`h-3 w-3 ${isActive && bundleSortOrder === 'asc' ? 'text-blue-600' : 'text-gray-400'}`} />
-          <ChevronDownIcon className={`h-3 w-3 -mt-1 ${isActive && bundleSortOrder === 'desc' ? 'text-blue-600' : 'text-gray-400'}`} />
+          <ChevronUpIcon className={`h-3 w-3 ${isActive && bundleSortOrder === 'asc' ? 'text-primary-600' : 'text-gray-400'}`} />
+          <ChevronDownIcon className={`h-3 w-3 -mt-1 ${isActive && bundleSortOrder === 'desc' ? 'text-primary-600' : 'text-gray-400'}`} />
         </div>
       </div>
     );
@@ -903,7 +911,7 @@ export default function Devices() {
             type="checkbox"
             checked={selectedBundles.length === filteredBundles.length && filteredBundles.length > 0}
             onChange={handleSelectAllBundles}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
           />
         </div>
       ),
@@ -913,7 +921,7 @@ export default function Devices() {
             type="checkbox"
             checked={selectedBundles.includes(record.id)}
             onChange={() => handleSelectBundle(record.id)}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
           />
         </div>
       ),
@@ -923,7 +931,7 @@ export default function Devices() {
       key: 'bundle_code' as keyof DeviceBundle,
       title: <BundleSortableHeader field="bundle_code" title="多合一设备订单号" />,
       render: (value: string, record: DeviceBundle) => (
-        <Link to={`/bundles/${record.id}`} className="text-blue-600 hover:text-blue-800 font-medium font-mono">
+        <Link to={`/bundles/${record.id}`} className="text-primary-600 hover:text-primary-700 font-medium font-mono">
           {value}
         </Link>
       ),
@@ -978,7 +986,7 @@ export default function Devices() {
       render: (value: string) => {
         if (!value) return <span className="text-gray-300">—</span>;
         const display = value.includes(' ') ? value : value.replace(/(\d{3})(?=\d)/g, '$1 ');
-        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-white text-blue-600 border border-blue-200">{display}</span>;
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-white text-primary-600 border border-primary-200">{display}</span>;
       },
       width: '130px'
     },
@@ -1027,7 +1035,7 @@ export default function Devices() {
       title: '操作',
       render: (_value: any, record: DeviceBundle) => (
         <div className="flex items-center space-x-2">
-          <Link to={`/bundles/${record.id}`} className="text-blue-600 hover:text-blue-800" title="查看详情">
+          <Link to={`/bundles/${record.id}`} className="text-primary-600 hover:text-primary-700" title="查看详情">
             <EyeIcon className="h-4 w-4" />
           </Link>
           <button onClick={(e) => handleEditBundle(record, e)} className="text-yellow-600 hover:text-yellow-800" title="编辑">
@@ -1070,13 +1078,13 @@ export default function Devices() {
             <div className="flex rounded-md border border-gray-300 overflow-hidden">
               <button
                 onClick={() => { setViewMode('devices'); setSearchParams(p => { p.set('view', 'devices'); return p; }, { replace: true }); }}
-                className={`px-3 py-1.5 text-sm font-medium ${viewMode === 'devices' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                className={`px-3 py-1.5 text-sm font-medium ${viewMode === 'devices' ? 'bg-primary-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
               >
                 单台设备列表
               </button>
               <button
                 onClick={() => { setViewMode('bundles'); setSearchParams(p => { p.set('view', 'bundles'); return p; }, { replace: true }); }}
-                className={`px-3 py-1.5 text-sm font-medium ${viewMode === 'bundles' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                className={`px-3 py-1.5 text-sm font-medium ${viewMode === 'bundles' ? 'bg-primary-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
               >
                 多合一设备列表
               </button>
@@ -1099,7 +1107,7 @@ export default function Devices() {
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
-              <span className="absolute -top-2 left-2 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-blue-700 bg-blue-100 rounded border border-blue-200">
+              <span className="absolute -top-2 left-2 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-primary-700 bg-blue-100 rounded border border-primary-200">
                 全局搜索
               </span>
               <input
@@ -1107,12 +1115,12 @@ export default function Devices() {
                 placeholder="全局搜索设备..."
                 value={globalSearch}
                 onChange={e => handleGlobalSearch(e.target.value)}
-                className="w-72 pl-4 pr-8 py-2.5 text-sm font-medium text-blue-900 placeholder:text-blue-400 bg-blue-50 border-2 border-blue-200 rounded-lg shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500"
+                className="w-72 pl-4 pr-8 py-2.5 text-sm font-medium text-blue-900 placeholder:text-blue-400 bg-blue-50 border-2 border-primary-200 rounded-lg shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-primary-500"
               />
               {globalSearch && (
                 <button
                   onClick={() => handleGlobalSearch('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 hover:text-blue-700 text-lg leading-none"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 hover:text-primary-700 text-lg leading-none"
                   title="清除搜索"
                 >×</button>
               )}
@@ -1138,7 +1146,7 @@ export default function Devices() {
                 <select
                   value={filters.type || ''}
                   onChange={(e) => handleFilterChange('type', e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                 >
                   <option value="">全部产品线</option>
                   {productLines.map(pl => <option key={pl.id} value={pl.name}>{pl.name}</option>)}
@@ -1149,7 +1157,7 @@ export default function Devices() {
                 <select
                   value={filters.status || ''}
                   onChange={(e) => handleFilterChange('status', e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                 >
                   <option value="">全部状态</option>
                   <option value="生产中">生产中</option>
@@ -1192,7 +1200,7 @@ export default function Devices() {
                       className="hover:bg-gray-50 cursor-pointer"
                       onClick={() => { sessionStorage.setItem('devices_highlight', d.id); navigate(`/devices/${d.id}`); }}
                     >
-                      <td className="px-4 py-3 font-mono text-blue-600 font-medium whitespace-nowrap">{d.id}</td>
+                      <td className="px-4 py-3 font-mono text-primary-600 font-medium whitespace-nowrap">{d.id}</td>
                       <td className="px-4 py-3 font-mono text-gray-700 whitespace-nowrap">{d.device_code || '-'}</td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{d.name || '-'}</div>
@@ -1230,7 +1238,7 @@ export default function Devices() {
               <div className="text-center py-3 border-t border-gray-100">
                 <button
                   onClick={() => setVisibleCount(prev => prev + 20)}
-                  className="text-sm text-blue-600 hover:text-blue-800"
+                  className="text-sm text-primary-600 hover:text-primary-700"
                 >加载更多（已显示 {visibleCount} / {globalSearchResults.length}）</button>
               </div>
             )}
@@ -1243,7 +1251,7 @@ export default function Devices() {
         <>
         {/* 筛选器 */}
         <div className="bg-white rounded-lg shadow p-4 3xl:p-6 no-print">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 产品线
@@ -1251,7 +1259,7 @@ export default function Devices() {
               <select
                 value={filters.type || ''}
                 onChange={(e) => handleFilterChange('type', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
                 <option value="">全部产品线</option>
                 {productLines.map((productLine) => (
@@ -1272,13 +1280,22 @@ export default function Devices() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">设备编码</label>
+              <input
+                value={deviceCodeFilter}
+                onChange={(e) => { setVisibleCount(20); setDeviceCodeFilter(e.target.value); }}
+                placeholder="输入设备编码"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 状态
               </label>
               <select
                 value={filters.status || ''}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
                 <option value="">全部状态</option>
                 <option value="生产中">生产中</option>
@@ -1293,7 +1310,7 @@ export default function Devices() {
               <select
                 value={deviceIssueFilter}
                 onChange={(e) => { setVisibleCount(20); setDeviceIssueFilter(e.target.value); }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
                 <option value="">全部</option>
                 <option value="has">有待解决问题</option>
@@ -1305,6 +1322,7 @@ export default function Devices() {
                 onClick={() => {
                   setFilters(prev => ({ ...prev, page: 1, limit: 20, search: '', type: '', status: '' }));
                   setDeviceCustomerFilter('');
+                  setDeviceCodeFilter('');
                   setDeviceIssueFilter('');
                   setVisibleCount(20);
                 }}
@@ -1394,7 +1412,7 @@ export default function Devices() {
               <select
                 value={bundleFilters.status}
                 onChange={(e) => setBundleFilters(prev => ({ ...prev, status: e.target.value, page: 1 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
                 <option value="">全部</option>
                 <option value="生产中">生产中</option>
@@ -1409,7 +1427,7 @@ export default function Devices() {
               <select
                 value={bundleFilters.issueStatus}
                 onChange={(e) => setBundleFilters(prev => ({ ...prev, issueStatus: e.target.value, page: 1 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
                 <option value="">全部</option>
                 <option value="has">有待解决问题</option>

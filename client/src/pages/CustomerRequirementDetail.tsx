@@ -181,7 +181,7 @@ const CustomerRequirementDetail: React.FC = () => {
   return (
     <Layout>
       <div className="p-4 3xl:p-6">
-        <button onClick={() => navigate('/customer-requirements')} className="inline-flex items-center text-sm text-gray-600 hover:text-blue-600 mb-4">
+        <button onClick={() => navigate('/customer-requirements')} className="inline-flex items-center text-sm text-gray-600 hover:text-primary-600 mb-4">
           <ArrowLeftIcon className="h-4 w-4 mr-1" /> 返回需求列表
         </button>
 
@@ -237,7 +237,7 @@ const CustomerRequirementDetail: React.FC = () => {
                   key={d.id}
                   type="button"
                   onClick={() => navigate(`/devices/${d.id}`)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-primary-700 border border-primary-200 hover:bg-blue-100 hover:border-primary-300 transition-colors"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
@@ -262,7 +262,7 @@ const CustomerRequirementDetail: React.FC = () => {
                 const reached = i <= currentIndex;
                 return (
                   <React.Fragment key={s}>
-                    {i > 0 && <div className={`flex-1 h-0.5 ${reached ? 'bg-blue-500' : 'bg-gray-300'}`}></div>}
+                    {i > 0 && <div className={`flex-1 h-0.5 ${reached ? 'bg-primary-500' : 'bg-gray-300'}`}></div>}
                     <button
                       type="button"
                       onClick={() => { if (s !== data.status) setTargetStatus(s); }}
@@ -271,14 +271,14 @@ const CustomerRequirementDetail: React.FC = () => {
                       title={s === data.status ? '当前状态' : '点击流转到该阶段'}
                     >
                       <div className={`flex items-center justify-center h-9 w-9 rounded-full text-sm font-medium transition-colors
-                        ${current ? 'bg-blue-600 text-white'
+                        ${current ? 'bg-primary-500 text-white'
                           : done ? 'bg-blue-100 text-blue-600'
-                          : selected ? 'bg-white text-blue-700 ring-1 ring-blue-400'
-                          : 'bg-gray-200 text-gray-500 group-hover:bg-blue-50 group-hover:text-blue-600'}`}
+                          : selected ? 'bg-white text-primary-700 ring-1 ring-primary-400'
+                          : 'bg-gray-200 text-gray-500 group-hover:bg-blue-50 group-hover:text-primary-600'}`}
                       >
                         {done ? <CheckIcon className="h-4 w-4" /> : i + 1}
                       </div>
-                      <span className={`mt-1.5 text-[11px] whitespace-nowrap ${current ? 'font-semibold text-blue-700' : done ? 'text-blue-600' : selected ? 'font-medium text-blue-700' : 'text-gray-500'}`}>
+                      <span className={`mt-1.5 text-[11px] whitespace-nowrap ${current ? 'font-semibold text-primary-700' : done ? 'text-primary-600' : selected ? 'font-medium text-primary-700' : 'text-gray-500'}`}>
                         {s}
                       </span>
                     </button>
@@ -337,9 +337,9 @@ const CustomerRequirementDetail: React.FC = () => {
               const atts = byStatus(s);
               const done = STATUSES.indexOf(s) <= currentIndex;
               return (
-                <div key={s} className={`border rounded-md p-3 ${done ? 'border-blue-300 bg-blue-50' : 'border-gray-300 bg-gray-50'}`}>
+                <div key={s} className={`border rounded-md p-3 ${done ? 'border-primary-300 bg-blue-50' : 'border-gray-300 bg-gray-50'}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className={`text-sm font-medium ${done ? 'text-blue-700' : 'text-gray-500'}`}>{s}</span>
+                    <span className={`text-sm font-medium ${done ? 'text-primary-700' : 'text-gray-500'}`}>{s}</span>
                     {done && (
                       <label className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50 cursor-pointer">
                         <ArrowUpTrayIcon className="h-3 w-3 mr-1" />
@@ -356,8 +356,8 @@ const CustomerRequirementDetail: React.FC = () => {
                         <li key={a.id} className="flex items-center justify-between gap-2 text-xs">
                           <span className="text-gray-700 truncate">{a.original_name}</span>
                           <span className="flex items-center gap-1 flex-shrink-0">
-                            <button onClick={() => openPreview(atts, idx)} title="预览" className="p-1 text-gray-500 hover:text-blue-600"><EyeIcon className="h-3 w-3" /></button>
-                            <a href={attUrl(a.id)} download={a.original_name} title="下载" className="p-1 text-gray-500 hover:text-blue-600"><ArrowDownTrayIcon className="h-3 w-3" /></a>
+                            <button onClick={() => openPreview(atts, idx)} title="预览" className="p-1 text-gray-500 hover:text-primary-600"><EyeIcon className="h-3 w-3" /></button>
+                            <a href={attUrl(a.id)} download={a.original_name} title="下载" className="p-1 text-gray-500 hover:text-primary-600"><ArrowDownTrayIcon className="h-3 w-3" /></a>
                             <button onClick={() => handleDeleteAtt(a.id)} title="删除" className="p-1 text-gray-500 hover:text-red-600"><TrashIcon className="h-3 w-3" /></button>
                           </span>
                         </li>
@@ -377,7 +377,7 @@ const CustomerRequirementDetail: React.FC = () => {
               {data.logs.map(log => (
                 <li key={log.id} className="flex gap-3">
                   <div className="flex flex-col items-center">
-                    <div className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-500 flex-shrink-0"></div>
+                    <div className="mt-1 h-2.5 w-2.5 rounded-full bg-primary-500 flex-shrink-0"></div>
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm text-gray-900">
@@ -412,7 +412,7 @@ const CustomerRequirementDetail: React.FC = () => {
             </div>
             <h3 className="text-lg font-semibold text-gray-900">状态流转成功</h3>
             <p className="text-sm text-gray-500 mt-1">需求已流转至「{successStatus}」</p>
-            <button onClick={() => setShowSuccess(false)} className="mt-5 w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">确定</button>
+            <button onClick={() => setShowSuccess(false)} className="mt-5 w-full px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600">确定</button>
           </div>
         </div>
       )}

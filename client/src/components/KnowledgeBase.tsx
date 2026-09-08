@@ -265,13 +265,13 @@ export default function KnowledgeBase({ productLines }: Props) {
               placeholder="搜索标题、现象或解决方案..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
             />
           </div>
           <select
             value={catFilter}
             onChange={e => setCatFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
           >
             <option value="">全部分类</option>
             {moduleTypes.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
@@ -279,16 +279,16 @@ export default function KnowledgeBase({ productLines }: Props) {
           <select
             value={plFilter}
             onChange={e => setPlFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
           >
             <option value="">全部产品线</option>
             {productLines.map(pl => <option key={pl.id} value={String(pl.id)}>{pl.name}</option>)}
           </select>
           <div className="flex-1" />
           {tagFilter && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-xs font-medium">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-primary-200 text-primary-700 rounded-lg text-xs font-medium">
               #{tagFilter}
-              <button onClick={() => setTagFilter('')} className="ml-0.5 hover:text-blue-900">
+              <button onClick={() => setTagFilter('')} className="ml-0.5 hover:text-primary-700">
                 <XMarkIcon className="h-3 w-3" />
               </button>
             </span>
@@ -310,8 +310,8 @@ export default function KnowledgeBase({ productLines }: Props) {
       ) : displayedArticles.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
           <BookOpenIcon className="h-12 w-12 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">没有匹配关键词 <span className="text-blue-600">#{tagFilter}</span> 的词条</p>
-          <button onClick={() => setTagFilter('')} className="mt-2 text-sm text-blue-500 hover:underline">清除筛选</button>
+          <p className="text-gray-500 font-medium">没有匹配关键词 <span className="text-primary-600">#{tagFilter}</span> 的词条</p>
+          <button onClick={() => setTagFilter('')} className="mt-2 text-sm text-primary-500 hover:underline">清除筛选</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -344,7 +344,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                     className={`text-xs px-2 py-0.5 rounded-full cursor-pointer transition-colors ${
                       tagFilter === t
                         ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
-                        : 'bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                        : 'bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-primary-600'
                     }`}
                   >#{t}</span>
                 ))}
@@ -366,7 +366,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                 <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => openEdit(a)}
-                    className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600"
+                    className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-primary-600"
                     title="编辑"
                   >
                     <PencilIcon className="h-3.5 w-3.5" />
@@ -409,14 +409,14 @@ export default function KnowledgeBase({ productLines }: Props) {
                       className={`text-xs px-2 py-0.5 rounded-full cursor-pointer transition-colors ${
                         tagFilter === t
                           ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
-                          : 'bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                          : 'bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-primary-600'
                       }`}
                     >#{t}</span>
                   ))}
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button onClick={() => openEdit(detail)} className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600" title="编辑">
+                <button onClick={() => openEdit(detail)} className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-primary-600" title="编辑">
                   <PencilIcon className="h-4 w-4" />
                 </button>
                 <button onClick={() => handleDelete(detail)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600" title="删除">
@@ -464,13 +464,13 @@ export default function KnowledgeBase({ productLines }: Props) {
                                 setPreviewAtts(atts);
                                 setPreviewIdx(i);
                               }}
-                              className="text-blue-700 hover:underline truncate text-left flex-1"
+                              className="text-primary-700 hover:underline truncate text-left flex-1"
                             >{att.name}</button>
                           ) : (
-                            <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline truncate flex-1">{att.name}</a>
+                            <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-primary-700 hover:underline truncate flex-1">{att.name}</a>
                           )}
                           <span className="text-gray-400 text-xs flex-shrink-0">{att.size ? formatFileSize(att.size) : ''}</span>
-                          <a href={att.url} download={att.name} className="text-gray-400 hover:text-blue-600 flex-shrink-0" title="下载">
+                          <a href={att.url} download={att.name} className="text-gray-400 hover:text-primary-600 flex-shrink-0" title="下载">
                             <ArrowUpTrayIcon className="h-3.5 w-3.5 rotate-180" />
                           </a>
                         </li>
@@ -517,7 +517,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                   type="text"
                   value={form.title}
                   onChange={e => f('title', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errs.title ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${errs.title ? 'border-red-400' : 'border-gray-300'}`}
                   placeholder="简洁描述问题，如：设备开机无显示"
                 />
                 {errs.title && <p className="text-red-500 text-xs mt-1">{errs.title}</p>}
@@ -530,7 +530,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                   <select
                     value={form.category}
                     onChange={e => f('category', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                   >
                     <option value="">请选择模块</option>
                     {moduleTypes.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
@@ -541,7 +541,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                   <select
                     value={form.product_line_id}
                     onChange={e => f('product_line_id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                   >
                     <option value="">通用</option>
                     {productLines.map(pl => <option key={pl.id} value={String(pl.id)}>{pl.name}</option>)}
@@ -558,7 +558,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                   rows={3}
                   value={form.symptom}
                   onChange={e => f('symptom', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${errs.symptom ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 resize-none ${errs.symptom ? 'border-red-400' : 'border-gray-300'}`}
                   placeholder="描述什么情况下会出现此问题..."
                 />
                 {errs.symptom && <p className="text-red-500 text-xs mt-1">{errs.symptom}</p>}
@@ -573,7 +573,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                   rows={2}
                   value={form.cause}
                   onChange={e => f('cause', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 resize-none"
                   placeholder="分析造成此问题的原因..."
                 />
               </div>
@@ -587,7 +587,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                   rows={5}
                   value={form.solution}
                   onChange={e => f('solution', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono ${errs.solution ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 resize-none font-mono ${errs.solution ? 'border-red-400' : 'border-gray-300'}`}
                   placeholder={"1. 检查连接线是否牢固\n2. 重启设备，观察是否恢复\n3. 若仍无效，执行 xxx 命令"}
                 />
                 {errs.solution && <p className="text-red-500 text-xs mt-1">{errs.solution}</p>}
@@ -602,7 +602,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                   type="text"
                   value={form.tags}
                   onChange={e => f('tags', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                   placeholder="如：屏幕/断电/底盘"
                 />
               </div>
@@ -613,7 +613,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                   附件 <span className="text-gray-400 font-normal text-xs">（选填，支持图片、PDF、日志等）</span>
                 </label>
                 <div
-                  className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                  className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-primary-400 hover:bg-blue-50 transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                   onDragOver={e => e.preventDefault()}
                   onDrop={e => {
@@ -623,7 +623,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                   }}
                 >
                   <ArrowUpTrayIcon className="h-5 w-5 mx-auto text-blue-400 mb-1" />
-                  <p className="text-xs text-blue-500">
+                  <p className="text-xs text-primary-500">
                     {uploadingCount > 0 ? `上传中 (${uploadingCount})…` : '点击或拖拽上传附件'}
                   </p>
                 </div>
@@ -662,7 +662,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                   type="checkbox"
                   checked={form.is_pinned}
                   onChange={e => f('is_pinned', e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
                 />
                 <span className="text-sm text-gray-700">置顶此词条</span>
               </label>

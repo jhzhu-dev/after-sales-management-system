@@ -288,14 +288,14 @@ const ReleaseLibrary: React.FC = () => {
                         <div className="flex items-center bg-gray-100 rounded-lg p-1">
                             <button
                                 onClick={() => setViewMode('grid')}
-                                className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
                                 title="方块视图"
                             >
                                 <Squares2X2Icon className="h-5 w-5" />
                             </button>
                             <button
                                 onClick={() => setViewMode('list')}
-                                className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
                                 title="列表视图"
                             >
                                 <ListBulletIcon className="h-5 w-5" />
@@ -326,7 +326,7 @@ const ReleaseLibrary: React.FC = () => {
                                     key={type.id}
                                     onClick={() => { setActiveTypeId(type.id); setSearchParams({ typeId: String(type.id) }, { replace: true }); }}
                                     className={`flex items-center gap-2 py-4 px-6 border-b-2 font-medium text-sm transition-colors ${activeTypeId === type.id
-                                            ? 'border-blue-500 text-blue-600 bg-blue-50/30'
+                                            ? 'border-primary-500 text-primary-600 bg-blue-50/30'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                 >
@@ -357,7 +357,7 @@ const ReleaseLibrary: React.FC = () => {
                                             onClick={() => { setActiveProductLineId(null); setActiveProductId(null); }}
                                             className={`px-3 py-1 rounded-full text-sm transition-colors ${
                                                 activeProductLineId === null
-                                                    ? 'bg-blue-600 text-white'
+                                                    ? 'bg-primary-500 text-white'
                                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                             }`}
                                         >
@@ -369,7 +369,7 @@ const ReleaseLibrary: React.FC = () => {
                                                 onClick={() => { setActiveProductLineId(line.id); setActiveProductId(null); }}
                                                 className={`px-3 py-1 rounded-full text-sm transition-colors ${
                                                     activeProductLineId === line.id
-                                                        ? 'bg-blue-600 text-white'
+                                                        ? 'bg-primary-500 text-white'
                                                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                 }`}
                                             >
@@ -429,7 +429,7 @@ const ReleaseLibrary: React.FC = () => {
                                         onClick={() => { setActiveCategory(''); setActiveProductId(null); }}
                                         className={`px-3 py-1 rounded-full text-sm transition-colors ${
                                             activeCategory === ''
-                                                ? 'bg-blue-600 text-white'
+                                                ? 'bg-primary-500 text-white'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                         }`}
                                     >
@@ -441,7 +441,7 @@ const ReleaseLibrary: React.FC = () => {
                                             onClick={() => { setActiveCategory(cat); setActiveProductId(null); }}
                                             className={`px-3 py-1 rounded-full text-sm transition-colors ${
                                                 activeCategory === cat
-                                                    ? 'bg-blue-600 text-white'
+                                                    ? 'bg-primary-500 text-white'
                                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                             }`}
                                         >
@@ -532,7 +532,7 @@ const ReleaseLibrary: React.FC = () => {
                                         {moduleTypes.length > 0 && (
                                             <button
                                                 onClick={handleAddRelease}
-                                                className="mt-4 text-blue-600 font-medium hover:underline"
+                                                className="mt-4 text-primary-600 font-medium hover:underline"
                                             >
                                                 立即发布第一个版本
                                             </button>
@@ -580,7 +580,7 @@ const ReleaseLibrary: React.FC = () => {
                                                     <span className="text-xs text-gray-400">ID: {release.id}</span>
                                                     {release.source === 'synced' && (
                                                         <span title="该记录由产品型号自动同步，如需修改请到对应产品型号下操作"
-                                                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 cursor-help">
+                                                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-primary-600 border border-primary-200 cursor-help">
                                                             来源：产品型号同步
                                                         </span>
                                                     )}
@@ -588,7 +588,7 @@ const ReleaseLibrary: React.FC = () => {
                                                 <div className="flex gap-2">
                                                     <button 
                                                         onClick={() => handleViewDetail(release)}
-                                                        className="flex-1 text-center px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded text-sm font-medium transition-colors"
+                                                        className="flex-1 text-center px-3 py-1.5 text-primary-600 bg-blue-50 hover:bg-blue-100 rounded text-sm font-medium transition-colors"
                                                     >
                                                         查看详情
                                                     </button>
@@ -623,7 +623,7 @@ const ReleaseLibrary: React.FC = () => {
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4 flex-1">
                                                     {/* 版本号 - 突出显示 */}
-                                                    <div className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold font-mono text-base min-w-[100px] text-center shadow-md">
+                                                    <div className="bg-primary-500 text-white px-4 py-2 rounded-lg font-bold font-mono text-base min-w-[100px] text-center shadow-md">
                                                         {release.version_number}
                                                     </div>
                                                     {/* 版本名称 - 突出显示 */}
@@ -640,7 +640,7 @@ const ReleaseLibrary: React.FC = () => {
                                                             ))}
                                                             {release.source === 'synced' && (
                                                                 <span title="该记录由产品型号自动同步，如需修改请到对应产品型号下操作"
-                                                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 cursor-help">
+                                                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-primary-600 border border-primary-200 cursor-help">
                                                                     来源：产品型号同步
                                                                 </span>
                                                             )}
@@ -657,7 +657,7 @@ const ReleaseLibrary: React.FC = () => {
                                                     <div className="flex gap-2">
                                                         <button 
                                                             onClick={() => handleViewDetail(release)}
-                                                            className="text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            className="text-primary-600 hover:text-primary-700 font-medium px-3 py-1.5 hover:bg-blue-50 rounded-lg transition-colors"
                                                         >
                                                             详情
                                                         </button>
@@ -758,7 +758,7 @@ const ReleaseLibrary: React.FC = () => {
                         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-blue-50 to-purple-50">
                             <div className="flex items-center gap-3">
                                 <h3 className="text-xl font-bold text-gray-900">版本详情</h3>
-                                <span className="px-3 py-1 bg-blue-600 text-white text-sm font-bold font-mono rounded-md shadow-sm">
+                                <span className="px-3 py-1 bg-primary-500 text-white text-sm font-bold font-mono rounded-md shadow-sm">
                                     {selectedRelease.version_number}
                                 </span>
                             </div>
@@ -775,7 +775,7 @@ const ReleaseLibrary: React.FC = () => {
                                 <div className="space-y-2">
                                     <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">版本号</label>
                                     <div className="flex items-center gap-2">
-                                        <TagIcon className="h-5 w-5 text-blue-600" />
+                                        <TagIcon className="h-5 w-5 text-primary-600" />
                                         <p className="text-lg font-bold text-gray-900 font-mono">{selectedRelease.version_number}</p>
                                     </div>
                                 </div>
@@ -846,7 +846,7 @@ const ReleaseLibrary: React.FC = () => {
                                         {detailAttachments.map((att: any) => (
                                             <div key={att.id} className="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg border border-gray-200">
                                                 <div className="flex items-center gap-3 min-w-0">
-                                                    <PaperClipIcon className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                                                    <PaperClipIcon className="h-5 w-5 text-primary-500 flex-shrink-0" />
                                                     <div className="min-w-0">
                                                         <p className="text-sm font-medium text-gray-900 truncate">{att.original_name}</p>
                                                         <p className="text-xs text-gray-400">
@@ -861,14 +861,14 @@ const ReleaseLibrary: React.FC = () => {
                                                 <div className="flex items-center gap-2 flex-shrink-0">
                                                     <button
                                                         onClick={() => handlePreviewAttachment(att, detailAttachments)}
-                                                        className="text-gray-500 hover:text-blue-600 p-1.5 hover:bg-blue-50 rounded transition-colors"
+                                                        className="text-gray-500 hover:text-primary-600 p-1.5 hover:bg-blue-50 rounded transition-colors"
                                                         title="预览"
                                                     >
                                                         <EyeIcon className="h-4 w-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDownloadAttachment(att)}
-                                                        className="text-blue-600 hover:text-blue-800 p-1.5 hover:bg-blue-50 rounded transition-colors"
+                                                        className="text-primary-600 hover:text-primary-700 p-1.5 hover:bg-blue-50 rounded transition-colors"
                                                         title="下载"
                                                     >
                                                         <ArrowDownTrayIcon className="h-4 w-4" />
@@ -906,7 +906,7 @@ const ReleaseLibrary: React.FC = () => {
                         <div className="px-4 py-3 3xl:px-6 3xl:py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
                             <button
                                 onClick={() => setShowDetailModal(false)}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
                             >
                                 关闭
                             </button>

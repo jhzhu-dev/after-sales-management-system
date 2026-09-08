@@ -337,7 +337,7 @@ const ProductDetail: React.FC = () => {
                 {/* 顶部面包屑和标题 */}
                 <div className="mb-6">
                     <div className="flex items-center text-sm text-gray-500 mb-2">
-                        <Link to="/product-lines" className="hover:text-blue-600">产品线管理</Link>
+                        <Link to="/product-lines" className="hover:text-primary-600">产品线管理</Link>
                         <span className="mx-2">/</span>
                         <span className="text-gray-900">{product.name}</span>
                     </div>
@@ -383,7 +383,7 @@ const ProductDetail: React.FC = () => {
                         <button
                             onClick={() => setActiveTab('info')}
                             className={`pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'info'
-                                ? 'border-blue-500 text-blue-600'
+                                ? 'border-primary-500 text-primary-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                 }`}
                         >
@@ -392,7 +392,7 @@ const ProductDetail: React.FC = () => {
                         <button
                             onClick={() => setActiveTab('docs')}
                             className={`pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'docs'
-                                ? 'border-blue-500 text-blue-600'
+                                ? 'border-primary-500 text-primary-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                 }`}
                         >
@@ -401,7 +401,7 @@ const ProductDetail: React.FC = () => {
                         <button
                             onClick={() => setActiveTab('modules')}
                             className={`pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'modules'
-                                ? 'border-blue-500 text-blue-600'
+                                ? 'border-primary-500 text-primary-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                 }`}
                         >
@@ -461,7 +461,7 @@ const ProductDetail: React.FC = () => {
                                     <h3 className="text-lg font-medium text-gray-900">迭代版本 ({versions.length})</h3>
                                     <button
                                         onClick={() => { setEditingVersion(null); setShowVersionForm(true); }}
-                                        className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 inline-flex items-center gap-1.5"
+                                        className="px-3 py-1.5 bg-primary-500 text-white rounded text-sm hover:bg-primary-600 inline-flex items-center gap-1.5"
                                     >
                                         <PlusIcon className="h-4 w-4" />
                                         新增迭代版本
@@ -503,7 +503,7 @@ const ProductDetail: React.FC = () => {
                                                         {!v.is_current && (
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); handleSetCurrentVersion(v.id); }}
-                                                                className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 hover:bg-blue-50 rounded"
+                                                                className="text-xs text-primary-600 hover:text-primary-700 px-2 py-1 hover:bg-blue-50 rounded"
                                                                 title="设为当前版本"
                                                             >
                                                                 设为当前
@@ -559,7 +559,7 @@ const ProductDetail: React.FC = () => {
                                                                                         alert('获取预览链接失败');
                                                                                     }
                                                                                 }}
-                                                                                className="ml-auto text-blue-500 hover:text-blue-700 p-1 flex-shrink-0"
+                                                                                className="ml-auto text-primary-500 hover:text-primary-700 p-1 flex-shrink-0"
                                                                                 title="预览"
                                                                             >
                                                                                 <EyeIcon className="h-4 w-4" />
@@ -585,7 +585,7 @@ const ProductDetail: React.FC = () => {
                                 <h3 className="text-lg font-medium text-gray-900">产品文档列表</h3>
                                 <button
                                     onClick={() => setShowUploadModal(true)}
-                                    className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 inline-flex items-center gap-1.5 transition-colors"
+                                    className="px-3 py-1.5 bg-primary-500 text-white rounded text-sm hover:bg-primary-600 inline-flex items-center gap-1.5 transition-colors"
                                 >
                                     <ArrowUpTrayIcon className="h-4 w-4" />
                                     上传新文档
@@ -604,7 +604,7 @@ const ProductDetail: React.FC = () => {
                                         <li key={doc.id} className="py-4 flex items-center justify-between hover:bg-gray-50 -mx-2 px-2 rounded transition-colors">
                                             <div className="flex items-center min-w-0">
                                                 <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center mr-3">
-                                                    <DocumentIcon className="h-5 w-5 text-blue-500" />
+                                                    <DocumentIcon className="h-5 w-5 text-primary-500" />
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-medium text-gray-900 truncate">{doc.title}</p>
@@ -619,7 +619,7 @@ const ProductDetail: React.FC = () => {
                                             <div className="flex space-x-3 flex-shrink-0 ml-4">
                                                 <button
                                                     onClick={() => handlePreviewProductDocument(doc.id, doc.title, documents)}
-                                                    className="text-gray-500 hover:text-blue-600 text-sm font-medium flex items-center gap-1"
+                                                    className="text-gray-500 hover:text-primary-600 text-sm font-medium flex items-center gap-1"
                                                     title="预览"
                                                 >
                                                     <EyeIcon className="h-4 w-4" />
@@ -627,7 +627,7 @@ const ProductDetail: React.FC = () => {
                                                 </button>
                                                 <button
                                                     onClick={() => downloadFile(doc.id, doc.title)}
-                                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                                    className="text-primary-600 hover:text-primary-700 text-sm font-medium"
                                                 >
                                                     下载
                                                 </button>
@@ -749,7 +749,7 @@ const ProductDetail: React.FC = () => {
                                                                             setSelectedModuleTypes(selectedModuleTypes.filter(id => id !== type.id));
                                                                         }
                                                                     }}
-                                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                                    className="h-4 w-4 text-primary-600 focus:ring-primary-500/40 border-gray-300 rounded"
                                                                 />
                                                                 <span className="ml-3 text-sm text-gray-700">
                                                                     {type.name} ({type.code})
@@ -772,7 +772,7 @@ const ProductDetail: React.FC = () => {
                                                             type="radio"
                                                             checked={isRequired}
                                                             onChange={() => setIsRequired(true)}
-                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                                                            className="h-4 w-4 text-primary-600 focus:ring-primary-500/40 border-gray-300"
                                                         />
                                                         <span className="ml-2 text-sm text-gray-700">必需</span>
                                                     </label>
@@ -781,7 +781,7 @@ const ProductDetail: React.FC = () => {
                                                             type="radio"
                                                             checked={!isRequired}
                                                             onChange={() => setIsRequired(false)}
-                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                                                            className="h-4 w-4 text-primary-600 focus:ring-primary-500/40 border-gray-300"
                                                         />
                                                         <span className="ml-2 text-sm text-gray-700">可选</span>
                                                     </label>
@@ -806,7 +806,7 @@ const ProductDetail: React.FC = () => {
                                             <button
                                                 onClick={handleAddModules}
                                                 disabled={submitting || selectedModuleTypes.length === 0}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 {submitting ? '提交中...' : '确认添加'}
                                             </button>
@@ -842,7 +842,7 @@ const ProductDetail: React.FC = () => {
                                 <div
                                     className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                                         dragOver
-                                            ? 'border-blue-400 bg-blue-50'
+                                            ? 'border-primary-400 bg-blue-50'
                                             : uploadFile
                                             ? 'border-green-300 bg-green-50'
                                             : 'border-gray-300 hover:border-gray-400'
@@ -869,7 +869,7 @@ const ProductDetail: React.FC = () => {
                                         <>
                                             <ArrowUpTrayIcon className="mx-auto h-10 w-10 text-gray-400" />
                                             <p className="mt-2 text-sm text-gray-600">拖拽文件到此处，或</p>
-                                            <label className="mt-1 inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm font-medium text-blue-600 hover:bg-gray-50 cursor-pointer">
+                                            <label className="mt-1 inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm font-medium text-primary-600 hover:bg-gray-50 cursor-pointer">
                                                 选择文件
                                                 <input
                                                     type="file"
@@ -893,7 +893,7 @@ const ProductDetail: React.FC = () => {
                                         value={uploadTitle}
                                         onChange={(e) => setUploadTitle(e.target.value)}
                                         placeholder="输入文档标题"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent text-sm"
                                     />
                                 </div>
 
@@ -905,7 +905,7 @@ const ProductDetail: React.FC = () => {
                                     <select
                                         value={uploadDocType}
                                         onChange={(e) => setUploadDocType(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent text-sm"
                                     >
                                         {DOC_TYPES.map((type) => (
                                             <option key={type} value={type}>{type}</option>
@@ -921,7 +921,7 @@ const ProductDetail: React.FC = () => {
                                         value={uploadBy}
                                         onChange={(e) => setUploadBy(e.target.value)}
                                         placeholder="输入上传者姓名（选填）"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent text-sm"
                                     />
                                 </div>
                             </div>
@@ -938,7 +938,7 @@ const ProductDetail: React.FC = () => {
                                 <button
                                     onClick={handleUploadDocument}
                                     disabled={uploading || !uploadFile || !uploadTitle.trim()}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                                    className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
                                 >
                                     {uploading ? (
                                         <>

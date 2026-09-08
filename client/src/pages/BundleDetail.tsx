@@ -19,7 +19,7 @@ import {
   TruckIcon
 } from '@heroicons/react/24/outline';
 import { DeviceBundle } from '../types';
-import { bundleApi } from '../services/api';
+import { bundleApi, deviceApi } from '../services/api';
 import api from '../services/api';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
@@ -130,14 +130,14 @@ const BundleDetail: React.FC = () => {
           <div
             key={doc.id}
             style={{ marginLeft: `${depth * 16}px` }}
-            className={`bg-white p-3 rounded-lg shadow-sm border flex items-center justify-between transition-colors ${selectedDocIds.has(doc.id) ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-green-200'}`}
+            className={`bg-white p-3 rounded-lg shadow-sm border flex items-center justify-between transition-colors ${selectedDocIds.has(doc.id) ? 'border-primary-400 bg-blue-50' : 'border-gray-100 hover:border-green-200'}`}
           >
             {docSelectMode && (
               <input
                 type="checkbox"
                 checked={selectedDocIds.has(doc.id)}
                 onChange={() => toggleDocSelect(doc.id)}
-                className="w-4 h-4 text-blue-600 rounded flex-shrink-0 mr-2"
+                className="w-4 h-4 text-primary-600 rounded flex-shrink-0 mr-2"
               />
             )}
             <div
@@ -174,7 +174,7 @@ const BundleDetail: React.FC = () => {
               </button>
               <button
                 onClick={() => handleDownloadDoc(doc)}
-                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                className="p-1.5 text-primary-600 hover:bg-blue-50 rounded-md transition-colors"
                 title="下载"
               >
                 <DocumentArrowDownIcon className="h-5 w-5" />
@@ -326,6 +326,32 @@ const BundleDetail: React.FC = () => {
         console.error('移除设备失败:', error);
         alert('移除设备失败');
       }
+    }
+  };
+
+  // 维护成员设备远程码 / 主设备
+  const updateLocalDevice = (deviceId: string, patch: any) => {
+    setBundle(prev => prev ? { ...prev, devices: (prev.devices || []).map(d => (d.id === deviceId ? { ...d, ...patch } : d)) } : prev);
+  };
+
+  const handleRemoteChange = (device: any, value: string) => updateLocalDevice(device.id, { remote_code: value });
+
+  const handleRemoteBlur = async (device: any) => {
+    try {
+      await deviceApi.updateDevice(device.id, { remote_code: device.remote_code || null } as any);
+    } catch (e) {
+      console.error('更新远程码失败', e);
+    }
+  };
+
+  const handleTogglePrimary = async (device: any) => {
+    const next = Number(device.is_primary) === 1 ? 0 : 1;
+    try {
+      const res = await deviceApi.updateDevice(device.id, { is_primary: next } as any);
+      if (res.success) await fetchBundle();
+      else alert(res.error || '设置主设备失败');
+    } catch (e: any) {
+      alert(e?.response?.data?.error || '设置主设备失败');
     }
   };
 
@@ -765,13 +791,21 @@ const BundleDetail: React.FC = () => {
             {/* 倒数第三行: 远程码 | 远程密码 | （空） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">远程码</label>
-              <p className="text-lg">
-                {bundle.remote_code ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-mono font-medium bg-white text-blue-600 border border-blue-200">
+              <div className="flex flex-wrap gap-2">
+                {(bundle.remote_codes && bundle.remote_codes.length > 0) ? (
+                  bundle.remote_codes.map((c: string, i: number) => (
+                    <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-sm font-mono font-medium bg-white text-primary-600 border border-primary-200">
+                      {c.includes(' ') ? c : c.replace(/(\d{3})(?=\d)/g, '$1 ')}
+                    </span>
+                  ))
+                ) : bundle.remote_code ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-mono font-medium bg-white text-primary-600 border border-primary-200">
                     {bundle.remote_code.includes(' ') ? bundle.remote_code : bundle.remote_code.replace(/(\d{3})(?=\d)/g, '$1 ')}
                   </span>
-                ) : '-'}
-              </p>
+                ) : (
+                  <span className="text-sm text-gray-400">未设置主设备，请在下方成员设备中设置（或需龙门设备）</span>
+                )}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">远程密码</label>
@@ -827,7 +861,7 @@ const BundleDetail: React.FC = () => {
                 onClick={() => setActiveTab('devices')}
                 className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === 'devices'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -837,7 +871,7 @@ const BundleDetail: React.FC = () => {
                 onClick={() => setActiveTab('documents')}
                 className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === 'documents'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -860,6 +894,8 @@ const BundleDetail: React.FC = () => {
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">生产序列号</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">设备编码</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">远程码</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">主设备</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">简称</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">产品名称</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">商户号</th>
@@ -874,11 +910,28 @@ const BundleDetail: React.FC = () => {
                       {bundle.devices && bundle.devices.length > 0 ? bundle.devices.map((device: any) => (
                         <tr key={device.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/devices/${device.id}?from=bundle&bundleId=${id}`)}>  
                           <td className="px-4 py-3">
-                            <span className="text-blue-600 font-mono font-medium">
+                            <span className="text-primary-600 font-mono font-medium">
                               {device.id}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900">{device.device_code || '-'}</td>
+                          <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                            <input
+                              value={device.remote_code || ''}
+                              onChange={e => handleRemoteChange(device, e.target.value)}
+                              onBlur={() => handleRemoteBlur(device)}
+                              placeholder="远程码"
+                              className="w-28 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                            />
+                          </td>
+                          <td className="px-4 py-3 no-print" onClick={e => e.stopPropagation()}>
+                            <button
+                              onClick={() => handleTogglePrimary(device)}
+                              className={`text-xs px-2 py-1 rounded border whitespace-nowrap transition-colors ${Number(device.is_primary) === 1 ? 'bg-primary-500 text-white border-blue-600' : 'text-gray-600 border-gray-300 hover:border-primary-400 hover:text-primary-600'}`}
+                            >
+                              {Number(device.is_primary) === 1 ? '★ 主设备' : '设为主设备'}
+                            </button>
+                          </td>
                           <td className="px-4 py-3 text-sm text-gray-600">{device.nickname || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{device.product_name || '-'}</td>
                           <td className="px-4 py-3 text-sm font-mono text-gray-700">{bundle.merchant_id || '-'}</td>
@@ -907,7 +960,7 @@ const BundleDetail: React.FC = () => {
                         </tr>
                       )) : (
                         <tr>
-                          <td colSpan={10} className="px-4 py-8 text-center text-gray-500">暂无成员设备</td>
+                          <td colSpan={12} className="px-4 py-8 text-center text-gray-500">暂无成员设备</td>
                         </tr>
                       )}
                     </tbody>
@@ -964,13 +1017,13 @@ const BundleDetail: React.FC = () => {
                 </div>
 
                 {docSelectMode && (
-                  <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                  <div className="flex items-center gap-3 bg-blue-50 border border-primary-200 rounded-lg px-4 py-2">
                     <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
                       <input
                         type="checkbox"
                         checked={selectedDocIds.size === documents.length && documents.length > 0}
                         onChange={toggleSelectAllDocs}
-                        className="w-4 h-4 text-blue-600 rounded"
+                        className="w-4 h-4 text-primary-600 rounded"
                       />
                       全选
                     </label>
@@ -979,7 +1032,7 @@ const BundleDetail: React.FC = () => {
                       <button
                         onClick={handleBatchDownloadDocs}
                         disabled={selectedDocIds.size === 0 || batchDownloading}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary-500 text-white rounded-md hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
                         <DocumentArrowDownIcon className="h-4 w-4" />
                         {batchDownloading ? '下载中...' : '批量下载'}
@@ -1017,7 +1070,7 @@ const BundleDetail: React.FC = () => {
                       const catAllSelected = catSelectedCount === docs.length && docs.length > 0;
                       const catSomeSelected = catSelectedCount > 0 && catSelectedCount < docs.length;
                       return (
-                        <div key={cat} className={`bg-gray-50 rounded-xl border overflow-hidden ${catAllSelected ? 'border-blue-400' : catSomeSelected ? 'border-blue-200' : 'border-gray-200'}`}>
+                        <div key={cat} className={`bg-gray-50 rounded-xl border overflow-hidden ${catAllSelected ? 'border-primary-400' : catSomeSelected ? 'border-primary-200' : 'border-gray-200'}`}>
                           <div className="flex items-center">
                             {docSelectMode && (
                               <label className="flex items-center pl-3 cursor-pointer flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -1036,7 +1089,7 @@ const BundleDetail: React.FC = () => {
                                       return next;
                                     });
                                   }}
-                                  className="w-4 h-4 text-blue-600 rounded"
+                                  className="w-4 h-4 text-primary-600 rounded"
                                 />
                               </label>
                             )}
@@ -1048,7 +1101,7 @@ const BundleDetail: React.FC = () => {
                                 <FolderIcon className="h-5 w-5 mr-2 text-green-500" />
                                 {cat} ({docs.length})
                                 {docSelectMode && catSelectedCount > 0 && (
-                                  <span className="ml-2 text-xs font-normal text-blue-600">已选 {catSelectedCount}</span>
+                                  <span className="ml-2 text-xs font-normal text-primary-600">已选 {catSelectedCount}</span>
                                 )}
                               </span>
                               {isExpanded
@@ -1058,7 +1111,7 @@ const BundleDetail: React.FC = () => {
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDownloadCategory(cat); }}
-                              className="flex items-center gap-1 px-3 py-3 text-blue-600 hover:bg-blue-50 transition-colors text-xs font-medium flex-shrink-0 border-l border-gray-200"
+                              className="flex items-center gap-1 px-3 py-3 text-primary-600 hover:bg-blue-50 transition-colors text-xs font-medium flex-shrink-0 border-l border-gray-200"
                               title={`下载 ${cat} 下所有文件`}
                             >
                               <DocumentArrowDownIcon className="h-4 w-4" />
@@ -1152,7 +1205,7 @@ const BundleDetail: React.FC = () => {
                         }}
                       />
                     </label>
-                    <label className="inline-flex items-center px-3 py-1 bg-white border border-gray-300 rounded-md text-xs font-medium text-blue-600 hover:bg-gray-50 cursor-pointer mt-1">
+                    <label className="inline-flex items-center px-3 py-1 bg-white border border-gray-300 rounded-md text-xs font-medium text-primary-600 hover:bg-gray-50 cursor-pointer mt-1">
                       <FolderIcon className="h-3.5 w-3.5 mr-1" />
                       添加文件夹
                       <input
@@ -1194,7 +1247,7 @@ const BundleDetail: React.FC = () => {
                           }}
                         />
                       </label>
-                      <label className="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm font-medium text-blue-600 hover:bg-gray-50 cursor-pointer">
+                      <label className="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm font-medium text-primary-600 hover:bg-gray-50 cursor-pointer">
                         <FolderIcon className="h-4 w-4 mr-1" />
                         选择文件夹
                         <input
@@ -1298,7 +1351,7 @@ const BundleDetail: React.FC = () => {
       {bgUpload && (
         <div className={`fixed bottom-6 right-6 z-50 bg-white rounded-2xl shadow-2xl border w-80 overflow-hidden ${bgUpload.failedFiles?.length ? 'border-yellow-300' : 'border-gray-200'}`}>
           <div
-            className={`h-1.5 transition-all duration-300 ${bgUpload.error ? 'bg-red-500' : bgUpload.done ? (bgUpload.failedFiles?.length ? 'bg-yellow-400' : 'bg-green-500') : 'bg-blue-500'}`}
+            className={`h-1.5 transition-all duration-300 ${bgUpload.error ? 'bg-red-500' : bgUpload.done ? (bgUpload.failedFiles?.length ? 'bg-yellow-400' : 'bg-green-500') : 'bg-primary-500'}`}
             style={{ width: `${bgUpload.progress}%` }}
           />
           <div className="px-4 py-3 flex items-start gap-3">
@@ -1308,7 +1361,7 @@ const BundleDetail: React.FC = () => {
               ) : bgUpload.done ? (
                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
               ) : (
-                <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
+                <svg className="animate-spin h-5 w-5 text-primary-600" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
@@ -1401,7 +1454,7 @@ const BundleDetail: React.FC = () => {
               <div className="flex-1 min-w-0 flex items-center justify-center overflow-auto bg-gray-800">
                 {previewDoc.loading ? (
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-8 h-8 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
                     <span className="text-gray-400 text-sm">加载中...</span>
                   </div>
                 ) : previewDoc.type === 'image' ? (
@@ -1425,7 +1478,7 @@ const BundleDetail: React.FC = () => {
                     <p className="text-gray-500 text-xs">该文件类型不支持预览</p>
                     <button
                       onClick={() => handleDownloadDoc({ id: previewDoc.docId, original_name: previewDoc.originalName })}
-                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm mt-2"
+                      className="flex items-center gap-2 bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600 transition-colors text-sm mt-2"
                     >
                       <DocumentArrowDownIcon className="h-4 w-4" />
                       下载文件
@@ -1462,7 +1515,7 @@ const BundleDetail: React.FC = () => {
                         key={d.id}
                         onClick={() => handlePreviewDoc(d, previewDoc.catDocs, i)}
                         className={`flex-shrink-0 w-14 h-14 rounded overflow-hidden border-2 transition-colors ${
-                          i === previewDoc.catIndex ? 'border-blue-400' : 'border-gray-600 hover:border-gray-400'
+                          i === previewDoc.catIndex ? 'border-primary-400' : 'border-gray-600 hover:border-gray-400'
                         }`}
                         title={d.original_name}
                       >

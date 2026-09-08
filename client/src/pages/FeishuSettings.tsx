@@ -170,7 +170,7 @@ const FeishuSettings: React.FC = () => {
                 value={config.app_id}
                 onChange={e => setConfig(prev => ({ ...prev, app_id: e.target.value }))}
                 placeholder="cli_..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               />
             </div>
             <div>
@@ -180,7 +180,7 @@ const FeishuSettings: React.FC = () => {
                 value={config.app_secret}
                 onChange={e => setConfig(prev => ({ ...prev, app_secret: e.target.value }))}
                 placeholder="保存后显示 ***"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               />
             </div>
           </div>
@@ -192,7 +192,7 @@ const FeishuSettings: React.FC = () => {
               value={config.chat_id}
               onChange={e => setConfig(prev => ({ ...prev, chat_id: e.target.value }))}
               placeholder="oc_..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
             />
             <p className="text-xs text-gray-400 mt-1">所有通知（售后问题、设备录入、升级任务）统一发送到此群，消息卡片标题会区分类型</p>
           </div>
@@ -204,7 +204,7 @@ const FeishuSettings: React.FC = () => {
               value={config.system_base_url}
               onChange={e => setConfig(prev => ({ ...prev, system_base_url: e.target.value.trim() }))}
               placeholder="http://192.168.0.181:5000"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
             />
             <p className="text-xs text-gray-400 mt-1">飞书通知卡片中的跳转链接将使用此地址（生产环境请填写实际部署 IP 或域名，勿使用 localhost）</p>
           </div>

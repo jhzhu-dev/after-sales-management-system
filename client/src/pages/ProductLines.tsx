@@ -141,14 +141,14 @@ const ProductLines: React.FC = () => {
                         <div className="flex items-center bg-gray-100 rounded-lg p-1">
                             <button
                                 onClick={() => setViewMode('grid')}
-                                className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
                                 title="方块视图"
                             >
                                 <Squares2X2Icon className="h-5 w-5" />
                             </button>
                             <button
                                 onClick={() => setViewMode('list')}
-                                className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
                                 title="列表视图"
                             >
                                 <ListBulletIcon className="h-5 w-5" />
@@ -223,7 +223,7 @@ const ProductLines: React.FC = () => {
                                             <Link
                                                 to={`/products?product_line_id=${line.id}`}
                                                 onClick={(e) => e.stopPropagation()}
-                                                className="flex-1 text-center px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded text-sm font-medium transition-colors"
+                                                className="flex-1 text-center px-3 py-1.5 text-primary-600 bg-blue-50 hover:bg-blue-100 rounded text-sm font-medium transition-colors"
                                             >
                                                 查看产品
                                             </Link>
@@ -257,7 +257,7 @@ const ProductLines: React.FC = () => {
                             >
                                 <div className="flex items-center gap-5 flex-1 min-w-0">
                                     {/* Code 标签 */}
-                                    <div className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold font-mono text-sm min-w-[120px] text-center shadow-sm shrink-0">
+                                    <div className="bg-primary-500 text-white px-3 py-1.5 rounded-lg font-bold font-mono text-sm min-w-[120px] text-center shadow-sm shrink-0">
                                         {line.code}
                                     </div>
                                     {/* 名称 + 描述 */}
@@ -285,7 +285,7 @@ const ProductLines: React.FC = () => {
                                         <Link
                                             to={`/products?product_line_id=${line.id}`}
                                             onClick={(e) => e.stopPropagation()}
-                                            className="text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 hover:bg-blue-100 rounded-lg transition-colors text-sm whitespace-nowrap"
+                                            className="text-primary-600 hover:text-primary-700 font-medium px-3 py-1.5 hover:bg-blue-100 rounded-lg transition-colors text-sm whitespace-nowrap"
                                         >
                                             查看产品
                                         </Link>
@@ -315,7 +315,7 @@ const ProductLines: React.FC = () => {
                         <p className="text-gray-500">暂无产品线数据</p>
                         <button
                             onClick={handleAddProductLine}
-                            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                            className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors"
                         >
                             创建第一个产品线
                         </button>

@@ -150,7 +150,7 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
 
       {/* 添加记录表单 */}
       {showForm && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 border border-primary-200 rounded-lg p-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -160,7 +160,7 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                 placeholder="请描述本次处理的具体内容..."
                 required
               />
@@ -181,10 +181,10 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
               />
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-blue-200 rounded-lg p-3 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                className="border-2 border-dashed border-primary-200 rounded-lg p-3 text-center cursor-pointer hover:border-primary-400 hover:bg-blue-50 transition-colors"
               >
                 <ArrowUpTrayIcon className="h-5 w-5 mx-auto text-blue-400 mb-1" />
-                <p className="text-xs text-blue-500">点击选择附件（支持多选）</p>
+                <p className="text-xs text-primary-500">点击选择附件（支持多选）</p>
               </div>
               {pendingFiles.length > 0 && (
                 <ul className="mt-2 space-y-1">
@@ -213,7 +213,7 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
                   type="text"
                   value={formData.operator}
                   onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                   placeholder="请输入处理人姓名"
                   required
                 />
@@ -253,7 +253,7 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
                 
                 {/* 时间点 */}
                 <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-blue-100 border-2 border-blue-600 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                  <div className="w-2 h-2 rounded-full bg-primary-500"></div>
                 </div>
 
                 {/* 内容卡片 */}
@@ -293,7 +293,7 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
                               <PaperClipIcon className="h-3 w-3 text-blue-400 flex-shrink-0" />
                               <button
                                 onClick={() => { setPreviewAtts(atts); setPreviewIdx(i); }}
-                                className="text-blue-700 hover:underline truncate text-left"
+                                className="text-primary-700 hover:underline truncate text-left"
                               >{att.name}</button>
                               <span className="text-gray-400 ml-auto flex-shrink-0">{formatFileSize(att.size ?? 0)}</span>
                             </li>

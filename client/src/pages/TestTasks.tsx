@@ -154,7 +154,7 @@ const TestTasks: React.FC = () => {
             <label className="block text-xs text-gray-500 mb-1">关键字</label>
             <div className="relative">
               <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 absolute left-3 top-3" />
-              <input type="text" value={filters.search} onChange={e => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))} placeholder="任务编号 / 模型 / 需求人" className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="text" value={filters.search} onChange={e => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))} placeholder="任务编号 / 模型 / 需求人" className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40" />
             </div>
           </div>
         </div>

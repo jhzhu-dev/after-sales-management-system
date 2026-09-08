@@ -94,7 +94,7 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
                                 value={formData.device_id}
                                 onChange={handleChange}
                                 required
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                             >
                                 <option value="">请选择要升级的设备</option>
                                 {devices.map(d => (
@@ -111,7 +111,7 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
                                 value={formData.upgrade_type}
                                 onChange={handleChange}
                                 required
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                             >
                                 <option value="软件更新">软件更新</option>
                                 <option value="硬件升级">硬件升级</option>
@@ -142,7 +142,7 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
                                     onChange={handleChange}
                                     required
                                     placeholder="执行工程师姓名"
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                                 />
                             )}
                         </div>
@@ -157,7 +157,7 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
                                 value={formData.old_version}
                                 onChange={handleChange}
                                 placeholder="例如 V1.2.0"
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                             />
                         </div>
                         <div>
@@ -169,7 +169,7 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
                                 onChange={handleChange}
                                 required
                                 placeholder="例如 V1.3.0"
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                             />
                         </div>
                     </div>
@@ -185,7 +185,7 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
                             required
                             rows={4}
                             placeholder="请详细描述本次升级的具体内容、解决的问题或改进的项目..."
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/40 resize-none"
                         />
                     </div>
 

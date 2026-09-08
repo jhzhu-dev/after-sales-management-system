@@ -4,6 +4,7 @@ import { DeviceBundle, Device, Customer, NewBundleDevice, FeishuUser } from '../
 import { customerApi, deviceApi, bundleApi, productLineApi, productApi, productModuleApi, feishuApi } from '../services/api';
 import { Button } from '../components/ui/button';
 import FeishuMultiUserPicker from './FeishuMultiUserPicker';
+import SearchableSelect from './SearchableSelect';
 
 interface BundleFormProps {
   bundle?: DeviceBundle | null;
@@ -356,7 +357,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
     } finally { setSubmitting(false); }
   };
 
-  const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
+  const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm';
   const selectCls = `${inputCls} appearance-none`;
 
   return (
@@ -391,11 +392,11 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">客户 <span className="text-red-500">*</span></label>
-                  <select
-                    value={customerId}
-                    onChange={e => {
-                      const v = e.target.value ? parseInt(e.target.value) : '';
-                      setCustomerId(v);
+                  <SearchableSelect
+                    value={customerId === '' ? '' : String(customerId)}
+                    onChange={(v) => {
+                      const cid = v ? parseInt(v) : '';
+                      setCustomerId(cid);
                       if (!isEdit) {
                         setSelectedDevices([]);
                         setNewDeviceRows([]);
@@ -403,11 +404,10 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                         setSearchResults([]);
                       }
                     }}
-                    className={selectCls}
-                  >
-                    <option value="">请选择客户</option>
-                    {customers.map(c => (<option key={c.id} value={c.id}>{c.name} ({c.short_name})</option>))}
-                  </select>
+                    options={customers.map(c => ({ id: String(c.id), name: `${c.name} (${c.short_name})`, short_name: c.short_name }))}
+                    placeholder="请选择客户"
+                    searchPlaceholder="搜索客户名称或简称"
+                  />
                   {isEdit && (
                     <p className="text-xs text-gray-400 mt-0.5">修改客户将同步更新所有成员设备</p>
                   )}
@@ -455,7 +455,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                     新增设备
                     <span className="text-gray-400 font-normal ml-2">{newDeviceRows.length} 台</span>
                   </h4>
-                  <button type="button" onClick={addNewDeviceRow} disabled={totalCount >= 5} className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed">
+                  <button type="button" onClick={addNewDeviceRow} disabled={totalCount >= 5} className="inline-flex items-center text-xs text-primary-600 hover:text-primary-700 disabled:text-gray-400 disabled:cursor-not-allowed">
                     <PlusIcon className="h-4 w-4 mr-0.5" /> 添加设备
                   </button>
                 </div>
@@ -533,7 +533,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                           {row.moduleTypes.map(mt => {
                             const checked = row.module_type_ids.includes(mt.id);
                             return (
-                              <label key={mt.id} className={`inline-flex items-center px-2 py-1 rounded text-xs cursor-pointer border ${checked ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600'} ${mt.is_required ? 'opacity-75 cursor-not-allowed' : 'hover:border-blue-400'}`}>
+                              <label key={mt.id} className={`inline-flex items-center px-2 py-1 rounded text-xs cursor-pointer border ${checked ? 'bg-blue-50 border-primary-300 text-primary-700' : 'bg-white border-gray-200 text-gray-600'} ${mt.is_required ? 'opacity-75 cursor-not-allowed' : 'hover:border-primary-400'}`}>
                                 <input type="checkbox" checked={checked} onChange={() => toggleModuleType(row.key, mt.id, mt.is_required)} disabled={mt.is_required} className="h-3 w-3 mr-1" />
                                 {mt.name}
                                 {mt.is_required && <span className="text-red-500 ml-0.5">*</span>}
@@ -549,7 +549,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                         <label className="block text-xs font-medium text-gray-600 mb-1">
                           通知同事填写版本号（飞书）
                           {row.pinned_open_ids.length > 0 && (
-                            <span className="ml-1 text-blue-500 font-normal">{row.pinned_open_ids.length} 位模块关联负责人已置顶</span>
+                            <span className="ml-1 text-primary-500 font-normal">{row.pinned_open_ids.length} 位模块关联负责人已置顶</span>
                           )}
                         </label>
                         <FeishuMultiUserPicker
@@ -583,9 +583,9 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                 {selectedDevices.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedDevices.map(d => (
-                      <span key={d.id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-200">
+                      <span key={d.id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-blue-50 text-primary-700 border border-primary-200">
                         <span className="font-medium">{d.id}</span>
-                        {d.nickname && <span className="text-blue-500">({d.nickname})</span>}
+                        {d.nickname && <span className="text-primary-500">({d.nickname})</span>}
                         <button type="button" onClick={() => removeExistingDevice(d.id)} className="text-blue-400 hover:text-red-500 ml-0.5">
                           <XMarkIcon className="h-3 w-3" />
                         </button>
@@ -603,7 +603,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                       onChange={e => handleSearchChange(e.target.value)}
                       onFocus={() => { if (deviceSearch.trim()) setShowSearchDropdown(true); }}
                       placeholder="输入序列号或昵称搜索已有设备..."
-                      className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                       disabled={totalCount >= 5}
                     />
                     {searchLoading && <span className="absolute right-2.5 top-2.5 text-xs text-gray-400">搜索中...</span>}
@@ -619,7 +619,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                           <div>
                             <div className="text-sm font-medium text-gray-900">
                               {d.id}
-                              {d.nickname && <span className="text-xs text-blue-600 ml-1.5">{d.nickname}</span>}
+                              {d.nickname && <span className="text-xs text-primary-600 ml-1.5">{d.nickname}</span>}
                             </div>
                             <div className="text-xs text-gray-400">
                               {d.product_line_name && <span>{d.product_line_name}</span>}
@@ -640,7 +640,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
                 {!isEdit && customerId && (
                   <>
                     新增 {newDeviceRows.length} 台 + 已有 {selectedDeviceIds.length} 台
-                    = <span className={`font-semibold ${totalCount >= 2 && totalCount <= 5 ? 'text-blue-600' : 'text-red-600'}`}>{totalCount}</span> 台
+                    = <span className={`font-semibold ${totalCount >= 2 && totalCount <= 5 ? 'text-primary-600' : 'text-red-600'}`}>{totalCount}</span> 台
                     <span className="text-gray-400 ml-1">（需 2-5 台）</span>
                   </>
                 )}

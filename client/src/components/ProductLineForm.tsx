@@ -129,7 +129,7 @@ const ProductLineForm: React.FC<ProductLineFormProps> = ({ productLine, onClose,
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
                 errors.name ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="请输入产品线名称"
@@ -149,7 +149,7 @@ const ProductLineForm: React.FC<ProductLineFormProps> = ({ productLine, onClose,
               name="code"
               value={formData.code}
               onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
                 errors.code ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="例如: ELS-LINE-01"
@@ -173,7 +173,7 @@ const ProductLineForm: React.FC<ProductLineFormProps> = ({ productLine, onClose,
               value={formData.description}
               onChange={handleInputChange}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               placeholder="请输入产品线描述（可选）"
             />
           </div>
@@ -186,7 +186,7 @@ const ProductLineForm: React.FC<ProductLineFormProps> = ({ productLine, onClose,
               name="is_active"
               checked={formData.is_active}
               onChange={handleCheckboxChange}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500/40"
             />
             <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
               启用该产品线

@@ -22,7 +22,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   options,
   placeholder = '请选择',
   searchPlaceholder = '搜索...',
-  className = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+  className = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40',
 }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -77,7 +77,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               autoFocus
             />
           </div>
@@ -88,7 +88,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 type="button"
                 onClick={() => handleSelect(o.id)}
                 className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 ${
-                  value === o.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-900'
+                  value === o.id ? 'bg-blue-50 text-primary-700 font-medium' : 'text-gray-900'
                 }`}
               >
                 {o.name}

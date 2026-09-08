@@ -396,7 +396,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                     type="text"
                     value={formData.name ?? ''}
                     onChange={(e) => handleChange('name', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                     placeholder="请输入订单号"
                   />
                 </div>
@@ -408,7 +408,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                     type="text"
                     value={formData.device_code || ''}
                     onChange={(e) => handleChange('device_code', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                     placeholder="请输入设备编码"
                   />
                 </div>
@@ -420,7 +420,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                     type="text"
                     value={formData.id || ''}
                     onChange={(e) => handleChange('id', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                     placeholder="请输入生产序列号"
                   />
                 </div>
@@ -449,7 +449,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                         const v = e.target.value ? parseInt(e.target.value) : undefined;
                         setFormData(prev => ({ ...prev, customer_id: v }));
                       }}
-                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none"
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm appearance-none"
                     >
                       <option value="">请选择客户</option>
                       {customers.map(c => (
@@ -481,7 +481,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   <select
                     value={formData.status}
                     onChange={(e) => handleChange('status', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                   >
                     <option value="生产中">生产中</option>
                     <option value="已发货">已发货</option>
@@ -498,7 +498,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                     type="text"
                     value={formData.remote_code || ''}
                     onChange={(e) => handleChange('remote_code', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                     placeholder="请输入远程码"
                   />
                 </div>
@@ -510,7 +510,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                     type="text"
                     value={formData.password || ''}
                     onChange={(e) => handleChange('password', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                     placeholder="请输入密码"
                   />
                 </div>
@@ -519,14 +519,14 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">商户号</label>
                   <input type="text" value={formData.merchant_id || ''} onChange={(e) => handleChange('merchant_id', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="请输入商户号" />
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm" placeholder="请输入商户号" />
                 </div>
 
                 {/* 商户密码 */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">商户密码</label>
                   <input type="text" value={formData.merchant_password || ''} onChange={(e) => handleChange('merchant_password', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="请输入商户密码" />
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm" placeholder="请输入商户密码" />
                 </div>
 
                 {/* 备注 */}
@@ -535,7 +535,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   <textarea
                     value={formData.notes || ''}
                     onChange={(e) => handleChange('notes', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                     placeholder="请输入备注"
                     rows={2}
                   />
@@ -554,7 +554,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   type="text"
                   value={formData.name ?? ''}
                   onChange={(e) => handleChange('name', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                   placeholder="请输入订单号"
                 />
               </div>
@@ -564,7 +564,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   type="text"
                   value={formData.device_code || ''}
                   onChange={(e) => handleChange('device_code', e.target.value)}
-                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="请输入设备编码"
                 />
               </div>
@@ -574,7 +574,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   type="text"
                   value={formData.id || ''}
                   onChange={(e) => handleChange('id', e.target.value)}
-                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="请输入生产序列号"
                 />
               </div>
@@ -586,7 +586,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   type="text"
                   value={formData.remote_code || ''}
                   onChange={(e) => handleChange('remote_code', e.target.value)}
-                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="请输入远程码"
                 />
                 {errors.identity && <p className="text-red-500 text-xs mt-1 col-span-3">{errors.identity}</p>}
@@ -594,12 +594,12 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">商户号</label>
                 <input type="text" value={formData.merchant_id || ''} onChange={(e) => handleChange('merchant_id', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="请输入商户号" />
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm" placeholder="请输入商户号" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">商户密码</label>
                 <input type="text" value={formData.merchant_password || ''} onChange={(e) => handleChange('merchant_password', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="请输入商户密码" />
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm" placeholder="请输入商户密码" />
               </div>
 
               {/* Row 3: 客户(col-span-2) | 状态 */}
@@ -615,7 +615,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                       if (!e.target.value) setFormData(prev => ({ ...prev, customer_id: undefined }));
                     }}
                     onFocus={() => setShowCustomerDropdown(true)}
-                    className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${errors.customer_id ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.customer_id ? 'border-red-500' : 'border-gray-300'}`}
                     placeholder="搜索客户名称或简称"
                   />
                   {formData.customer_id && (
@@ -629,7 +629,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                     {filteredCustomers.map(c => (
                       <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)}
-                        className={`w-full text-left px-3 py-2 hover:bg-blue-50 text-sm ${formData.customer_id === c.id ? 'bg-blue-50 text-blue-700' : ''}`}>
+                        className={`w-full text-left px-3 py-2 hover:bg-blue-50 text-sm ${formData.customer_id === c.id ? 'bg-blue-50 text-primary-700' : ''}`}>
                         <span className="font-medium">{c.name}</span>
                         <span className="text-gray-400 ml-2">({c.short_name})</span>
                       </button>
@@ -648,7 +648,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 <select
                   value={formData.status}
                   onChange={(e) => handleChange('status', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                 >
                   <option value="生产中">生产中</option>
                   <option value="已发货">已发货</option>
@@ -679,7 +679,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 <select
                   value={formData.product_line_id}
                   onChange={(e) => handleChange('product_line_id', e.target.value ? parseInt(e.target.value) : '')}
-                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${errors.product_line_id ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.product_line_id ? 'border-red-500' : 'border-gray-300'}`}
                 >
                   <option value="">请选择产品线</option>
                   {productLines.map((pl) => (
@@ -693,7 +693,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                 <select
                   value={formData.product_id || ''}
                   onChange={(e) => handleChange('product_id', e.target.value ? parseInt(e.target.value) : undefined)}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                   disabled={products.length === 0}
                 >
                   <option value="">{products.length === 0 ? '请先选产品线' : '请选择产品型号'}</option>
@@ -708,7 +708,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   type="text"
                   value={formData.notes || ''}
                   onChange={(e) => handleChange('notes', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                   placeholder="请输入备注"
                 />
               </div>
@@ -729,8 +729,8 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                         <input type="checkbox" checked={selectedModuleTypeIds.includes(mt.id)}
                           onChange={() => !mt.is_required && handleModuleTypeToggle(mt.id)}
                           disabled={mt.is_required}
-                          className={`rounded border-gray-300 ${mt.is_required ? 'text-blue-600 opacity-70' : 'text-blue-600'}`} />
-                        <span className={`text-xs ${mt.is_required ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{mt.name}</span>
+                          className={`rounded border-gray-300 ${mt.is_required ? 'text-primary-600 opacity-70' : 'text-primary-600'}`} />
+                        <span className={`text-xs ${mt.is_required ? 'text-primary-700 font-medium' : 'text-gray-700'}`}>{mt.name}</span>
                         {mt.is_required ? (
                           <span className="ml-auto text-xs text-blue-600 bg-blue-100 px-1 rounded">必</span>
                         ) : (
@@ -741,7 +741,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   </div>
                 )}
                 {moduleTypes.length > 0 && selectedModuleTypeIds.length > 0 && (
-                  <p className="text-xs text-blue-600 mt-0.5">已选 {selectedModuleTypeIds.length} 个模块</p>
+                  <p className="text-xs text-primary-600 mt-0.5">已选 {selectedModuleTypeIds.length} 个模块</p>
                 )}
               </div>
 
@@ -751,7 +751,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     通知同事填写版本号（飞书）
                     {pinnedOpenIds.length > 0 && (
-                      <span className="ml-2 text-xs text-blue-600 font-normal">
+                      <span className="ml-2 text-xs text-primary-600 font-normal">
                         {pinnedOpenIds.length} 位模块关联负责人已置顶
                       </span>
                     )}

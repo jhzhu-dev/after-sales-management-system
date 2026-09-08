@@ -185,7 +185,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                                 type="text"
                                 value={formData.version_number}
                                 onChange={(e) => handleChange('version_number', e.target.value)}
-                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${errors.version_number ? 'border-red-500' : 'border-gray-300'}`}
+                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.version_number ? 'border-red-500' : 'border-gray-300'}`}
                                 placeholder="如 V1, V2.1"
                             />
                             {errors.version_number && <p className="text-red-500 text-xs mt-1">{errors.version_number}</p>}
@@ -196,7 +196,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                                 type="text"
                                 value={formData.version_name || ''}
                                 onChange={(e) => handleChange('version_name', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                                 placeholder="如 2025款改进型"
                             />
                         </div>
@@ -209,7 +209,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                             <select
                                 value={formData.status}
                                 onChange={(e) => handleChange('status', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                             >
                                 {VERSION_STATUS_OPTIONS.map(opt => (
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -222,7 +222,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                                 type="date"
                                 value={formData.release_date || ''}
                                 onChange={(e) => handleChange('release_date', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                             />
                         </div>
                     </div>
@@ -235,7 +235,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                                 id="is_current"
                                 checked={formData.is_current || false}
                                 onChange={(e) => handleChange('is_current', e.target.checked)}
-                                className="rounded border-gray-300 text-blue-600 mr-2"
+                                className="rounded border-gray-300 text-primary-600 mr-2"
                             />
                             <label htmlFor="is_current" className="text-sm font-medium text-gray-700">
                                 设为当前在产版本
@@ -247,7 +247,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                                 type="number"
                                 value={formData.sort_order || 0}
                                 onChange={(e) => handleChange('sort_order', parseInt(e.target.value) || 0)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                                 min="0"
                             />
                         </div>
@@ -259,7 +259,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                         <textarea
                             value={formData.description || ''}
                             onChange={(e) => handleChange('description', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
                             rows={3}
                             placeholder="描述该版本相对上一版本的变更内容..."
                         />
@@ -297,7 +297,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                                                         alert('获取预览链接失败');
                                                     }
                                                 }}
-                                                className="p-1 text-blue-500 hover:text-blue-700"
+                                                className="p-1 text-primary-500 hover:text-primary-700"
                                                 title="预览/下载"
                                             >
                                                 <EyeIcon className="h-4 w-4" />
@@ -332,7 +332,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                             <select
                                 value={uploadCategory}
                                 onChange={(e) => setUploadCategory(e.target.value)}
-                                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+                                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary-500/40"
                             >
                                 {DOC_CATEGORIES.map(cat => (
                                     <option key={cat} value={cat}>{cat}</option>
@@ -340,14 +340,14 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                             </select>
                         </div>
                         <div
-                            className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}`}
+                            className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${dragOver ? 'border-primary-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}`}
                             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                             onDragLeave={() => setDragOver(false)}
                             onDrop={handleFileDrop}
                         >
                             <ArrowUpTrayIcon className="mx-auto h-8 w-8 text-gray-400" />
                             <p className="mt-1 text-sm text-gray-600">拖拽文件到此处，或</p>
-                            <label className="mt-1 inline-flex items-center px-3 py-1 bg-white border border-gray-300 rounded text-sm text-blue-600 hover:bg-gray-50 cursor-pointer">
+                            <label className="mt-1 inline-flex items-center px-3 py-1 bg-white border border-gray-300 rounded text-sm text-primary-600 hover:bg-gray-50 cursor-pointer">
                                 选择文件
                                 <input type="file" className="hidden" onChange={handleFileSelect} multiple />
                             </label>

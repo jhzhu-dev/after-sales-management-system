@@ -138,7 +138,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
               value={formData.product_line_id}
               onChange={handleInputChange}
               disabled={!!product}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
                 errors.product_line_id ? 'border-red-500' : 'border-gray-300'
               } ${product ? 'bg-gray-100 cursor-not-allowed' : ''}`}
             >
@@ -167,7 +167,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
                 errors.name ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="请输入产品名称"
@@ -187,7 +187,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
               name="short_name"
               value={formData.short_name}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               placeholder="例如：侧面、底盘、胎纹、龙门"
               maxLength={20}
             />
@@ -206,7 +206,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
               name="model"
               value={formData.model}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               placeholder="例如: ELS-DM-2024-V1"
             />
             <p className="mt-1 text-xs text-gray-500">
@@ -224,7 +224,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
               value={formData.description}
               onChange={handleInputChange}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               placeholder="请输入产品描述（可选）"
             />
           </div>
@@ -237,7 +237,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
               name="is_active"
               checked={formData.is_active}
               onChange={handleCheckboxChange}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500/40"
             />
             <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
               启用该产品

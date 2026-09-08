@@ -144,12 +144,12 @@ const OrderImport: React.FC = () => {
     }
   };
 
-  const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
+  const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40';
 
   return (
     <Layout>
       <div className="p-4 3xl:p-6">
-        <button onClick={() => navigate('/devices')} className="inline-flex items-center text-sm text-gray-600 hover:text-blue-600 mb-4">
+        <button onClick={() => navigate('/devices')} className="inline-flex items-center text-sm text-gray-600 hover:text-primary-600 mb-4">
           <ArrowLeftIcon className="h-4 w-4 mr-1" /> 返回设备管理
         </button>
 

@@ -157,7 +157,7 @@ const TestTaskDetail: React.FC = () => {
   return (
     <Layout>
       <div className="p-4 3xl:p-6">
-        <button onClick={() => navigate('/test-tasks')} className="inline-flex items-center text-sm text-gray-600 hover:text-blue-600 mb-4">
+        <button onClick={() => navigate('/test-tasks')} className="inline-flex items-center text-sm text-gray-600 hover:text-primary-600 mb-4">
           <ArrowLeftIcon className="h-4 w-4 mr-1" /> 返回测试管理
         </button>
 
@@ -257,8 +257,8 @@ const TestTaskDetail: React.FC = () => {
                     <span className="text-sm text-gray-800 truncate">{a.original_name}</span>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => openPreview(idx)} title="预览" className="p-1.5 text-gray-500 hover:text-blue-600"><EyeIcon className="h-4 w-4" /></button>
-                    <a href={attUrl(a.id)} download={a.original_name} title="下载" className="p-1.5 text-gray-500 hover:text-blue-600"><ArrowDownTrayIcon className="h-4 w-4" /></a>
+                    <button onClick={() => openPreview(idx)} title="预览" className="p-1.5 text-gray-500 hover:text-primary-600"><EyeIcon className="h-4 w-4" /></button>
+                    <a href={attUrl(a.id)} download={a.original_name} title="下载" className="p-1.5 text-gray-500 hover:text-primary-600"><ArrowDownTrayIcon className="h-4 w-4" /></a>
                     <button onClick={() => handleDeleteAtt(a.id)} title="删除" className="p-1.5 text-gray-500 hover:text-red-600"><TrashIcon className="h-4 w-4" /></button>
                   </div>
                 </div>
@@ -320,7 +320,7 @@ const TestTaskDetail: React.FC = () => {
 
 const RadioOption: React.FC<{ checked: boolean; onChange: () => void; label: string }> = ({ checked, onChange, label }) => (
   <label className="flex items-center gap-2 cursor-pointer">
-    <input type="radio" checked={checked} onChange={onChange} className="h-4 w-4 text-blue-600 focus:ring-blue-500" />
+    <input type="radio" checked={checked} onChange={onChange} className="h-4 w-4 text-primary-600 focus:ring-primary-500/40" />
     <span className="text-sm text-gray-800">{label}</span>
   </label>
 );

@@ -209,7 +209,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
               name="version_number"
               value={formData.version_number}
               onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40 font-mono ${
                 errors.version_number ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="例如: V1.2.0, 2024.01.15"
@@ -232,7 +232,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
               name="title"
               value={formData.title}
               onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
                 errors.title ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="例如: 优化视觉服务器，提升识别率"
@@ -253,7 +253,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
                   type="radio"
                   checked={categoryMode === 'select'}
                   onChange={() => setCategoryMode('select')}
-                  className="text-blue-600"
+                  className="text-primary-600"
                 />
                 选择分类
               </label>
@@ -262,7 +262,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
                   type="radio"
                   checked={categoryMode === 'custom'}
                   onChange={() => setCategoryMode('custom')}
-                  className="text-blue-600"
+                  className="text-primary-600"
                 />
                 自定义分类
               </label>
@@ -272,7 +272,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
                 name="category"
                 value={formData.category}
                 onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
                 <option value="">不选择分类</option>
                 {productLines.length > 0 && (
@@ -297,7 +297,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
                 type="text"
                 value={customCategory}
                 onChange={(e) => setCustomCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                 placeholder="输入自定义分类名称"
               />
             )}
@@ -329,7 +329,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
                             setSelectedProductIds(prev => prev.filter(id => id !== p.id));
                           }
                         }}
-                        className="rounded text-blue-600 focus:ring-blue-500"
+                        className="rounded text-primary-600 focus:ring-primary-500/40"
                       />
                       <span className="text-sm font-mono text-gray-700">{p.model}</span>
                       <span className="text-xs text-gray-500">{p.name}</span>
@@ -338,7 +338,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
                 </div>
               )}
               {selectedProductIds.length > 0 && (
-                <p className="mt-1 text-xs text-blue-600">已选 {selectedProductIds.length} 个型号</p>
+                <p className="mt-1 text-xs text-primary-600">已选 {selectedProductIds.length} 个型号</p>
               )}
             </div>
           )}
@@ -356,7 +356,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
               name="release_date"
               value={formData.release_date}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40"
             />
             <p className="mt-1 text-xs text-gray-500">
               默认为今天，可以选择历史日期
@@ -373,7 +373,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
               value={formData.change_log}
               onChange={handleInputChange}
               rows={8}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/40 font-mono text-sm"
               placeholder="详细说明本次发布的改进内容，例如：
 
 【新增功能】
@@ -399,22 +399,22 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
               附件
             </label>
             <div
-              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer bg-gray-50"
+              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors cursor-pointer bg-gray-50"
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => { 
                 e.preventDefault(); 
                 e.stopPropagation(); 
-                e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
+                e.currentTarget.classList.add('border-primary-500', 'bg-blue-50');
               }}
               onDragLeave={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+                e.currentTarget.classList.remove('border-primary-500', 'bg-blue-50');
               }}
               onDrop={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+                e.currentTarget.classList.remove('border-primary-500', 'bg-blue-50');
                 const droppedFiles = Array.from(e.dataTransfer.files);
                 if (droppedFiles.length > 0) {
                   setFiles(prev => [...prev, ...droppedFiles]);
@@ -446,7 +446,7 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
                 {files.map((file, index) => (
                   <div key={`${file.name}-${index}`} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <PaperClipIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                      <PaperClipIcon className="h-4 w-4 text-primary-500 flex-shrink-0" />
                       <span className="text-sm text-gray-700 truncate" title={file.name}>{file.name}</span>
                       <span className="text-xs text-gray-500 flex-shrink-0 ml-auto">
                         {file.size < 1024 * 1024
@@ -479,8 +479,8 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
           )}
 
           {/* 提示信息 */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-700">
+          <div className="p-3 bg-blue-50 border border-primary-200 rounded-lg">
+            <p className="text-sm text-primary-700">
               <strong>提示：</strong>发布后的版本将存储在模块类型中可调，用于记录该模块的版本库及历史记录。
             </p>
           </div>

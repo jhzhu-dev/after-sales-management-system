@@ -138,7 +138,7 @@ export default function DataTable<T extends Record<string, any>>({
                           className={cn(
                             'w-3 h-3',
                             sortConfig.key === column.key && sortConfig.direction === 'asc'
-                              ? 'text-blue-600'
+                              ? 'text-primary-600'
                               : 'text-gray-400'
                           )}
                           fill="currentColor"
@@ -150,7 +150,7 @@ export default function DataTable<T extends Record<string, any>>({
                           className={cn(
                             'w-3 h-3 -mt-1',
                             sortConfig.key === column.key && sortConfig.direction === 'desc'
-                              ? 'text-blue-600'
+                              ? 'text-primary-600'
                               : 'text-gray-400'
                           )}
                           fill="currentColor"
@@ -241,7 +241,7 @@ export default function DataTable<T extends Record<string, any>>({
                     className={cn(
                       'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
                       pagination.current === i + 1
-                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                        ? 'z-10 bg-blue-50 border-primary-500 text-primary-600'
                         : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
                     )}
                   >

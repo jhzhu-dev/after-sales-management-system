@@ -305,7 +305,7 @@ export default function Dashboard() {
                           'bg-green-100'
                         }`}>
                           <ClockIcon className={`h-5 w-5 ${
-                            activity.type === 'device' ? 'text-blue-600' :
+                            activity.type === 'device' ? 'text-primary-600' :
                             activity.type === 'issue' ? 'text-red-600' :
                             'text-green-600'
                           }`} />

@@ -74,7 +74,7 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachments, initia
               href={att.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+              className="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-blue-50 rounded"
               title="在新标签页打开"
             >
               <ArrowTopRightOnSquareIcon className="h-5 w-5" />
@@ -82,7 +82,7 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachments, initia
             <a
               href={att.url}
               download={att.name}
-              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+              className="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-blue-50 rounded"
               title="下载"
             >
               <ArrowDownTrayIcon className="h-5 w-5" />
@@ -134,7 +134,7 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachments, initia
                 href={att.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 text-sm font-medium"
               >
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
                 在新标签页打开
@@ -158,7 +158,7 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachments, initia
                 <button
                   key={i}
                   onClick={() => setIndex(i)}
-                  className={`w-2 h-2 rounded-full transition-colors ${i === index ? 'bg-blue-600' : 'bg-gray-300 hover:bg-gray-400'}`}
+                  className={`w-2 h-2 rounded-full transition-colors ${i === index ? 'bg-primary-500' : 'bg-gray-300 hover:bg-gray-400'}`}
                 />
               ))}
             </div>

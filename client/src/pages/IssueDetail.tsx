@@ -108,7 +108,7 @@ export default function IssueDetail() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'open':
-        return <ExclamationTriangleIcon className="h-5 w-5 text-blue-500" />;
+        return <ExclamationTriangleIcon className="h-5 w-5 text-primary-500" />;
       case 'in_progress':
         return <ClockIcon className="h-5 w-5 text-yellow-500" />;
       case 'closed':
@@ -324,6 +324,18 @@ export default function IssueDetail() {
                 <p className="text-base font-semibold text-gray-900 print:text-sm">{issue.assignee || '未分配'}</p>
               </div>
               <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">反馈时间</p>
+                <p className="text-base font-semibold text-gray-900 print:text-sm">{issue.feedback_time ? formatDate(issue.feedback_time, 'yyyy-MM-dd HH:mm') : '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">反馈单号</p>
+                <p className="text-base font-semibold text-gray-900 print:text-sm">{issue.feedback_no || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">是否首次发生</p>
+                <p className="text-base font-semibold text-gray-900 print:text-sm">{issue.is_first_occurrence ? '是' : '否'}</p>
+              </div>
+              <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">创建时间</p>
                 <p className="text-base font-semibold text-gray-900 print:text-sm">{formatDate(issue.created_at, 'yyyy-MM-dd HH:mm')}</p>
               </div>
@@ -400,10 +412,10 @@ export default function IssueDetail() {
                     <ul className="space-y-1.5">
                       {atts.map((att, i) => (
                         <li key={i} className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-md px-3 py-2">
-                          <PaperClipIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                          <PaperClipIcon className="h-4 w-4 text-primary-500 flex-shrink-0" />
                           <button
                             onClick={() => { setPreviewAtts(atts); setPreviewIdx(i); }}
-                            className="text-base text-blue-700 hover:underline truncate text-left print-show print:text-sm"
+                            className="text-base text-primary-700 hover:underline truncate text-left print-show print:text-sm"
                           >{att.name}</button>
                           <span className="text-sm text-gray-400 ml-auto flex-shrink-0 print:text-xs">{att.size ? (att.size / 1024).toFixed(0) + ' KB' : ''}</span>
                         </li>
@@ -485,7 +497,7 @@ export default function IssueDetail() {
                     value={resolveNotes}
                     onChange={(e) => setResolveNotes(e.target.value)}
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                     placeholder="请描述问题的解决方案..."
                   />
                 </div>

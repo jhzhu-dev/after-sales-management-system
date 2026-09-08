@@ -101,7 +101,7 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
     }
   };
 
-  const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
+  const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm';
   const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
 
   return (

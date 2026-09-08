@@ -62,7 +62,7 @@ export default function Layout({ children }: LayoutProps) {
                     className={cn(
                       'flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all',
                       isActive
-                        ? 'bg-blue-500/10 text-blue-600 dark:bg-blue-400/15 dark:text-blue-200'
+                        ? 'bg-primary-500/10 text-primary-600 dark:bg-blue-400/15 dark:text-[#9ccbe8]'
                         : 'text-gray-600 hover:bg-gray-500/10 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-gray-100'
                     )}
                   >

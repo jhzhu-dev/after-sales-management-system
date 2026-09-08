@@ -190,7 +190,7 @@ const CustomerRequirements: React.FC = () => {
                 value={filters.search}
                 onChange={e => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))}
                 placeholder="需求编号 / 描述 / 客户"
-                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               />
             </div>
           </div>

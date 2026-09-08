@@ -155,7 +155,7 @@ const SOPChecklistSection: React.FC<Props> = ({ items, onChange, disabled = fals
                     <button
                       type="button"
                       onClick={() => fileInputRefs.current[item.id]?.click()}
-                      className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 rounded px-2 py-1 hover:bg-blue-50 transition-colors"
+                      className="text-xs text-primary-600 hover:text-primary-700 border border-primary-200 rounded px-2 py-1 hover:bg-blue-50 transition-colors"
                     >
                       + 上传图片佐证
                     </button>

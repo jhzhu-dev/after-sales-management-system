@@ -402,16 +402,16 @@ export default function Settings() {
     <Layout>
       <div className="space-y-4 3xl:space-y-6">
         <div className="flex items-center space-x-3">
-          <CogIcon className="h-8 w-8 text-blue-600" />
+          <CogIcon className="h-8 w-8 text-primary-600" />
           <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">基础设置</h1>
         </div>
 
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
-            <button onClick={() => { setActiveTab('module-types'); setSearchParams({ tab: 'module-types' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'module-types' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>模块类型管理</button>
-            <button onClick={() => { setActiveTab('customers'); setSearchParams({ tab: 'customers' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'customers' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>客户管理</button>
-            <button onClick={() => { setActiveTab('sop-templates'); setSearchParams({ tab: 'sop-templates' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'sop-templates' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>版本更新检查项模板</button>
-            <button onClick={() => { setActiveTab('issue-classifications'); setSearchParams({ tab: 'issue-classifications' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'issue-classifications' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>问题分类管理</button>
+            <button onClick={() => { setActiveTab('module-types'); setSearchParams({ tab: 'module-types' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'module-types' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>模块类型管理</button>
+            <button onClick={() => { setActiveTab('customers'); setSearchParams({ tab: 'customers' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'customers' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>客户管理</button>
+            <button onClick={() => { setActiveTab('sop-templates'); setSearchParams({ tab: 'sop-templates' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'sop-templates' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>版本更新检查项模板</button>
+            <button onClick={() => { setActiveTab('issue-classifications'); setSearchParams({ tab: 'issue-classifications' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'issue-classifications' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>问题分类管理</button>
           </nav>
         </div>
 
@@ -482,7 +482,7 @@ export default function Settings() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                           <button
                             onClick={() => handleOpenModal(moduleType)}
-                            className="text-blue-600 hover:text-blue-900 inline-flex items-center"
+                            className="text-primary-600 hover:text-primary-700 inline-flex items-center"
                           >
                             <PencilIcon className="h-4 w-4 mr-1" />
                             编辑
@@ -526,7 +526,7 @@ export default function Settings() {
                         required
                         value={moduleTypeForm.name}
                         onChange={(e) => setModuleTypeForm({ ...moduleTypeForm, name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                         placeholder="例如：机械"
                       />
                     </div>
@@ -541,7 +541,7 @@ export default function Settings() {
                         required
                         value={moduleTypeForm.code}
                         onChange={(e) => setModuleTypeForm({ ...moduleTypeForm, code: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                         placeholder="例如：mechanical"
                       />
                     </div>
@@ -555,7 +555,7 @@ export default function Settings() {
                         value={moduleTypeForm.description}
                         onChange={(e) => setModuleTypeForm({ ...moduleTypeForm, description: e.target.value })}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                         placeholder="描述此模块类型..."
                       />
                     </div>
@@ -567,7 +567,7 @@ export default function Settings() {
                           type="checkbox"
                           checked={moduleTypeForm.is_active}
                           onChange={(e) => setModuleTypeForm({ ...moduleTypeForm, is_active: e.target.checked })}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-primary-600 focus:ring-primary-500/40 border-gray-300 rounded"
                         />
                         <span className="ml-2 text-sm text-gray-700">启用此模块类型</span>
                       </label>
@@ -587,7 +587,7 @@ export default function Settings() {
                         <select
                           value={moduleTypeForm.feishu_user_open_id}
                           onChange={(e) => setModuleTypeForm({ ...moduleTypeForm, feishu_user_open_id: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent text-sm"
                         >
                           <option value="">不关联（选填）</option>
                           {feishuUsers.map(u => (
@@ -612,7 +612,7 @@ export default function Settings() {
                       <button
                         type="submit"
                         disabled={submitting}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {submitting ? '提交中...' : editingModuleType ? '更新' : '创建'}
                       </button>
@@ -678,7 +678,7 @@ export default function Settings() {
                                 handleEditSop(mt);
                               }
                             }}
-                            className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700"
+                            className="text-xs bg-primary-500 text-white px-3 py-1.5 rounded hover:bg-primary-600"
                           >
                             {isEditing ? '收起' : (tpl ? '编辑检查项' : '配置检查项')}
                           </button>
@@ -700,14 +700,14 @@ export default function Settings() {
                                     value={item.text}
                                     onChange={e => handleSopItemChange(item.id, 'text', e.target.value)}
                                     placeholder="检查项内容..."
-                                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary-500/40 outline-none"
                                   />
                                   <label className="flex items-center gap-1 text-xs text-gray-600 shrink-0 cursor-pointer">
                                     <input
                                       type="checkbox"
                                       checked={item.required}
                                       onChange={e => handleSopItemChange(item.id, 'required', e.target.checked)}
-                                      className="rounded border-gray-300 text-blue-600"
+                                      className="rounded border-gray-300 text-primary-600"
                                     />
                                     必填
                                   </label>
@@ -727,7 +727,7 @@ export default function Settings() {
                             <button
                               type="button"
                               onClick={handleAddSopItem}
-                              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 border border-blue-200 rounded px-3 py-1.5 hover:bg-blue-50"
+                              className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 border border-primary-200 rounded px-3 py-1.5 hover:bg-blue-50"
                             >
                               <PlusIcon className="h-4 w-4" />
                               添加检查项
@@ -744,7 +744,7 @@ export default function Settings() {
                                 type="button"
                                 disabled={sopSubmitting}
                                 onClick={() => handleSaveSop(mt.id)}
-                                className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                                className="px-4 py-1.5 text-sm bg-primary-500 text-white rounded hover:bg-primary-600 disabled:opacity-50"
                               >
                                 {sopSubmitting ? '保存中...' : '保存模板'}
                               </button>
@@ -759,7 +759,7 @@ export default function Settings() {
                           <div className="flex flex-wrap gap-2">
                             {tpl.items.map((item, idx) => (
                               <span key={item.id} className={`text-xs px-2 py-1 rounded ${
-                                item.required ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-gray-100 text-gray-600'
+                                item.required ? 'bg-blue-50 text-primary-700 border border-primary-200' : 'bg-gray-100 text-gray-600'
                               }`}>
                                 {idx + 1}. {item.text}{item.required ? ' *' : ''}
                               </span>
@@ -785,7 +785,7 @@ export default function Settings() {
                   placeholder="搜索客户..."
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                 />
                 <Button onClick={() => handleOpenCustomerModal()}>
                   <PlusIcon className="h-5 w-5" />
@@ -828,7 +828,7 @@ export default function Settings() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                           <button
                             onClick={() => handleOpenCustomerModal(customer)}
-                            className="text-blue-600 hover:text-blue-900 inline-flex items-center"
+                            className="text-primary-600 hover:text-primary-700 inline-flex items-center"
                           >
                             <PencilIcon className="h-4 w-4 mr-1" />
                             编辑
@@ -871,7 +871,7 @@ export default function Settings() {
                         required
                         value={customerForm.name}
                         onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                         placeholder="例如：某某科技有限公司"
                       />
                     </div>
@@ -885,7 +885,7 @@ export default function Settings() {
                         required
                         value={customerForm.short_name}
                         onChange={(e) => setCustomerForm({ ...customerForm, short_name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                         placeholder="例如：ABC Tech"
                       />
                       <p className="text-xs text-gray-400 mt-1">英文简称需唯一，用于快速识别</p>
@@ -903,7 +903,7 @@ export default function Settings() {
                       <button
                         type="submit"
                         disabled={submitting}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {submitting ? '提交中...' : editingCustomer ? '更新' : '创建'}
                       </button>
@@ -962,7 +962,7 @@ export default function Settings() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                           <button
                             onClick={() => handleOpenClassificationModal(c)}
-                            className="text-blue-600 hover:text-blue-900 inline-flex items-center"
+                            className="text-primary-600 hover:text-primary-700 inline-flex items-center"
                           >
                             <PencilIcon className="h-4 w-4 mr-1" />
                             编辑
@@ -1005,7 +1005,7 @@ export default function Settings() {
                         maxLength={100}
                         value={classificationForm.name}
                         onChange={(e) => setClassificationForm({ ...classificationForm, name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                         placeholder="例如：运营问题"
                       />
                     </div>
@@ -1016,7 +1016,7 @@ export default function Settings() {
                         min={0}
                         value={classificationForm.sort_order}
                         onChange={(e) => setClassificationForm({ ...classificationForm, sort_order: parseInt(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                       />
                       <p className="text-xs text-gray-400 mt-1">数值越小越靠前</p>
                     </div>
@@ -1032,7 +1032,7 @@ export default function Settings() {
                       <button
                         type="submit"
                         disabled={submitting}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {submitting ? '提交中...' : editingClassification ? '更新' : '创建'}
                       </button>

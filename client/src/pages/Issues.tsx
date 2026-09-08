@@ -495,16 +495,16 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     const isActive = sortField === field;
     return (
       <div 
-        className="flex items-center space-x-1 cursor-pointer hover:text-blue-600 select-none"
+        className="flex items-center space-x-1 cursor-pointer hover:text-primary-600 select-none"
         onClick={() => handleSort(field)}
       >
         <span>{title}</span>
         <div className="flex flex-col">
           <ChevronUpIcon 
-            className={`h-3 w-3 ${isActive && sortOrder === 'asc' ? 'text-blue-600' : 'text-gray-400'}`} 
+            className={`h-3 w-3 ${isActive && sortOrder === 'asc' ? 'text-primary-600' : 'text-gray-400'}`} 
           />
           <ChevronDownIcon 
-            className={`h-3 w-3 -mt-1 ${isActive && sortOrder === 'desc' ? 'text-blue-600' : 'text-gray-400'}`} 
+            className={`h-3 w-3 -mt-1 ${isActive && sortOrder === 'desc' ? 'text-primary-600' : 'text-gray-400'}`} 
           />
         </div>
       </div>
@@ -520,7 +520,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             type="checkbox"
             checked={selectedIssues.length === issues.length && issues.length > 0}
             onChange={handleSelectAll}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
           />
         </div>
       ),
@@ -530,7 +530,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             type="checkbox"
             checked={selectedIssues.includes(record.id)}
             onChange={() => handleSelectIssue(record.id)}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
           />
         </div>
       ),
@@ -542,7 +542,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
       render: (value: number, record: Issue) => (
         <Link 
           to={`/issues/${value}`} 
-          className="text-blue-600 hover:text-blue-800 font-medium text-xs font-mono"
+          className="text-primary-600 hover:text-primary-700 font-medium text-xs font-mono"
         >
           #{value}
         </Link>
@@ -558,7 +558,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             {value}{record.device_id ? <span className="text-gray-400 font-normal"> · {record.device_id.slice(-4)}</span> : ''}
           </div>
           {record.device_nickname ? (
-            <div className="text-xs text-blue-600 font-medium">{record.device_nickname}</div>
+            <div className="text-xs text-primary-600 font-medium">{record.device_nickname}</div>
           ) : (
             <div className="text-xs text-gray-500">{record.product_name || record.device_type || '-'}</div>
           )}
@@ -637,7 +637,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         <div className="flex items-center space-x-2">
           <Link
             to={`/issues/${record.id}`}
-            className="text-blue-600 hover:text-blue-800"
+            className="text-primary-600 hover:text-primary-700"
             title="查看详情"
             onClick={(e) => e.stopPropagation()}
           >
@@ -671,7 +671,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         key: 'device_nickname',
         title: '设备简称',
         render: (_: any, item: any) => (
-          <div className="text-sm text-blue-600 font-medium">{item.device_nickname || '-'}</div>
+          <div className="text-sm text-primary-600 font-medium">{item.device_nickname || '-'}</div>
         )
       },
       {
@@ -701,7 +701,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 <span className="text-gray-400">→</span>
               </>
             )}
-            <span className="font-mono font-bold text-blue-600">{val}</span>
+            <span className="font-mono font-bold text-primary-600">{val}</span>
             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
               item.version_type === 'factory'
                 ? 'bg-gray-100 text-gray-600'
@@ -747,8 +747,8 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               onClick={e => { e.stopPropagation(); setExpandedUpgradeId(isExpanded ? null : item.id); }}
               className={`text-xs px-2 py-1 rounded border transition-colors ${
                 isExpanded
-                  ? 'bg-blue-50 text-blue-700 border-blue-300'
-                  : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600'
+                  ? 'bg-blue-50 text-primary-700 border-primary-300'
+                  : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-300 hover:text-primary-600'
               }`}
             >
               {isExpanded ? '收起' : '查看详情'}
@@ -767,13 +767,13 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <input
                 type="text"
                 placeholder="搜索订单号、产品名称、客户、简称、版本号、变更说明..."
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-lg focus:ring-2 focus:ring-primary-500/40"
                 value={upgradeFilters.search}
                 onChange={e => setUpgradeFilters(f => ({ ...f, search: e.target.value }))}
               />
             </div>
             <select
-              className="bg-gray-50 border-none rounded-lg py-2 pl-3 pr-8 focus:ring-2 focus:ring-blue-500"
+              className="bg-gray-50 border-none rounded-lg py-2 pl-3 pr-8 focus:ring-2 focus:ring-primary-500/40"
               value={upgradeFilters.module_type}
               onChange={e => setUpgradeFilters(f => ({ ...f, module_type: e.target.value }))}
             >
@@ -785,7 +785,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <option value="视觉">视觉</option>
             </select>
             <select
-              className="bg-gray-50 border-none rounded-lg py-2 pl-3 pr-8 focus:ring-2 focus:ring-blue-500"
+              className="bg-gray-50 border-none rounded-lg py-2 pl-3 pr-8 focus:ring-2 focus:ring-primary-500/40"
               value={upgradeFilters.version_type}
               onChange={e => setUpgradeFilters(f => ({ ...f, version_type: e.target.value }))}
             >
@@ -794,7 +794,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <option value="update">更新版本</option>
             </select>
             <select
-              className="bg-gray-50 border-none rounded-lg py-2 pl-3 pr-8 focus:ring-2 focus:ring-blue-500"
+              className="bg-gray-50 border-none rounded-lg py-2 pl-3 pr-8 focus:ring-2 focus:ring-primary-500/40"
               value={upgradeFilters.customer}
               onChange={e => setUpgradeFilters(f => ({ ...f, customer: e.target.value }))}
             >
@@ -854,7 +854,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                           <div className="font-medium text-gray-900 text-sm">{item.device_name || '-'}</div>
                           <div className="text-xs text-gray-400">{item.device_id}</div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-blue-600 font-medium">{item.device_nickname || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-primary-600 font-medium">{item.device_nickname || '-'}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{item.customer_name || '-'}</td>
                         <td className="px-4 py-3">
                           <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">{item.module_type}</span>
@@ -867,7 +867,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                                 <span className="text-gray-300 text-xs">→</span>
                               </>
                             )}
-                            <span className="font-mono font-bold text-blue-600 text-sm">{item.version_number}</span>
+                            <span className="font-mono font-bold text-primary-600 text-sm">{item.version_number}</span>
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                               item.version_type === 'factory' ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'
                             }`}>{item.version_type === 'factory' ? '出厂' : '更新'}</span>
@@ -886,8 +886,8 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                               onClick={() => setExpandedUpgradeId(isExpanded ? null : item.id)}
                               className={`text-xs px-2.5 py-1 rounded border transition-colors whitespace-nowrap ${
                                 isExpanded
-                                  ? 'bg-blue-50 text-blue-700 border-blue-300'
-                                  : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600'
+                                  ? 'bg-blue-50 text-primary-700 border-primary-300'
+                                  : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-300 hover:text-primary-600'
                               }`}
                             >
                               {isExpanded ? '收起' : `查看 ${checklist.length} 项`}
@@ -901,9 +901,9 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                       {isExpanded && (
                         <tr>
                           <td colSpan={10} className="bg-blue-50 px-6 py-4 border-b border-blue-100">
-                            <div className="text-xs font-semibold text-blue-700 mb-3 flex items-center gap-2">
+                            <div className="text-xs font-semibold text-primary-700 mb-3 flex items-center gap-2">
                               <span>版本更新检查项核对记录</span>
-                              <span className="font-normal text-blue-500">
+                              <span className="font-normal text-primary-500">
                                 · 已完成 {checklist.filter((i: any) => i.status === 'done').length} / 不涉及 {checklist.filter((i: any) => i.status === 'na').length} / 待确认 {checklist.filter((i: any) => i.status === 'pending').length}
                               </span>
                             </div>
@@ -926,7 +926,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                                                 <img
                                                   src={att.url}
                                                   alt={att.name}
-                                                  className="w-20 h-20 object-cover rounded border border-gray-200 hover:border-blue-400 transition-colors cursor-pointer"
+                                                  className="w-20 h-20 object-cover rounded border border-gray-200 hover:border-primary-400 transition-colors cursor-pointer"
                                                 />
                                               </a>
                                             ) : (
@@ -1009,11 +1009,11 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                   onClick={() => { setActiveTab(tab.id); navigate('?tab=' + tab.id, { replace: true }); }}
                   className={`flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all ${
                     activeTab === tab.id
-                      ? 'bg-white text-blue-600 shadow-sm'
+                      ? 'bg-white text-primary-600 shadow-sm'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  <tab.icon className={`w-4 h-4 mr-2 ${activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'}`} />
+                  <tab.icon className={`w-4 h-4 mr-2 ${activeTab === tab.id ? 'text-primary-600' : 'text-gray-400'}`} />
                   {tab.label}
                 </button>
               ))}
@@ -1048,9 +1048,9 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
 
         {/* 批量操作 */}
         {selectedIssues.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 no-print">
+          <div className="bg-blue-50 border border-primary-200 rounded-lg p-4 no-print">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-700">
+              <span className="text-sm text-primary-700">
                 已选择 {selectedIssues.length} 个问题
               </span>
               <div className="flex space-x-2">
@@ -1084,7 +1084,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 placeholder="搜索问题描述、订单号或简称"
                 value={filters.search || ''}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               />
             </div>
             <div>
@@ -1094,7 +1094,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <select
                 value={filters.customer || ''}
                 onChange={(e) => handleFilterChange('customer', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
                 <option value="">全部客户</option>
                 {customers.map((c) => (
@@ -1111,7 +1111,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <select
                 value={filters.device_type || ''}
                 onChange={(e) => handleFilterChange('device_type', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
                 <option value="">全部产品线</option>
                 {productLines.map((productLine) => (
@@ -1128,7 +1128,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <select
                 value={filters.module || ''}
                 onChange={(e) => handleFilterChange('module', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
                 <option value="">全部模块</option>
                 {allModuleOptions.map((name) => (
@@ -1145,7 +1145,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <select
                 value={filters.severity || ''}
                 onChange={(e) => handleFilterChange('severity', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
                 <option value="">全部严重性</option>
                 <option value="low">低</option>
@@ -1163,7 +1163,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                   console.log('状态筛选器变化:', e.target.value);
                   handleFilterChange('status', e.target.value);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
                 <option value="">全部状态</option>
                 <option value="open">待处理</option>
@@ -1177,7 +1177,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 <select
                   value={filters.classification_id || ''}
                   onChange={(e) => handleFilterChange('classification_id', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                 >
                   <option value="">全部分类</option>
                   {classifications.map(c => (

@@ -126,6 +126,16 @@ const DeviceDetail: React.FC = () => {
   // 出厂资料子文件夹折叠状态（key = category + '/' + folderPath，收录在此集合中表示折叠）
   const [expandedDocFolders, setExpandedDocFolders] = useState<Set<string>>(new Set());
 
+  const [bundleDevices, setBundleDevices] = useState<any[]>([]);
+
+  // 所属多合一：加载成员设备明细
+  useEffect(() => {
+    if (!device?.bundle_id) { setBundleDevices([]); return; }
+    bundleApi.getBundle(Number(device.bundle_id)).then(res => {
+      if (res.success) setBundleDevices(res.data.devices || []);
+    }).catch(() => {});
+  }, [device?.bundle_id]);
+
   // 获取设备详情
   const fetchDevice = async () => {
     if (!id) return;
@@ -904,7 +914,7 @@ const DeviceDetail: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case '生产中':
-        return <ClockIcon className="h-5 w-5 text-blue-500" />;
+        return <ClockIcon className="h-5 w-5 text-primary-500" />;
       case '已发货':
         return <TruckIcon className="h-5 w-5 text-orange-500" />;
       case '使用中(正常)':
@@ -960,14 +970,14 @@ const DeviceDetail: React.FC = () => {
           <div
             key={doc.id}
             style={{ marginLeft: `${depth * 16}px` }}
-            className={`bg-white p-3 rounded-lg shadow-sm border flex items-center justify-between transition-colors ${selectedDocIds.has(doc.id) ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-green-200'}`}
+            className={`bg-white p-3 rounded-lg shadow-sm border flex items-center justify-between transition-colors ${selectedDocIds.has(doc.id) ? 'border-primary-400 bg-blue-50' : 'border-gray-100 hover:border-green-200'}`}
           >
             {docSelectMode && (
               <input
                 type="checkbox"
                 checked={selectedDocIds.has(doc.id)}
                 onChange={() => toggleDocSelect(doc.id)}
-                className="w-4 h-4 text-blue-600 rounded flex-shrink-0 mr-2"
+                className="w-4 h-4 text-primary-600 rounded flex-shrink-0 mr-2"
               />
             )}
             <div
@@ -998,7 +1008,7 @@ const DeviceDetail: React.FC = () => {
               <button onClick={() => handlePreviewDocument(doc.id, doc.original_name, allDocsInCategory, allDocsInCategory.findIndex(d => d.id === doc.id))} className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors" title="阅览">
                 <EyeIcon className="h-5 w-5" />
               </button>
-              <button onClick={() => handleDownloadDocument(doc.id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="下载">
+              <button onClick={() => handleDownloadDocument(doc.id)} className="p-1.5 text-primary-600 hover:bg-blue-50 rounded-md transition-colors" title="下载">
                 <DocumentArrowDownIcon className="h-5 w-5" />
               </button>
               <button onClick={() => handleDeleteDocument(doc.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="删除">
@@ -1173,7 +1183,7 @@ const DeviceDetail: React.FC = () => {
             {/* 倒数第三行: 远程码 | 远程密码 | （空） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">远程码</label>
-              <p className="text-lg font-mono text-blue-600 print:text-base">{device.remote_code || '-'}</p>
+              <p className="text-lg font-mono text-primary-600 print:text-base">{device.remote_code || '-'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">远程密码</label>
@@ -1207,13 +1217,49 @@ const DeviceDetail: React.FC = () => {
           </div>
         </div>
 
+        {/* 所属多合一 · 成员设备明细 */}
+        {device.bundle_id && bundleDevices.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-4 3xl:p-6 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-medium text-gray-900">所属多合一 · 成员设备（{bundleDevices.length}）</h3>
+              <Link to={`/bundles/${device.bundle_id_val || device.bundle_id}`} className="text-sm text-primary-600 hover:text-primary-700">查看多合一详情</Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">生产序列号</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">设备编码</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">产品名称</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">远程码</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">主设备</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {bundleDevices.map((m: any) => (
+                    <tr key={m.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/devices/${m.id}`)}>
+                      <td className="px-4 py-3"><span className="text-primary-600 font-mono font-medium">{m.id}</span></td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{m.device_code || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{m.product_name || '-'}</td>
+                      <td className="px-4 py-3 text-sm font-mono text-gray-700">{m.remote_code || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{Number(m.is_primary) === 1 ? <span className="text-primary-600 font-medium">★ 主设备</span> : '-'}</td>
+                      <td className="px-4 py-3"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(m.status)}`}>{m.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* 统计信息 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 3xl:gap-6">
           <div className="bg-white rounded-lg shadow p-4 3xl:p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
-                  <span className="text-blue-600 font-semibold">M</span>
+                  <span className="text-primary-600 font-semibold">M</span>
                 </div>
               </div>
               <div className="ml-4">
@@ -1274,7 +1320,7 @@ const DeviceDetail: React.FC = () => {
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.key
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                 >
@@ -1305,7 +1351,7 @@ const DeviceDetail: React.FC = () => {
                       <div className="flex items-center justify-center gap-3 mb-3 print:gap-1 print:mb-2">
                         <h4 className="font-semibold text-lg text-gray-900 print:text-sm">{module.module_type}</h4>
                         {(module as any).current_version && (
-                          <span className="px-3 py-1 bg-blue-600 text-white text-sm font-mono font-bold rounded-md shadow-sm print:px-2 print:py-0.5 print:text-xs">
+                          <span className="px-3 py-1 bg-primary-500 text-white text-sm font-mono font-bold rounded-md shadow-sm print:px-2 print:py-0.5 print:text-xs">
                             {(module as any).current_version}
                           </span>
                         )}
@@ -1326,7 +1372,7 @@ const DeviceDetail: React.FC = () => {
                           className={`flex items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors border ${
                             (module as any).current_version
                               ? 'text-purple-600 hover:bg-purple-50 border-purple-200 hover:border-purple-400'
-                              : 'text-blue-600 hover:bg-blue-50 border-blue-200 hover:border-blue-400'
+                              : 'text-primary-600 hover:bg-blue-50 border-primary-200 hover:border-primary-400'
                           }`}
                           title={(module as any).current_version ? '更新版本' : '设置出厂版本'}
                         >
@@ -1390,13 +1436,13 @@ const DeviceDetail: React.FC = () => {
                   </div>
                 </div>
                 {docSelectMode && (
-                  <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                  <div className="flex items-center gap-3 bg-blue-50 border border-primary-200 rounded-lg px-4 py-2">
                     <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
                       <input
                         type="checkbox"
                         checked={selectedDocIds.size === deviceDocuments.length && deviceDocuments.length > 0}
                         onChange={toggleSelectAllDocs}
-                        className="w-4 h-4 text-blue-600 rounded"
+                        className="w-4 h-4 text-primary-600 rounded"
                       />
                       全选
                     </label>
@@ -1436,7 +1482,7 @@ const DeviceDetail: React.FC = () => {
                       const catAllSelected = catSelectedCount === docs.length && docs.length > 0;
                       const catSomeSelected = catSelectedCount > 0 && catSelectedCount < docs.length;
                       return (
-                        <div key={cat} className={`bg-gray-50 rounded-xl border overflow-hidden ${catAllSelected ? 'border-blue-400' : catSomeSelected ? 'border-blue-200' : 'border-gray-200'}`}>
+                        <div key={cat} className={`bg-gray-50 rounded-xl border overflow-hidden ${catAllSelected ? 'border-primary-400' : catSomeSelected ? 'border-primary-200' : 'border-gray-200'}`}>
                           <div className="flex items-center">
                             {docSelectMode && (
                               <label className="flex items-center pl-3 cursor-pointer flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -1455,7 +1501,7 @@ const DeviceDetail: React.FC = () => {
                                       return next;
                                     });
                                   }}
-                                  className="w-4 h-4 text-blue-600 rounded"
+                                  className="w-4 h-4 text-primary-600 rounded"
                                 />
                               </label>
                             )}
@@ -1471,7 +1517,7 @@ const DeviceDetail: React.FC = () => {
                                 <FolderIcon className="h-5 w-5 mr-2 text-green-500" />
                                 {cat} ({docs.length})
                                 {docSelectMode && catSelectedCount > 0 && (
-                                  <span className="ml-2 text-xs font-normal text-blue-600">已选 {catSelectedCount}</span>
+                                  <span className="ml-2 text-xs font-normal text-primary-600">已选 {catSelectedCount}</span>
                                 )}
                               </span>
                               {isExpanded
@@ -1481,7 +1527,7 @@ const DeviceDetail: React.FC = () => {
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDownloadCategory(cat); }}
-                              className="flex items-center gap-1 px-3 py-3 text-blue-600 hover:bg-blue-50 transition-colors text-xs font-medium flex-shrink-0 border-l border-gray-200"
+                              className="flex items-center gap-1 px-3 py-3 text-primary-600 hover:bg-blue-50 transition-colors text-xs font-medium flex-shrink-0 border-l border-gray-200"
                               title={`下载 ${cat} 下所有文件`}
                             >
                               <DocumentArrowDownIcon className="h-4 w-4" />
@@ -1524,7 +1570,7 @@ const DeviceDetail: React.FC = () => {
                       }).map(issue => (
                         <div
                           key={issue.id}
-                          className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 hover:border-blue-200 cursor-pointer transition-colors"
+                          className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 hover:border-primary-200 cursor-pointer transition-colors"
                           onClick={() => navigate(`/issues/${issue.id}`)}
                         >
                           <div className="flex justify-between items-start">
@@ -1553,7 +1599,7 @@ const DeviceDetail: React.FC = () => {
                           </div>
                           <p className="mt-2 text-sm text-gray-800 line-clamp-2">{issue.description}</p>
                           <div className="mt-2 flex justify-end">
-                            <span className="text-xs text-blue-600 hover:underline">查看详情 →</span>
+                            <span className="text-xs text-primary-600 hover:underline">查看详情 →</span>
                           </div>
                         </div>
                       ))}
@@ -1566,7 +1612,7 @@ const DeviceDetail: React.FC = () => {
                   {/* 最近升级记录 */}
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                     <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                      <ClockIcon className="h-5 w-5 mr-2 text-blue-500" />
+                      <ClockIcon className="h-5 w-5 mr-2 text-primary-500" />
                       最近升级历史
                     </h4>
                     <div className="space-y-3">
@@ -1583,7 +1629,7 @@ const DeviceDetail: React.FC = () => {
                                 <span className="text-gray-400">→</span>
                               </>
                             )}
-                            <span className="font-mono font-bold text-blue-600">{upgrade.version_number}</span>
+                            <span className="font-mono font-bold text-primary-600">{upgrade.version_number}</span>
                           </div>
                           <p className="mt-2 text-xs text-gray-600">{upgrade.description || '-'}</p>
                           {upgrade.updated_by && <p className="mt-1 text-xs text-gray-400">操作人: {upgrade.updated_by}</p>}
@@ -1703,32 +1749,32 @@ const DeviceDetail: React.FC = () => {
             <div className="p-4 3xl:p-6 space-y-5 overflow-y-auto flex-1">
               {/* 版本库必选区 */}
               <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-                <label className="block text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                <label className="block text-sm font-semibold text-primary-800 mb-2 flex items-center gap-2">
                   <TagIcon className="h-4 w-4" /> 从发布库勾选正式版本 (必选)
                 </label>
                 {moduleReleases.length === 0 ? (
                   <div className="text-center py-4 text-sm text-gray-500">
-                    暂无可选版本，请先前往<span className="font-semibold text-blue-600">版本发布中心</span>添加版本
+                    暂无可选版本，请先前往<span className="font-semibold text-primary-600">版本发布中心</span>添加版本
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
                     {moduleReleases.map((rel) => (
                       <label key={rel.id} className={`flex items-center justify-between p-2 bg-white rounded border cursor-pointer transition-colors group ${
                         selectedReleaseForVersion?.id === rel.id
-                          ? 'border-blue-500 ring-2 ring-blue-200'
-                          : 'border-blue-200 hover:bg-blue-50'
+                          ? 'border-primary-500 ring-2 ring-blue-200'
+                          : 'border-primary-200 hover:bg-blue-50'
                       }`}>
                         <div className="flex items-center">
                           <input
                             type="radio"
                             name="releaseSelection"
-                            className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="h-4 w-4 text-primary-600 border-gray-300 focus:ring-primary-500/40"
                             checked={selectedReleaseForVersion?.id === rel.id}
                             onChange={() => setSelectedReleaseForVersion(rel)}
                           />
                           <span className="ml-3 text-sm font-bold font-mono text-gray-900">{rel.version_number}</span>
                         </div>
-                        <span className="text-xs text-gray-500 group-hover:text-blue-600">{rel.title}</span>
+                        <span className="text-xs text-gray-500 group-hover:text-primary-600">{rel.title}</span>
                       </label>
                     ))}
                   </div>
@@ -1742,7 +1788,7 @@ const DeviceDetail: React.FC = () => {
                   id="updatedBy"
                   required
                   placeholder="请输入你的姓名"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 outline-none"
                 />
               </div>
 
@@ -1752,7 +1798,7 @@ const DeviceDetail: React.FC = () => {
                   id="versionDescription"
                   rows={4}
                   placeholder="可选：填写版本变更的相关备注说明..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/40 outline-none resize-none"
                 />
               </div>
 
@@ -1812,7 +1858,7 @@ const DeviceDetail: React.FC = () => {
                     });
                   }}
                   disabled={moduleReleases.length === 0 || versionSubmitting}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {versionSubmitting
                     ? '上传中...'
@@ -1859,7 +1905,7 @@ const DeviceDetail: React.FC = () => {
                       name="description"
                       required
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                       placeholder="请描述遇到的问题"
                     />
                   </div>
@@ -1868,7 +1914,7 @@ const DeviceDetail: React.FC = () => {
                     <select
                       name="severity"
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                     >
                       <option value="">请选择严重程度</option>
                       <option value="low">低</option>
@@ -1882,7 +1928,7 @@ const DeviceDetail: React.FC = () => {
                       type="text"
                       name="assignee"
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                       placeholder="请输入负责人姓名"
                     />
                   </div>
@@ -1890,7 +1936,7 @@ const DeviceDetail: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">相关模块（可选）</label>
                     <select
                       name="module_id"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                     >
                       <option value="">设备级别问题</option>
                       {modules.map((module) => (
@@ -1940,7 +1986,7 @@ const DeviceDetail: React.FC = () => {
                 <textarea
                   id="resolutionDescription"
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent"
                   placeholder="请描述问题的解决方案"
                 />
               </div>
@@ -2058,7 +2104,7 @@ const DeviceDetail: React.FC = () => {
                         }}
                       />
                     </label>
-                    <label className="inline-flex items-center px-3 py-1 bg-white border border-gray-300 rounded-md text-xs font-medium text-blue-600 hover:bg-gray-50 cursor-pointer mt-1">
+                    <label className="inline-flex items-center px-3 py-1 bg-white border border-gray-300 rounded-md text-xs font-medium text-primary-600 hover:bg-gray-50 cursor-pointer mt-1">
                       <FolderIcon className="h-3.5 w-3.5 mr-1" />
                       添加文件夹
                       <input
@@ -2100,7 +2146,7 @@ const DeviceDetail: React.FC = () => {
                           }}
                         />
                       </label>
-                      <label className="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm font-medium text-blue-600 hover:bg-gray-50 cursor-pointer">
+                      <label className="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm font-medium text-primary-600 hover:bg-gray-50 cursor-pointer">
                         <FolderIcon className="h-4 w-4 mr-1" />
                         选择文件夹
                         <input
@@ -2204,7 +2250,7 @@ const DeviceDetail: React.FC = () => {
       {bgUpload && (
         <div className={`fixed bottom-6 right-6 z-50 bg-white rounded-2xl shadow-2xl border w-80 overflow-hidden ${bgUpload.failedFiles?.length ? 'border-yellow-300' : 'border-gray-200'}`}>
           <div
-            className={`h-1.5 transition-all duration-300 ${bgUpload.error ? 'bg-red-500' : bgUpload.done ? (bgUpload.failedFiles?.length ? 'bg-yellow-400' : 'bg-green-500') : 'bg-blue-500'}`}
+            className={`h-1.5 transition-all duration-300 ${bgUpload.error ? 'bg-red-500' : bgUpload.done ? (bgUpload.failedFiles?.length ? 'bg-yellow-400' : 'bg-green-500') : 'bg-primary-500'}`}
             style={{ width: `${bgUpload.progress}%` }}
           />
           <div className="px-4 py-3 flex items-start gap-3">
@@ -2216,7 +2262,7 @@ const DeviceDetail: React.FC = () => {
                   ? <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
                   : <CheckCircleIcon className="h-5 w-5 text-green-500" />
               ) : (
-                <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
+                <svg className="animate-spin h-5 w-5 text-primary-600" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
@@ -2249,7 +2295,7 @@ const DeviceDetail: React.FC = () => {
               ) : !bgUpload.error && !bgUpload.done && (
                 <div className="mt-2 bg-gray-100 rounded-full h-1.5">
                   <div
-                    className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                    className="bg-primary-500 h-1.5 rounded-full transition-all duration-300"
                     style={{ width: `${bgUpload.progress}%` }}
                   />
                 </div>
@@ -2319,7 +2365,7 @@ const DeviceDetail: React.FC = () => {
               <div className="flex-1 min-w-0 flex items-center justify-center overflow-auto bg-gray-800">
                 {previewDoc.loading ? (
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-8 h-8 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
                     <span className="text-gray-400 text-sm">加载中...</span>
                   </div>
                 ) : previewDoc.type === 'image' ? (
@@ -2375,7 +2421,7 @@ const DeviceDetail: React.FC = () => {
                         key={d.id}
                         onClick={() => handlePreviewDocument(d.id, d.original_name, previewDoc.catDocs, i)}
                         className={`flex-shrink-0 w-14 h-14 rounded overflow-hidden border-2 transition-colors ${
-                          i === previewDoc.catIndex ? 'border-blue-400' : 'border-gray-600 hover:border-gray-400'
+                          i === previewDoc.catIndex ? 'border-primary-400' : 'border-gray-600 hover:border-gray-400'
                         }`}
                         title={d.title || d.original_name}
                       >

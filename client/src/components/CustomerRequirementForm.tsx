@@ -120,7 +120,7 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
     }
   };
 
-  const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
+  const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -190,7 +190,7 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
               <div className="max-h-48 overflow-y-auto p-2">
                 {filteredDevices.map(d => (
                   <label key={d.id} className="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer select-none hover:bg-gray-50">
-                    <input type="checkbox" checked={deviceIds.includes(d.id)} onChange={() => toggleDevice(d.id)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    <input type="checkbox" checked={deviceIds.includes(d.id)} onChange={() => toggleDevice(d.id)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40" />
                     <span className="text-sm text-gray-800">
                       {d.name || d.id}
                       {d.nickname ? <span className="text-gray-400 ml-1">({d.nickname})</span> : null}

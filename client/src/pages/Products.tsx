@@ -152,14 +152,14 @@ const Products: React.FC = () => {
                         <div className="flex items-center bg-gray-100 rounded-lg p-1">
                             <button
                                 onClick={() => setViewMode('grid')}
-                                className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
                                 title="方块视图"
                             >
                                 <Squares2X2Icon className="h-5 w-5" />
                             </button>
                             <button
                                 onClick={() => setViewMode('list')}
-                                className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
                                 title="列表视图"
                             >
                                 <ListBulletIcon className="h-5 w-5" />
@@ -184,7 +184,7 @@ const Products: React.FC = () => {
                         <select
                             value={productLineId || ''}
                             onChange={handleLineChange}
-                            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary-500/40"
                         >
                             <option value="">全部产品线</option>
                             {productLines.map(line => (
@@ -203,7 +203,7 @@ const Products: React.FC = () => {
                         <p className="text-gray-500 mb-4">暂无产品数据</p>
                         <button
                             onClick={handleAddProduct}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                            className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors"
                         >
                             创建第一个产品
                         </button>
@@ -228,7 +228,7 @@ const Products: React.FC = () => {
                                         {product.is_active ? '启用' : '停用'}
                                     </button>
                                 </div>
-                                <p className="text-xs text-blue-600 font-medium mb-2">{product.product_line_name}</p>
+                                <p className="text-xs text-primary-600 font-medium mb-2">{product.product_line_name}</p>
                                 <p className="text-sm text-gray-500 mb-4 font-mono">{product.model || '未设定型号'}</p>
                                 <p className="text-sm text-gray-600 mb-6 line-clamp-2 h-10">{product.description || '暂无描述'}</p>
                                 <div className="pt-4 border-t border-gray-50">
@@ -236,7 +236,7 @@ const Products: React.FC = () => {
                                         <Link
                                             to={`/products/${product.id}`}
                                             onClick={(e) => e.stopPropagation()}
-                                            className="flex-1 text-center px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded text-sm font-medium transition-colors"
+                                            className="flex-1 text-center px-3 py-1.5 text-primary-600 bg-blue-50 hover:bg-blue-100 rounded text-sm font-medium transition-colors"
                                         >
                                             配置详情
                                         </Link>
@@ -273,7 +273,7 @@ const Products: React.FC = () => {
                             >
                                 <div className="flex items-center gap-5 flex-1 min-w-0">
                                     {/* 型号标签 */}
-                                    <div className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold font-mono text-sm min-w-[120px] text-center shadow-sm shrink-0">
+                                    <div className="bg-primary-500 text-white px-3 py-1.5 rounded-lg font-bold font-mono text-sm min-w-[120px] text-center shadow-sm shrink-0">
                                         {product.model || '未设定型号'}
                                     </div>
                                     {/* 名称 + 产品线 + 描述 */}
@@ -291,7 +291,7 @@ const Products: React.FC = () => {
                                             </button>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <span className="text-xs text-blue-600 font-medium">{product.product_line_name}</span>
+                                            <span className="text-xs text-primary-600 font-medium">{product.product_line_name}</span>
                                             <span className="text-sm text-gray-500 truncate">{product.description || '暂无描述'}</span>
                                         </div>
                                     </div>
@@ -300,7 +300,7 @@ const Products: React.FC = () => {
                                     <Link
                                         to={`/products/${product.id}`}
                                         onClick={(e) => e.stopPropagation()}
-                                        className="text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 hover:bg-blue-100 rounded-lg transition-colors text-sm whitespace-nowrap"
+                                        className="text-primary-600 hover:text-primary-700 font-medium px-3 py-1.5 hover:bg-blue-100 rounded-lg transition-colors text-sm whitespace-nowrap"
                                     >
                                         配置详情
                                     </Link>

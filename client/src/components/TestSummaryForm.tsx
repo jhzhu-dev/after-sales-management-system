@@ -58,14 +58,14 @@ const TestSummaryForm: React.FC<TestSummaryFormProps> = ({ taskId, onSubmitted }
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-base font-semibold text-gray-900 mb-4">提交测试总结（上海）</h2>
 
-      {msg && <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md text-blue-700 text-sm">{msg}</div>}
+      {msg && <div className="mb-3 p-3 bg-blue-50 border border-primary-200 rounded-md text-primary-700 text-sm">{msg}</div>}
 
       <label className="block text-sm text-gray-600 mb-1">测试总结 <span className="text-red-500">*</span></label>
       <textarea
         value={testSummary}
         onChange={e => setTestSummary(e.target.value)}
         rows={4}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
         placeholder="填写测试结果、结论与说明..."
       />
 
