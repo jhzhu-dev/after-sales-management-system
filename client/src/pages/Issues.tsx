@@ -829,7 +829,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
               <thead className="bg-muted backdrop-blur border-b border-border sticky top-0 z-10">
                 <tr>
                   {['订单号','设备简称','客户','模块类型','版本号','变更说明','操作人','发布日期','检查项'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>

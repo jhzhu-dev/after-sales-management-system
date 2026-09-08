@@ -123,7 +123,7 @@ export default function DataTable<T extends Record<string, any>>({
                 <th
                   key={String(column.key)}
                   className={cn(
-                    'text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap',
+                    'text-left text-xs font-semibold text-foreground uppercase tracking-wider whitespace-nowrap',
                     compact ? 'px-3 py-2' : 'px-4 py-2 3xl:px-6 3xl:py-3',
                     column.sortable && 'cursor-pointer hover:bg-muted'
                   )}

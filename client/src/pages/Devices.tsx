@@ -1181,14 +1181,14 @@ export default function Devices() {
               <table className="min-w-full divide-y divide-border text-sm">
                 <thead className="bg-muted">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">生产序列号</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">设备编码</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">订单号 / 简称</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">产品名称</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">客户</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">远程码</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">所属多合一</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">状态</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">生产序列号</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">设备编码</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">订单号 / 简称</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">产品名称</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">客户</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">远程码</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">所属多合一</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">状态</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
