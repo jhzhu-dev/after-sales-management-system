@@ -430,27 +430,27 @@ export default function Settings() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : moduleTypes.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <div className="text-center py-12 bg-muted rounded-2xl">
                 <p className="text-gray-500">暂无模块类型</p>
                 <p className="text-sm text-gray-400 mt-2">点击"新增模块类型"按钮添加</p>
               </div>
             ) : (
-              <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+              <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">代码</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">描述</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关联人员</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">名称</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">代码</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">描述</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">关联人员</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">状态</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">创建时间</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-foreground uppercase tracking-wider">操作</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y divide-border">
                     {moduleTypes.map((moduleType) => (
-                      <tr key={moduleType.id} className="hover:bg-gray-50">
+                      <tr key={moduleType.id} className="hover:bg-muted">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{moduleType.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{moduleType.code}</td>
                         <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{moduleType.description || '-'}</td>
@@ -605,7 +605,7 @@ export default function Settings() {
                         type="button"
                         onClick={handleCloseModal}
                         disabled={submitting}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-muted disabled:opacity-50"
                       >
                         取消
                       </button>
@@ -636,7 +636,7 @@ export default function Settings() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : moduleTypes.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <div className="text-center py-12 bg-muted rounded-2xl">
                 <ClipboardDocumentCheckIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">暂无模块类型，请先添加模块类型</p>
               </div>
@@ -646,9 +646,9 @@ export default function Settings() {
                   const tpl = sopTemplatesMap[mt.id];
                   const isEditing = editingSopTypeId === mt.id;
                   return (
-                    <div key={mt.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div key={mt.id} className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
                       {/* 模块类型行 */}
-                      <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
+                      <div className="flex items-center justify-between px-4 py-3 bg-muted">
                         <div className="flex items-center gap-3">
                           <span className="font-semibold text-gray-800">{mt.name}</span>
                           <span className="text-xs text-gray-400 font-mono">{mt.code}</span>
@@ -687,7 +687,7 @@ export default function Settings() {
 
                       {/* 编辑面板 */}
                       {isEditing && (
-                        <div className="p-4 border-t border-gray-200 bg-white">
+                        <div className="p-4 border-t border-border bg-transparent">
                           {editingItems.length === 0 ? (
                             <p className="text-sm text-gray-400 mb-3">暂无检查项，点击下方按钮添加</p>
                           ) : (
@@ -736,7 +736,7 @@ export default function Settings() {
                               <button
                                 type="button"
                                 onClick={() => { setEditingSopTypeId(null); setEditingItems([]); }}
-                                className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                                className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-muted"
                               >
                                 取消
                               </button>
@@ -799,26 +799,26 @@ export default function Settings() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : filteredCustomersList.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <div className="text-center py-12 bg-muted rounded-2xl">
                 <UserGroupIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">暂无客户</p>
                 <p className="text-sm text-gray-400 mt-2">点击"新增客户"按钮添加</p>
               </div>
             ) : (
-              <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+              <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">客户名称</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">简称</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">ID</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">客户名称</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">简称</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">创建时间</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-foreground uppercase tracking-wider">操作</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y divide-border">
                     {filteredCustomersList.map((customer) => (
-                      <tr key={customer.id} className="hover:bg-gray-50">
+                      <tr key={customer.id} className="hover:bg-muted">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customer.id}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{customer.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.short_name}</td>
@@ -896,7 +896,7 @@ export default function Settings() {
                         type="button"
                         onClick={handleCloseCustomerModal}
                         disabled={submitting}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-muted disabled:opacity-50"
                       >
                         取消
                       </button>
@@ -934,24 +934,24 @@ export default function Settings() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : classificationList.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <div className="text-center py-12 bg-muted rounded-2xl">
                 <TagIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">暂无分类</p>
               </div>
             ) : (
-              <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+              <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分类名称</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">排序</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">分类名称</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">排序</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">创建时间</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-foreground uppercase tracking-wider">操作</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y divide-border">
                     {classificationList.map((c) => (
-                      <tr key={c.id} className="hover:bg-gray-50">
+                      <tr key={c.id} className="hover:bg-muted">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-blue-100 text-blue-700">{c.name}</span>
                         </td>
@@ -1025,7 +1025,7 @@ export default function Settings() {
                         type="button"
                         onClick={handleCloseClassificationModal}
                         disabled={submitting}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-muted disabled:opacity-50"
                       >
                         取消
                       </button>
