@@ -29,7 +29,7 @@ const attUrl = (id: number, inline = false) => {
 
 const SectionCard: React.FC<{ title: string; extra?: React.ReactNode; children: React.ReactNode }> = ({ title, extra, children }) => (
   <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
-    <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
+    <div className="flex items-center justify-between px-5 py-3 bg-gray-100 border-b border-gray-200">
       <h2 className="text-sm font-semibold text-gray-800">{title}</h2>
       {extra}
     </div>
@@ -220,7 +220,7 @@ const CustomerRequirementDetail: React.FC = () => {
 
           <div className="mt-4">
             <dt className="text-xs text-gray-500 mb-1">需求详情描述</dt>
-            <dd className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 rounded-md p-3">{data.description}</dd>
+            <dd className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-100 rounded-md p-3">{data.description}</dd>
           </div>
 
           {data.remarks && (

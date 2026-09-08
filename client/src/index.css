@@ -364,6 +364,9 @@ html.dark .hover\:text-gray-900:hover {
 
 /* 深色：浅色强调背景（选中/悬停高亮、状态标签、提示条）转为深色半透明色 */
 html.dark .bg-blue-50,
+html.dark .bg-blue-50\/30,
+html.dark .bg-blue-50\/40,
+html.dark .bg-blue-50\/50,
 html.dark .hover\:bg-blue-50:hover,
 html.dark .hover\:bg-blue-100:hover,
 html.dark .bg-blue-100 {
