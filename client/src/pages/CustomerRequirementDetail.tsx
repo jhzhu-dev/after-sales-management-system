@@ -262,7 +262,7 @@ const CustomerRequirementDetail: React.FC = () => {
                 const reached = i <= currentIndex;
                 return (
                   <React.Fragment key={s}>
-                    {i > 0 && <div className={`flex-1 h-0.5 ${reached ? 'bg-blue-500' : 'bg-gray-200'}`}></div>}
+                    {i > 0 && <div className={`flex-1 h-0.5 ${reached ? 'bg-blue-500' : 'bg-gray-300'}`}></div>}
                     <button
                       type="button"
                       onClick={() => { if (s !== data.status) setTargetStatus(s); }}
@@ -274,11 +274,11 @@ const CustomerRequirementDetail: React.FC = () => {
                         ${current ? 'bg-blue-600 text-white'
                           : done ? 'bg-blue-100 text-blue-600'
                           : selected ? 'bg-white text-blue-700 ring-1 ring-blue-400'
-                          : 'bg-gray-100 text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600'}`}
+                          : 'bg-gray-200 text-gray-500 group-hover:bg-blue-50 group-hover:text-blue-600'}`}
                       >
                         {done ? <CheckIcon className="h-4 w-4" /> : i + 1}
                       </div>
-                      <span className={`mt-1.5 text-[11px] whitespace-nowrap ${current ? 'font-semibold text-blue-700' : done ? 'text-blue-600' : selected ? 'font-medium text-blue-700' : 'text-gray-400'}`}>
+                      <span className={`mt-1.5 text-[11px] whitespace-nowrap ${current ? 'font-semibold text-blue-700' : done ? 'text-blue-600' : selected ? 'font-medium text-blue-700' : 'text-gray-500'}`}>
                         {s}
                       </span>
                     </button>
@@ -337,7 +337,7 @@ const CustomerRequirementDetail: React.FC = () => {
               const atts = byStatus(s);
               const done = STATUSES.indexOf(s) <= currentIndex;
               return (
-                <div key={s} className={`border rounded-md p-3 ${done ? 'border-blue-200 bg-blue-50/40' : 'border-gray-200'}`}>
+                <div key={s} className={`border rounded-md p-3 ${done ? 'border-blue-300 bg-blue-50' : 'border-gray-300 bg-gray-50'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className={`text-sm font-medium ${done ? 'text-blue-700' : 'text-gray-500'}`}>{s}</span>
                     {done && (
