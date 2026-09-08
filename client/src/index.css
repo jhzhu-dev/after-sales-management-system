@@ -302,6 +302,31 @@ html.dark .text-gray-900 {
   color: #f1f5f9;
 }
 
+/* 浅色：加深灰色文字与占位符，提高与白色窗口的对比度 */
+html:not(.dark) .text-gray-300,
+html:not(.dark) .text-gray-400 {
+  color: #6b7280;
+}
+
+html:not(.dark) .text-gray-500 {
+  color: #4b5563;
+}
+
+html:not(.dark) .text-gray-600 {
+  color: #374151;
+}
+
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea {
+  border-color: #cbd5e1;
+}
+
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+  color: #8a94a5;
+}
+
 /* 深色：边框 / 分隔线 */
 html.dark .border-gray-100,
 html.dark .border-gray-200 {
