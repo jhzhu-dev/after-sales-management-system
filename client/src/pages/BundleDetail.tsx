@@ -889,83 +889,85 @@ const BundleDetail: React.FC = () => {
                   <h3 className="text-base font-medium text-gray-900">成员设备列表</h3>
                   <ExportButton onExport={handleExportDevices} />
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">生产序列号</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">设备编码</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">远程码</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">主设备</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">简称</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">产品名称</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">商户号</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">商户密码</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">发货时间</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">待解决问题</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase no-print">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {bundle.devices && bundle.devices.length > 0 ? bundle.devices.map((device: any) => (
-                        <tr key={device.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/devices/${device.id}?from=bundle&bundleId=${id}`)}>  
-                          <td className="px-4 py-3">
-                            <span className="text-primary-600 font-mono font-medium">
-                              {device.id}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">{device.device_code || '-'}</td>
-                          <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                            <input
-                              value={device.remote_code || ''}
-                              onChange={e => handleRemoteChange(device, e.target.value)}
-                              onBlur={() => handleRemoteBlur(device)}
-                              placeholder="远程码"
-                              className="w-28 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-                            />
-                          </td>
-                          <td className="px-4 py-3 no-print" onClick={e => e.stopPropagation()}>
-                            <button
-                              onClick={() => handleTogglePrimary(device)}
-                              className={`text-xs px-2 py-1 rounded border whitespace-nowrap transition-colors ${Number(device.is_primary) === 1 ? 'bg-primary-500 text-white border-blue-600' : 'text-gray-600 border-gray-300 hover:border-primary-400 hover:text-primary-600'}`}
-                            >
-                              {Number(device.is_primary) === 1 ? '★ 主设备' : '设为主设备'}
-                            </button>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{device.nickname || '-'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-900">{device.product_name || '-'}</td>
-                          <td className="px-4 py-3 text-sm font-mono text-gray-700">{bundle.merchant_id || '-'}</td>
-                          <td className="px-4 py-3 text-sm font-mono text-gray-700">{bundle.merchant_password || '-'}</td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(device.status)}`}>
-                              {device.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                            {device.shipped_at ? formatDate(device.shipped_at) : '-'}
-                          </td>
-                          <td className="px-4 py-3">
-                            {device.open_issues ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{device.open_issues}</span>
-                            ) : <span className="text-sm text-gray-400">0</span>}
-                          </td>
-                          <td className="px-4 py-3 no-print" onClick={e => e.stopPropagation()}>
-                            <button
-                              onClick={() => handleRemoveDevice(device.id)}
-                              className="text-xs text-red-500 hover:text-red-700 border border-red-300 hover:border-red-500 rounded px-2 py-1 transition-colors"
-                            >
-                              移出
-                            </button>
-                          </td>
-                        </tr>
-                      )) : (
+                <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
+                  <div className="overflow-x-auto no-scrollbar">
+                    <table className="min-w-full divide-y divide-border text-sm">
+                      <thead className="bg-muted backdrop-blur border-b border-border">
                         <tr>
-                          <td colSpan={12} className="px-4 py-8 text-center text-gray-500">暂无成员设备</td>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">生产序列号</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">设备编码</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">远程码</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">主设备</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">简称</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">产品名称</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">商户号</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">商户密码</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">状态</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">发货时间</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">待解决问题</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider no-print">操作</th>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {bundle.devices && bundle.devices.length > 0 ? bundle.devices.map((device: any) => (
+                          <tr key={device.id} className="hover:bg-muted transition-colors cursor-pointer" onClick={() => navigate(`/devices/${device.id}?from=bundle&bundleId=${id}`)}>
+                            <td className="px-4 py-3">
+                              <span className="text-primary-600 font-mono font-medium">
+                                {device.id}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-foreground">{device.device_code || '-'}</td>
+                            <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                              <input
+                                value={device.remote_code || ''}
+                                onChange={e => handleRemoteChange(device, e.target.value)}
+                                onBlur={() => handleRemoteBlur(device)}
+                                placeholder="远程码"
+                                className="w-28 px-2 py-1 border border-border rounded-lg text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                              />
+                            </td>
+                            <td className="px-4 py-3 no-print" onClick={e => e.stopPropagation()}>
+                              <button
+                                onClick={() => handleTogglePrimary(device)}
+                                className={`text-xs px-2.5 py-1 rounded-lg border whitespace-nowrap transition-colors ${Number(device.is_primary) === 1 ? 'bg-primary-500 text-white border-blue-600' : 'text-muted-foreground border-border hover:border-primary-400 hover:text-primary-600'}`}
+                              >
+                                {Number(device.is_primary) === 1 ? '★ 主设备' : '设为主设备'}
+                              </button>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground">{device.nickname || '-'}</td>
+                            <td className="px-4 py-3 text-sm text-foreground">{device.product_name || '-'}</td>
+                            <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{bundle.merchant_id || '-'}</td>
+                            <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{bundle.merchant_password || '-'}</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(device.status)}`}>
+                                {device.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
+                              {device.shipped_at ? formatDate(device.shipped_at) : '-'}
+                            </td>
+                            <td className="px-4 py-3">
+                              {device.open_issues ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{device.open_issues}</span>
+                              ) : <span className="text-sm text-muted-foreground">0</span>}
+                            </td>
+                            <td className="px-4 py-3 no-print" onClick={e => e.stopPropagation()}>
+                              <button
+                                onClick={() => handleRemoveDevice(device.id)}
+                                className="text-xs text-red-500 hover:text-red-700 border border-red-300 hover:border-red-500 rounded-lg px-2.5 py-1 transition-colors"
+                              >
+                                移出
+                              </button>
+                            </td>
+                          </tr>
+                        )) : (
+                          <tr>
+                            <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">暂无成员设备</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
