@@ -6,6 +6,7 @@ import { deviceApi, moduleApi, feishuApi, issueClassificationApi } from '../serv
 import api from '../services/api';
 import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 import Select from './Select';
+import IssueImportPanel from './IssueImportPanel';
 
 interface UploadedAttachment {
   name: string;
@@ -18,9 +19,11 @@ interface IssueFormProps {
   issue?: Issue | null;
   onClose: () => void;
   onSubmit: (data: IssueFormData) => Promise<void>;
+  onImported?: () => void;
 }
 
-export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) {
+export default function IssueForm({ issue, onClose, onSubmit, onImported }: IssueFormProps) {
+  const [mode, setMode] = useState<'manual' | 'import'>('manual');
   const [formData, setFormData] = useState<IssueFormData>({
     device_id: '',
     module_id: undefined,
@@ -294,11 +297,29 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
+      <div className={`bg-card rounded-2xl border border-border shadow-2xl w-full ${mode === 'import' && !issue ? 'max-w-5xl' : 'max-w-2xl'} max-h-[85vh] overflow-y-auto`}>
+        <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200 gap-3">
           <h3 className="text-lg font-medium text-gray-900">
             {issue ? '编辑问题' : '新增问题'}
           </h3>
+          {!issue && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setMode('manual')}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${mode === 'manual' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                手动登记
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('import')}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${mode === 'import' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                导入反馈单
+              </button>
+            </div>
+          )}
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
@@ -307,10 +328,18 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 3xl:p-6 space-y-4 3xl:space-y-6">
+        {mode === 'import' && !issue ? (
+          <div className="p-4 3xl:p-6">
+            <IssueImportPanel
+              onClose={onClose}
+              onDone={() => { onImported?.(); onClose(); }}
+            />
+          </div>
+        ) : (
+        <form onSubmit={handleSubmit} className="p-4 3xl:p-6 space-y-3 3xl:space-y-4">
           {/* 设备搜索选择 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               设备 <span className="text-red-500">*</span>
             </label>
             <div ref={deviceSearchRef} className="relative">
@@ -388,7 +417,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
 
           {/* 模块选择 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               模块
             </label>
             <Select
@@ -422,14 +451,14 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
 
           {/* 问题描述 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               问题描述 <span className="text-red-500">*</span>
             </label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleInputChange}
-              rows={4}
+              rows={3}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
                 errors.description ? 'border-red-500' : 'border-gray-300'
               }`}
@@ -440,77 +469,65 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
             )}
           </div>
 
-          {/* 紧急程度 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              紧急程度 <span className="text-red-500">*</span>
-            </label>
-            <Select
-              value={formData.severity}
-              onChange={v => handleInputChange({ target: { name: 'severity', value: v } } as any)}
-              options={[{ value: 'high', label: '高' }, { value: 'medium', label: '中' }, { value: 'low', label: '低' }]}
-              className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
-                errors.severity ? 'border-red-500' : 'border-gray-300'
-              }`}
-            />
-            {errors.severity && (
-              <p className="mt-1 text-sm text-red-600">{errors.severity}</p>
-            )}
-          </div>
-
-          {/* 状态 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              状态 <span className="text-red-500">*</span>
-            </label>
-            <Select
-              value={formData.status}
-              onChange={v => handleInputChange({ target: { name: 'status', value: v } } as any)}
-              options={[{ value: 'open', label: '待处理' }, { value: 'in_progress', label: '处理中' }, { value: 'closed', label: '已解决' }]}
-              className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${
-                errors.status ? 'border-red-500' : 'border-gray-300'
-              }`}
-            />
-            {errors.status && (
-              <p className="mt-1 text-sm text-red-600">{errors.status}</p>
-            )}
-          </div>
-
-          {/* 问题分类 */}
-          {classifications.length > 0 && (
+          {/* 紧急程度 / 状态 / 问题分类 / 登记人 —— 紧凑两列布局 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                问题分类
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                紧急程度 <span className="text-red-500">*</span>
               </label>
               <Select
-                value={formData.classification_id ?? ''}
-                onChange={(v) => setFormData(prev => ({ ...prev, classification_id: v ? parseInt(v) : undefined }))}
-                placeholder="不设置"
-                options={[{ value: '', label: '不设置' }, ...classifications.map(c => ({ value: c.id, label: c.name }))]}
-                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                value={formData.severity}
+                onChange={v => handleInputChange({ target: { name: 'severity', value: v } } as any)}
+                options={[{ value: 'high', label: '高' }, { value: 'medium', label: '中' }, { value: 'low', label: '低' }]}
+                className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${errors.severity ? 'border-red-500' : 'border-gray-300'}`}
+              />
+              {errors.severity && <p className="mt-1 text-sm text-red-600">{errors.severity}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                状态 <span className="text-red-500">*</span>
+              </label>
+              <Select
+                value={formData.status}
+                onChange={v => handleInputChange({ target: { name: 'status', value: v } } as any)}
+                options={[{ value: 'open', label: '待处理' }, { value: 'in_progress', label: '处理中' }, { value: 'closed', label: '已解决' }]}
+                className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${errors.status ? 'border-red-500' : 'border-gray-300'}`}
+              />
+              {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
+            </div>
+            {classifications.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  问题分类
+                </label>
+                <Select
+                  value={formData.classification_id ?? ''}
+                  onChange={(v) => setFormData(prev => ({ ...prev, classification_id: v ? parseInt(v) : undefined }))}
+                  placeholder="不设置"
+                  options={[{ value: '', label: '不设置' }, ...classifications.map(c => ({ value: c.id, label: c.name }))]}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                />
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                登记人
+              </label>
+              <input
+                type="text"
+                name="assignee"
+                value={formData.assignee}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                placeholder="请输入登记人"
               />
             </div>
-          )}
-
-          {/* 登记人 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              登记人
-            </label>
-            <input
-              type="text"
-              name="assignee"
-              value={formData.assignee}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              placeholder="请输入登记人"
-            />
           </div>
 
           {/* 反馈信息 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">反馈时间</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">反馈时间</label>
               <input
                 type="datetime-local"
                 name="feedback_time"
@@ -520,7 +537,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">反馈单号</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">反馈单号</label>
               <input
                 type="text"
                 name="feedback_no"
@@ -660,6 +677,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
             <Button type="submit" disabled={loading}>{loading ? '保存中...' : '保存'}</Button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );
