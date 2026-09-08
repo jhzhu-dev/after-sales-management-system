@@ -87,7 +87,7 @@ html.dark body {
   --apple-border-strong: rgba(44, 62, 80, 0.16);
   --apple-shadow: 0 1px 2px rgba(28, 40, 51, 0.05), 0 10px 30px rgba(28, 40, 51, 0.07);
   --apple-shadow-lg: 0 2px 4px rgba(28, 40, 51, 0.06), 0 16px 44px rgba(28, 40, 51, 0.10);
-  --apple-blur: 24px;
+  --apple-blur: 32px;
   /* shadcn 语义令牌（浅色） */
   --background: #f2f3f4;
   --foreground: #1c2833;
@@ -216,8 +216,8 @@ html.dark {
 /* 让卡片/弹窗等 bg-card 表面呈现毛玻璃（配合半透明 --card） */
 .bg-card,
 .bg-popover {
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(32px) saturate(190%);
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
 }
 
 /* Tailwind v4 兼容：保留 flex-* 旧名称（flex-shrink/flex-grow 已改名） */
@@ -261,8 +261,8 @@ html.dark {
 .absolute.inset-0.bg-black\/40,
 .absolute.inset-0.bg-black\/75,
 .fixed.inset-0.bg-gray-500\/75 {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* 深色：背景表面（卡片 / 表格 / 弹窗 / 页面底） */
