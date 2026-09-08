@@ -115,6 +115,8 @@ export interface Issue {
   feedback_time?: string | null;
   feedback_no?: string | null;
   is_first_occurrence?: boolean | number;
+  region?: string | null;
+  occurrence_count?: number | null;
   attachments?: string[];
   created_at: string;
   updated_at: string;
@@ -176,40 +178,79 @@ export interface PaginatedResponse<T> {
 
 // 仪表盘统计类型
 export interface DashboardStats {
-  basicStats: {
-    total_devices: number;
+  kpi: {
     open_issues: number;
-    version_types: number;
-    resolved_this_month: number;
+    high_open_issues: number;
+    issues_created_this_month: number;
+    issues_resolved_this_month: number;
+    resolve_rate_this_month: number;
+    total_devices: number;
+    abnormal_devices: number;
+    active_requirements: number;
+    active_tasks: number;
+    releases_this_month: number;
   };
-  deviceStatusDistribution: Array<{ status: string; count: number }>;
+  issueMonthly: Array<{ month: string; created: number; resolved: number }>;
   issueStatusDistribution: Array<{ status: string; count: number }>;
   issueSeverityDistribution: Array<{ severity: string; count: number }>;
-  versionTypeDistribution: Array<{ version_type: string; count: number }>;
-  deviceTypeDistribution: Array<{
-    type: string;
+  issueCategoryDistribution: Array<{ category: string; count: number }>;
+  assigneeWorkload: Array<{ assignee: string; open_count: number }>;
+  latestHighIssues: Array<{
+    id: string;
+    description: string;
+    severity: string;
+    created_at: string;
+    device_name: string;
+  }>;
+  avgResolutionHours: number | null;
+  deviceStatusDistribution: Array<{ status: string; count: number }>;
+  deviceCustomerDistribution: Array<{ customer: string; count: number }>;
+  deviceProductLineDistribution: Array<{ line: string; count: number }>;
+  abnormalDevices: Array<{ id: string; name: string; customer: string }>;
+  releaseCategoryDistribution: Array<{ category: string; count: number }>;
+  latestReleases: Array<{
+    id: number;
+    version_number: string;
+    title: string;
+    category: string | null;
+    release_date: string;
+    module_type_name: string;
+  }>;
+  requirementStatusDistribution: Array<{ status: string; count: number }>;
+  requirementTypeDistribution: Array<{ type: string; count: number }>;
+  requirementUrgencyDistribution: Array<{ urgency: string; count: number }>;
+  activeRequirements: Array<{
+    id: number;
+    req_code: string;
+    description: string;
+    urgency: string;
+    status: string;
+    customer_name: string;
+  }>;
+  taskStatusDistribution: Array<{ status: string; count: number }>;
+  taskPriorityDistribution: Array<{ priority: string; count: number }>;
+  taskDecisionDistribution: Array<{ decision: string; count: number }>;
+  activeTasks: Array<{
+    id: number;
+    task_code: string;
+    model_name: string | null;
+    status: string;
+    priority: string;
+    product_name: string;
+    planned_completion_date: string | null;
+  }>;
+  kbCategoryDistribution: Array<{
+    category: string;
     count: number;
-    percentage: number;
+    views: number;
+    helpful: number;
   }>;
-  locationStats: Array<{
-    location: string;
-    total: number;
-    normal: number;
-    abnormal: number;
-    maintenance: number;
-  }>;
-  moduleCategoryDistribution: Array<{ category: string; count: number }>;
   recentActivities: Array<{
     type: string;
-    id: number;
+    id: string | number;
     name: string;
     timestamp: string;
     action: string;
-  }>;
-  monthlyTrends: Array<{
-    month: string;
-    count: number;
-    type: string;
   }>;
 }
 
@@ -264,6 +305,8 @@ export interface IssueFormData {
   feedback_time?: string;
   feedback_no?: string;
   is_first_occurrence?: boolean;
+  region?: string;
+  occurrence_count?: number;
   attachments?: string[];
   notes?: string;
   resolution_description?: string;
@@ -597,7 +640,7 @@ export interface DeviceBundleFormData {
 
 export type RequirementType = '接口对接' | '功能定制' | '输出结果定制';
 export type RequirementUrgency = '低' | '中' | '高';
-export type RequirementStatus = '待评估' | '评估中' | '已评估待开发' | '开发中' | '已开发待测试' | '测试中' | '已测试待发布' | '已发布' | '废弃';
+export type RequirementStatus = '需求收集' | '待评估' | '评估中' | '已评估待开发' | '开发中' | '已开发待测试' | '测试中' | '已测试待发布' | '已发布' | '废弃';
 
 export interface CustomerRequirementAttachment {
   id: number;
@@ -662,7 +705,7 @@ export interface CustomerRequirementFormData {
 // ==================== 测试管理 ====================
 
 export type TestTaskStatus = '测试中' | '已测试' | '通过' | '不通过';
-export type TestTaskPriority = '低' | '普通' | '高' | '紧急';
+export type TestTaskPriority = '低' | '中' | '高';
 export type UpgradeDecision = '待定' | '升级' | '不升级';
 
 export interface TestTaskAttachment {

@@ -35,6 +35,8 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
     feedback_time: '',
     feedback_no: '',
     is_first_occurrence: false,
+    region: '',
+    occurrence_count: undefined,
     notes: ''
   });
   const [devices, setDevices] = useState<Array<{id: string, name: string, device_code: string, customer_name: string, product_name: string, remote_code: string, nickname: string}>>([]); 
@@ -101,6 +103,8 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
         feedback_time: (issue as any).feedback_time || '',
         feedback_no: (issue as any).feedback_no || '',
         is_first_occurrence: !!(issue as any).is_first_occurrence,
+        region: (issue as any).region || '',
+        occurrence_count: (issue as any).occurrence_count ?? undefined,
         notes: issue.resolution_description || ''
       });
       // 编辑模式下不恢复飞书通知状态（每次创建才触发通知）
@@ -223,7 +227,11 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
       setNotifyOpenIds(prev => prev.filter(id => !pinnedOpenIds.includes(id)));
       setPinnedOpenIds([]);
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      if (name === 'occurrence_count') {
+        setFormData(prev => ({ ...prev, occurrence_count: value === '' ? undefined : Number(value) }));
+      } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+      }
     }
     
     // 清除相关错误
@@ -545,6 +553,29 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                 placeholder="请输入反馈单号"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">区域</label>
+              <input
+                type="text"
+                name="region"
+                value={formData.region || ''}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                placeholder="请输入区域"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">发生次数</label>
+              <input
+                type="number"
+                name="occurrence_count"
+                value={formData.occurrence_count ?? ''}
+                onChange={handleInputChange}
+                min={0}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                placeholder="请输入发生次数"
               />
             </div>
             <div className="md:col-span-2">

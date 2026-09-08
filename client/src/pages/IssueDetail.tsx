@@ -331,6 +331,18 @@ export default function IssueDetail() {
                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">反馈单号</p>
                 <p className="text-base font-semibold text-gray-900 print:text-sm">{issue.feedback_no || '-'}</p>
               </div>
+              {issue.region && (
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">区域</p>
+                  <p className="text-base font-semibold text-gray-900 print:text-sm">{issue.region}</p>
+                </div>
+              )}
+              {issue.occurrence_count != null && (
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">发生次数</p>
+                  <p className="text-base font-semibold text-gray-900 print:text-sm">{issue.occurrence_count}</p>
+                </div>
+              )}
               <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">是否首次发生</p>
                 <p className="text-base font-semibold text-gray-900 print:text-sm">{issue.is_first_occurrence ? '是' : '否'}</p>

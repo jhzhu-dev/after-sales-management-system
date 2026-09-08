@@ -449,8 +449,8 @@ async function createTables() {
         requirement_type ENUM('接口对接','功能定制','输出结果定制') NOT NULL COMMENT '需求分类',
         proposed_date DATE NOT NULL COMMENT '需求提出日期（区别于系统登记时间，必填）',
         urgency ENUM('低','中','高') DEFAULT '中' COMMENT '紧急程度',
-        status ENUM('待评估','评估中','已评估待开发','开发中','已开发待测试','测试中','已测试待发布','已发布','废弃')
-               DEFAULT '待评估' COMMENT '当前状态',
+        status ENUM('需求收集','待评估','评估中','已评估待开发','开发中','已开发待测试','测试中','已测试待发布','已发布','废弃')
+               DEFAULT '需求收集' COMMENT '当前状态',
         description TEXT NOT NULL COMMENT '需求详情描述',
         publish_version VARCHAR(50) NULL COMMENT '发布版本号（状态=已发布时必填）',
         publish_time DATETIME NULL COMMENT '发布时间（状态=已发布时必填）',
@@ -529,7 +529,7 @@ async function createTables() {
         vehicle_requirements VARCHAR(255) COMMENT '车型要求',
         test_scenarios TEXT COMMENT '测试场景',
         planned_completion_date DATE COMMENT '计划完成时间',
-        priority ENUM('低','普通','高','紧急') DEFAULT '普通' COMMENT '优先级别',
+        priority ENUM('低','中','高') DEFAULT '中' COMMENT '紧急程度',
         shenzhen_requester VARCHAR(64) COMMENT '深圳需求人（飞书 open_id；飞书不可用回退文本，二者其一必填）',
         shenzhen_requester_name VARCHAR(255) COMMENT '深圳需求人显示名（冗余，列表/详情展示用；必填）',
         shanghai_tester VARCHAR(100) COMMENT '上海测试人（手工文本录入）',
@@ -576,6 +576,16 @@ async function createTables() {
       }
     } catch (e) { console.warn('⚠️ customer_requirements.proposed_date 迁移警告:', e.message); }
 
+    // 迁移：客户需求状态增加「需求收集」初始阶段（幂等）
+    try {
+      const [statusCols] = await pool.execute("SHOW COLUMNS FROM customer_requirements LIKE 'status'");
+      const colType = statusCols[0] ? statusCols[0].Type : '';
+      if (colType && colType.includes('待评估') && !colType.includes('需求收集')) {
+        await pool.execute("ALTER TABLE customer_requirements MODIFY COLUMN status ENUM('需求收集','待评估','评估中','已评估待开发','开发中','已开发待测试','测试中','已测试待发布','已发布','废弃') DEFAULT '需求收集' COMMENT '当前状态'");
+        console.log('✅ customer_requirements.status 增加「需求收集」成功');
+      }
+    } catch (e) { console.warn('⚠️ customer_requirements.status ENUM 迁移警告:', e.message); }
+
     try {
       const [nameCols] = await pool.execute("SHOW COLUMNS FROM test_tasks LIKE 'shenzhen_requester_name'");
       if (nameCols.length === 0) {
@@ -600,6 +610,17 @@ async function createTables() {
         console.log('✅ devices.is_primary 字段添加成功');
       }
     } catch (e) { console.warn('⚠️ devices.is_primary 迁移警告:', e.message); }
+
+    // 迁移：test_tasks.priority 统一为 低/中/高
+    try {
+      const [priCols] = await pool.execute("SHOW COLUMNS FROM test_tasks LIKE 'priority'");
+      if (priCols.length > 0 && String(priCols[0].Type).includes('普通')) {
+        await pool.execute("UPDATE test_tasks SET priority = '中' WHERE priority = '普通'");
+        await pool.execute("UPDATE test_tasks SET priority = '高' WHERE priority = '紧急'");
+        await pool.execute("ALTER TABLE test_tasks MODIFY COLUMN priority ENUM('低','中','高') NOT NULL DEFAULT '中' COMMENT '紧急程度'");
+        console.log('✅ test_tasks.priority 统一为 低/中/高');
+      }
+    } catch (e) { console.warn('⚠️ test_tasks.priority 迁移警告:', e.message); }
 
     // ==================== Schema Migrations ====================
 
@@ -723,6 +744,20 @@ async function createTables() {
           console.log('✅ issues 反馈相关字段添加成功');
         }
       } catch (err) { console.warn('⚠️ issues 反馈字段迁移警告:', err.message); }
+
+      // 检查 issues 反馈单模板扩展字段（区域 / 发生次数）
+      try {
+        const [regionCol] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'region'");
+        if (regionCol.length === 0) {
+          await pool.execute("ALTER TABLE issues ADD COLUMN region VARCHAR(100) NULL COMMENT '区域' AFTER feedback_no");
+          console.log('✅ issues.region 字段添加成功');
+        }
+        const [occCol] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'occurrence_count'");
+        if (occCol.length === 0) {
+          await pool.execute("ALTER TABLE issues ADD COLUMN occurrence_count INT DEFAULT NULL COMMENT '发生次数' AFTER region");
+          console.log('✅ issues.occurrence_count 字段添加成功');
+        }
+      } catch (err) { console.warn('⚠️ issues 反馈单扩展字段迁移警告:', err.message); }
 
       // 检查 issues.id 列类型，若为 INT 则迁移为 VARCHAR(50)
       const [issueIdCol] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'id'");

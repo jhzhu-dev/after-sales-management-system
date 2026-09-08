@@ -15,6 +15,7 @@ interface PreviewRow {
   device_code: string;
   severity: string;
   occurrence: string;
+  occurrence_count: number | null;
   description: string;
   assignee: string;
   status: string;
@@ -179,6 +180,8 @@ const IssueImportPanel: React.FC<IssueImportPanelProps> = ({ onClose, onDone }) 
                         <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">行号</th>
                         <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">反馈时间</th>
                         <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">反馈单号</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">区域</th>
+                        <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">发生次数</th>
                         <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">设备编码</th>
                         <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">设备</th>
                         <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-3 py-3">紧急度</th>
@@ -200,6 +203,12 @@ const IssueImportPanel: React.FC<IssueImportPanelProps> = ({ onClose, onDone }) 
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap min-w-[140px]">
                               <input type="text" value={r.feedback_no || ''} onChange={e => setCell(r.rowIndex, { feedback_no: e.target.value })} className={cellInputCls} />
+                            </td>
+                            <td className="px-3 py-2 min-w-[110px]">
+                              <input type="text" value={r.region || ''} onChange={e => setCell(r.rowIndex, { region: e.target.value })} className={cellInputCls} placeholder="区域" />
+                            </td>
+                            <td className="px-3 py-2 min-w-[110px]">
+                              <input type="number" min={0} value={r.occurrence_count ?? ''} onChange={e => setCell(r.rowIndex, { occurrence_count: e.target.value === '' ? null : Number(e.target.value) })} className={cellInputCls} placeholder="次数" />
                             </td>
                             <td className="px-3 py-2 min-w-[160px]">
                               <div className="relative">

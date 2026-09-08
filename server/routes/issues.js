@@ -412,7 +412,9 @@ router.post('/', [
       feedback_time,
       feedback_no,
       is_first_occurrence = false,
-      attachments
+      attachments,
+      region,
+      occurrence_count
     } = req.body;
 
     // 处理module_id，空字符串转为null
@@ -437,12 +439,12 @@ router.post('/', [
       }
     }
 
-    const insertQuery = `feedback_time, feedback_no, is_first_occurrence, attachments
-      )
-      VALUES (?, ?, ?, vice_id, module_id, custom_module_name, category, classification_id, description, severity, status, 
-        assignee, contact_person, contact_phone, is_visit_required, visit_at, attachments
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    const insertQuery = `
+      INSERT INTO issues
+        (id, device_id, module_id, custom_module_name, category, classification_id, description, severity, status,
+         assignee, contact_person, contact_phone, is_visit_required, visit_at, feedback_time, feedback_no,
+         is_first_occurrence, attachments, region, occurrence_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     // 生成 issue ID：ISS + 提交时间 年月日时分秒（北京时间）
@@ -464,7 +466,7 @@ router.post('/', [
 
     await query(insertQuery, [
       issueId, device_id, processedModuleId, processedCustomModuleName, category, classification_id || null, description, severity, status,
-      assignee, contact_person, contact_phone, is_visit_required, visit_at || null, ft, feedback_no || null, is_first_occurrence ? 1 : 0, attachmentsJson
+      assignee, contact_person, contact_phone, is_visit_required, visit_at || null, ft, feedback_no || null, is_first_occurrence ? 1 : 0, attachmentsJson, region || null, occurrence_count || null
     ]);
 
     // ── 两阶段上传：将 pending 附件移动到正式路径 issues/{issueId}/ ──
@@ -593,7 +595,7 @@ router.put('/:id', [
     // 读取更新前的旧值用于变更检测
     const oldIssue = (await query('SELECT status, assignee, assignee_open_id, device_id, module_id FROM issues WHERE id = ?', [id]))[0];
 
-    const allowedFields = ['description', 'severity', 'status', 'category', 'classification_id', 'assignee', 'assignee_open_id', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'feedback_time', 'feedback_no', 'is_first_occurrence', 'attachments', 'resolution_description', 'resolved_at', 'module_id', 'custom_module_name', 'device_id'];
+    const allowedFields = ['description', 'severity', 'status', 'category', 'classification_id', 'assignee', 'assignee_open_id', 'contact_person', 'contact_phone', 'is_visit_required', 'visit_at', 'feedback_time', 'feedback_no', 'is_first_occurrence', 'attachments', 'resolution_description', 'resolved_at', 'module_id', 'custom_module_name', 'device_id', 'region', 'occurrence_count'];
     const updateFields = [];
     const updateValues = [];
 
@@ -967,28 +969,33 @@ router.post('/import/preview', importUpload.single('file'), async (req, res) => 
       if (!['low', 'medium', 'high'].includes(severity)) errors.push('严重程度无效');
       if (!['open', 'in_progress', 'closed'].includes(status)) errors.push('问题状态无效');
 
-      resultRows.push({
-        rowIndex: i + 1,
-        feedback_time: excelDateStr(getRaw(r, '反馈时间')),
-        feedback_no: get(r, '反馈单号'),
-        type: get(r, '类型'),
-        customer: get(r, '客户/地区'),
-        region: get(r, '区域'),
-        device_type: get(r, '设备类型'),
-        device_code: deviceCode,
-        severity,
-        occurrence: get(r, '发生次数'),
-        description: desc,
-        assignee: get(r, '负责人'),
-        status,
-        category: mapCategory(get(r, '问题分类')),
-        note: get(r, '上海补充（处理记录）'),
-        is_first_occurrence: mapFirstOccurrence(get(r, '发生次数')),
-        device_id: device ? device.id : null,
-        device_name: device ? (device.name || device.id) : '',
-        errors,
-      });
-    }
+        // 发生次数
+        const occRaw = clean(get(r, '发生次数'));
+        const occurrence_count = occRaw ? (Number(occRaw) || null) : null;
+
+        resultRows.push({
+          rowIndex: i + 1,
+          feedback_time: excelDateStr(getRaw(r, '反馈时间')),
+          feedback_no: get(r, '反馈单号'),
+          type: get(r, '类型'),
+          customer: get(r, '客户/地区'),
+          region: get(r, '区域'),
+          device_type: get(r, '设备类型'),
+          device_code: deviceCode,
+          severity,
+          occurrence: get(r, '发生次数'),
+          occurrence_count,
+          description: desc,
+          assignee: get(r, '负责人'),
+          status,
+          category: mapCategory(get(r, '问题分类')),
+          note: get(r, '上海补充（处理记录）'),
+          is_first_occurrence: mapFirstOccurrence(get(r, '发生次数')),
+          device_id: device ? device.id : null,
+          device_name: device ? (device.name || device.id) : '',
+          errors,
+        });
+      }
 
     const validCount = resultRows.filter((x) => x.errors.length === 0).length;
     res.json({ success: true, data: { rows: resultRows, total: resultRows.length, validCount } });
@@ -1041,9 +1048,9 @@ router.post('/import/confirm', async (req, res) => {
         const pad = (n) => String(n).padStart(2, '0');
         const issueId = `ISS${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}-${i + 1}`;
         await query(
-          `INSERT INTO issues (id, device_id, description, severity, status, category, assignee, feedback_time, feedback_no, is_first_occurrence, resolution_description)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [issueId, deviceId, r.description, r.severity || 'medium', r.status || 'open', r.category || '其他', r.assignee || null, r.feedback_time, r.feedback_no || null, r.is_first_occurrence ? 1 : 0, r.note || null]
+          `INSERT INTO issues (id, device_id, description, severity, status, category, assignee, feedback_time, feedback_no, is_first_occurrence, resolution_description, region, occurrence_count)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [issueId, deviceId, r.description, r.severity || 'medium', r.status || 'open', r.category || '其他', r.assignee || null, r.feedback_time, r.feedback_no || null, r.is_first_occurrence ? 1 : 0, r.note || null, r.region || null, r.occurrence_count || null]
         );
         imported++;
       } catch (e) {
