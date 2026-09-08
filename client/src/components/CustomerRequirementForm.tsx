@@ -3,7 +3,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import SearchableSelect, { SearchableSelectOption } from './SearchableSelect';
 import { customerRequirementApi, customerApi, deviceApi } from '../services/api';
 import { Button } from '../components/ui/button';
-import { CustomerRequirement, CustomerRequirementFormData, Customer, Device, RequirementType } from '../types';
+import { CustomerRequirement, CustomerRequirementFormData, Customer, Device, RequirementType, RequirementUrgency } from '../types';
 
 interface CustomerRequirementFormProps {
   requirement?: CustomerRequirement | null;
@@ -12,7 +12,7 @@ interface CustomerRequirementFormProps {
 }
 
 const REQ_TYPES: RequirementType[] = ['接口对接', '功能定制', '输出结果定制'];
-const URGENCIES = ['低', '普通', '高', '紧急'] as const;
+const URGENCIES = ['低', '中', '高'] as const;
 
 const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requirement, onClose, onSubmit }) => {
   const isEdit = !!requirement?.id;
@@ -20,7 +20,7 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
   const [customerId, setCustomerId] = useState('');
   const [requirementType, setRequirementType] = useState<RequirementType>('接口对接');
   const [proposedDate, setProposedDate] = useState('');
-  const [urgency, setUrgency] = useState<'低' | '普通' | '高' | '紧急'>('普通');
+  const [urgency, setUrgency] = useState<RequirementUrgency>('中');
   const [description, setDescription] = useState('');
   const [remarks, setRemarks] = useState('');
   const [deviceIds, setDeviceIds] = useState<string[]>([]);

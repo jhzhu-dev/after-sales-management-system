@@ -97,14 +97,16 @@ export function getSeverityColor(severity: string): string {
 }
 
 // 获取需求紧急程度颜色（与运维中心严重性配色保持一致）
-// 低→绿、普通→黄（对应严重性“中”）、高→红（对应严重性“高”）、紧急→深红
+// 低→绿、中/普通→黄（对应严重性“中”）、高→红（对应严重性“高”）、紧急→深红
+// 说明：需求已对齐为 低/中/高；普通/紧急 保留以兼容测试任务优先级
+const urgencyColors: Record<string, string> = {
+  '低': 'text-green-600 bg-green-100',
+  '普通': 'text-yellow-600 bg-yellow-100',
+  '中': 'text-yellow-600 bg-yellow-100',
+  '高': 'text-red-600 bg-red-100',
+  '紧急': 'text-red-700 bg-red-200',
+};
 export function getUrgencyColor(urgency: string): string {
-  const urgencyColors: Record<string, string> = {
-    '低': 'text-green-600 bg-green-100',
-    '普通': 'text-yellow-600 bg-yellow-100',
-    '高': 'text-red-600 bg-red-100',
-    '紧急': 'text-red-700 bg-red-200',
-  };
   return urgencyColors[urgency] || 'text-gray-600 bg-gray-100';
 }
 

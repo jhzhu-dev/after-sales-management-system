@@ -11,7 +11,7 @@ import { CustomerRequirement, CustomerRequirementFormData, Customer } from '../t
 import { formatDate, getUrgencyColor, getRequirementTypeColor } from '../utils';
 
 const REQ_TYPES = ['接口对接', '功能定制', '输出结果定制'];
-const URGENCIES = ['低', '普通', '高', '紧急'];
+const URGENCIES = ['低', '中', '高'];
 const STATUSES = ['待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
 
 const STATUS_COLORS: Record<string, string> = {

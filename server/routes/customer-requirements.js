@@ -26,7 +26,7 @@ const cqUpload = multer({ storage: cqUploadStorage, limits: { fileSize: 50 * 102
 // 允许的状态集合（用于校验）
 const CQ_STATUSES = ['待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
 const REQ_TYPES = ['接口对接', '功能定制', '输出结果定制'];
-const URGENCIES = ['低', '普通', '高', '紧急'];
+const URGENCIES = ['低', '中', '高'];
 
 // 生成需求编号：XQ-YYYYMMDD-NN（当日序号）。必须传 conn（在事务内调用，取最大序号）
 async function generateReqCode(conn) {
@@ -158,7 +158,7 @@ router.post('/', [
     const errors = validationResult(req);
     if (!errors.isEmpty()) return fail(res, 400, '输入数据无效', errors.array());
 
-    const { customer_id, requirement_type, proposed_date, urgency = '普通', description, remarks, device_ids = [] } = req.body;
+    const { customer_id, requirement_type, proposed_date, urgency = '中', description, remarks, device_ids = [] } = req.body;
     const createdBy = (req.user && req.user.username) || 'system';
 
     if (!Array.isArray(device_ids) || device_ids.length === 0) {

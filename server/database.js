@@ -448,7 +448,7 @@ async function createTables() {
         customer_id INT NOT NULL COMMENT '客户名称',
         requirement_type ENUM('接口对接','功能定制','输出结果定制') NOT NULL COMMENT '需求分类',
         proposed_date DATE NOT NULL COMMENT '需求提出日期（区别于系统登记时间，必填）',
-        urgency ENUM('低','普通','高','紧急') DEFAULT '普通' COMMENT '紧急程度',
+        urgency ENUM('低','中','高') DEFAULT '中' COMMENT '紧急程度',
         status ENUM('待评估','评估中','已评估待开发','开发中','已开发待测试','测试中','已测试待发布','已发布','废弃')
                DEFAULT '待评估' COMMENT '当前状态',
         description TEXT NOT NULL COMMENT '需求详情描述',
@@ -592,6 +592,15 @@ async function createTables() {
       }
     } catch (e) { console.warn('⚠️ customer_requirement_attachments.status 迁移警告:', e.message); }
 
+    // 迁移：devices 增加 is_primary（多合一主设备标记）
+    try {
+      const [isPrimaryCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'is_primary'");
+      if (isPrimaryCols.length === 0) {
+        await pool.execute("ALTER TABLE devices ADD COLUMN is_primary BOOLEAN DEFAULT FALSE COMMENT '多合一设备中的主设备标记'");
+        console.log('✅ devices.is_primary 字段添加成功');
+      }
+    } catch (e) { console.warn('⚠️ devices.is_primary 迁移警告:', e.message); }
+
     // ==================== Schema Migrations ====================
 
     // 迁移：将设备类型改为产品线
@@ -703,6 +712,17 @@ async function createTables() {
         await pool.execute("ALTER TABLE issues ADD COLUMN attachments JSON AFTER visit_at");
         console.log('✅ issues 表扩展字段成功');
       }
+
+      // 检查 issues 反馈相关字段
+      try {
+        const [ftCol] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'feedback_time'");
+        if (ftCol.length === 0) {
+          await pool.execute("ALTER TABLE issues ADD COLUMN feedback_time DATETIME NULL COMMENT '反馈时间' AFTER visit_at");
+          await pool.execute("ALTER TABLE issues ADD COLUMN feedback_no VARCHAR(100) NULL COMMENT '反馈单号' AFTER feedback_time");
+          await pool.execute("ALTER TABLE issues ADD COLUMN is_first_occurrence TINYINT(1) DEFAULT 0 COMMENT '是否首次发生' AFTER feedback_no");
+          console.log('✅ issues 反馈相关字段添加成功');
+        }
+      } catch (err) { console.warn('⚠️ issues 反馈字段迁移警告:', err.message); }
 
       // 检查 issues.id 列类型，若为 INT 则迁移为 VARCHAR(50)
       const [issueIdCol] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'id'");

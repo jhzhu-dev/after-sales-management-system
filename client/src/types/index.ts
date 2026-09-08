@@ -43,6 +43,7 @@ export interface Device {
   bundle_id_val?: number | null;
   bundle_code?: string | null;
   bundle_name?: string | null;
+  is_primary?: boolean | number;
   notes?: string | null;
   mechanical_version?: string | null;
   module_total?: number;
@@ -111,6 +112,9 @@ export interface Issue {
   contact_phone?: string;
   is_visit_required: boolean;
   visit_at?: string;
+  feedback_time?: string | null;
+  feedback_no?: string | null;
+  is_first_occurrence?: boolean | number;
   attachments?: string[];
   created_at: string;
   updated_at: string;
@@ -257,6 +261,9 @@ export interface IssueFormData {
   contact_phone?: string;
   is_visit_required?: boolean;
   visit_at?: string;
+  feedback_time?: string;
+  feedback_no?: string;
+  is_first_occurrence?: boolean;
   attachments?: string[];
   notes?: string;
   resolution_description?: string;
@@ -552,6 +559,8 @@ export interface DeviceBundle {
     open_issues: number;
     bundle_documents: number;
   };
+  remote_codes?: string[];
+  primary_set?: boolean;
   created_at: string;
   updated_at: string;
   factory_docs_complete?: boolean | number;
@@ -587,6 +596,7 @@ export interface DeviceBundleFormData {
 // ==================== 客户需求登记 ====================
 
 export type RequirementType = '接口对接' | '功能定制' | '输出结果定制';
+export type RequirementUrgency = '低' | '中' | '高';
 export type RequirementStatus = '待评估' | '评估中' | '已评估待开发' | '开发中' | '已开发待测试' | '测试中' | '已测试待发布' | '已发布' | '废弃';
 
 export interface CustomerRequirementAttachment {
@@ -620,7 +630,7 @@ export interface CustomerRequirement {
   customer_short_name?: string;
   requirement_type: RequirementType;
   proposed_date: string;
-  urgency: '低' | '普通' | '高' | '紧急';
+  urgency: RequirementUrgency;
   status: RequirementStatus;
   description: string;
   publish_version?: string | null;
@@ -643,7 +653,7 @@ export interface CustomerRequirementFormData {
   customer_id: number;
   requirement_type: RequirementType;
   proposed_date: string;
-  urgency: '低' | '普通' | '高' | '紧急';
+  urgency: RequirementUrgency;
   description: string;
   remarks?: string;
   device_ids: string[];
