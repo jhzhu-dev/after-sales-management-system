@@ -79,8 +79,8 @@ export default function Devices() {
   }));
   const [deviceCustomerFilter, setDeviceCustomerFilter] = useState<string>('');
   const [deviceIssueFilter, setDeviceIssueFilter] = useState<string>('');
-  const [deviceCodeFilter, setDeviceCodeFilter] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showBundleFilters, setShowBundleFilters] = useState(false);
   const [bundleFilters, setBundleFilters] = useState({
     page: 1,
     limit: 10,
@@ -173,11 +173,6 @@ export default function Devices() {
       filtered = filtered.filter(device => String(device.customer_id || '') === deviceCustomerFilter);
     }
 
-    // 设备编码过滤
-    if (deviceCodeFilter) {
-      filtered = filtered.filter(device => (device.device_code || '').toLowerCase().includes(deviceCodeFilter.toLowerCase()));
-    }
-
     // 待解决问题过滤
     if (deviceIssueFilter === 'has') {
       filtered = filtered.filter(device => Number(device.open_issues || 0) > 0);
@@ -203,7 +198,7 @@ export default function Devices() {
       total: filtered.length,
       pages: 1
     });
-  }, [allDevices, filters, deviceCustomerFilter, deviceCodeFilter, deviceIssueFilter, sortField, sortOrder]);
+  }, [allDevices, filters, deviceCustomerFilter, deviceIssueFilter, sortField, sortOrder]);
 
   // 初始数据获取
   useEffect(() => {
@@ -352,7 +347,6 @@ export default function Devices() {
     );
     if (filters.type) result = result.filter(d => d.product_line_name === filters.type);
     if (deviceCustomerFilter) result = result.filter(d => String(d.customer_id || '') === deviceCustomerFilter);
-    if (deviceCodeFilter) result = result.filter(d => (d.device_code || '').toLowerCase().includes(deviceCodeFilter.toLowerCase()));
     if (deviceIssueFilter === 'has') result = result.filter(d => Number(d.open_issues || 0) > 0);
     if (deviceIssueFilter === 'none') result = result.filter(d => Number(d.open_issues || 0) === 0);
     if (filters.status) result = result.filter(d => d.status === filters.status);
@@ -513,7 +507,6 @@ export default function Devices() {
   const allFilteredDevices = (() => {
     let filtered = [...allDevices].filter(d => !d.bundle_id);
     if (filters.type) filtered = filtered.filter(d => d.product_line_name === filters.type);
-    if (deviceCodeFilter) filtered = filtered.filter(d => (d.device_code || '').toLowerCase().includes(deviceCodeFilter.toLowerCase()));
     if (deviceCustomerFilter) filtered = filtered.filter(d => String(d.customer_id || '') === deviceCustomerFilter);
     if (deviceIssueFilter === 'has') filtered = filtered.filter(d => Number(d.open_issues || 0) > 0);
     if (deviceIssueFilter === 'none') filtered = filtered.filter(d => Number(d.open_issues || 0) === 0);
@@ -1254,7 +1247,7 @@ export default function Devices() {
             <span className="text-xs">{showFilters ? '▲ 收起' : '▼ 展开'}</span>
           </button>
           {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4 p-2 3xl:p-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4 p-2 3xl:p-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 产品线
@@ -1274,15 +1267,6 @@ export default function Devices() {
                 options={customerFilterOptions}
                 placeholder="全部客户"
                 searchPlaceholder="搜索客户名称或简称"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">设备编码</label>
-              <input
-                value={deviceCodeFilter}
-                onChange={(e) => { setVisibleCount(20); setDeviceCodeFilter(e.target.value); }}
-                placeholder="输入设备编码"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               />
             </div>
             <div>
@@ -1310,7 +1294,6 @@ export default function Devices() {
                 onClick={() => {
                   setFilters(prev => ({ ...prev, page: 1, limit: 20, search: '', type: '', status: '' }));
                   setDeviceCustomerFilter('');
-                  setDeviceCodeFilter('');
                   setDeviceIssueFilter('');
                   setVisibleCount(20);
                 }}
@@ -1384,8 +1367,17 @@ export default function Devices() {
         {!globalSearch && viewMode === 'bundles' && (
         <>
         {/* 多合一设备筛选器 */}
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 no-print">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-10">
+          <button
+            type="button"
+            onClick={() => setShowBundleFilters(f => !f)}
+            className="flex items-center justify-between w-full px-2 py-1.5 text-sm font-medium text-gray-700 hover:text-primary-600"
+          >
+            <span>筛选</span>
+            <span className="text-xs">{showBundleFilters ? '▲ 收起' : '▼ 展开'}</span>
+          </button>
+          {showBundleFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-2 3xl:p-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">客户</label>
               <SearchableSelect
@@ -1426,6 +1418,7 @@ export default function Devices() {
               </button>
             </div>
           </div>
+          )}
         </div>
 
         {/* 多合一设备数据表格 */}
