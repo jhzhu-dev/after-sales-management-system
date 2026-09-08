@@ -253,13 +253,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, productLines, onClos
 
           {/* Buttons */}
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              取消
-            </button>
+            <Button type="button" variant="outline" onClick={onClose}>取消</Button>
             <Button type="submit" disabled={loading}>{loading ? '提交中...' : (product ? '保存' : '创建')}</Button>
           </div>
         </form>

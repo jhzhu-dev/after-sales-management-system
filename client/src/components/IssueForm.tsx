@@ -635,13 +635,7 @@ export default function IssueForm({ issue, onClose, onSubmit }: IssueFormProps) 
 
           {/* 按钮 */}
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              取消
-            </button>
+            <Button type="button" variant="outline" onClick={onClose}>取消</Button>
             <Button type="submit" disabled={loading}>{loading ? '保存中...' : '保存'}</Button>
           </div>
         </form>
