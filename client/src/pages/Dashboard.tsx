@@ -16,6 +16,9 @@ import ProductLineChart from '../components/ProductLineChart';
 import ChartCard from '../components/ChartCard';
 import { formatDate } from '../utils';
 import { useIs1080p } from '../utils';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
 import { 
   BarChart, 
   Bar, 
@@ -117,13 +120,10 @@ export default function Dashboard() {
             <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">系统仪表盘</h1>
             <p className="mt-1 text-sm text-gray-600">实时监控系统运行状态和关键指标</p>
           </div>
-          <button
-            onClick={handlePrint}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-          >
-            <PrinterIcon className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" onClick={handlePrint}>
+            <PrinterIcon className="h-4 w-4" />
             打印
-          </button>
+          </Button>
         </div>
 
         {/* 核心指标卡片 */}
@@ -158,9 +158,10 @@ export default function Dashboard() {
 
         {/* 设备分布统计 */}
         <section>
-          <button
+          <Button
+            variant="ghost"
+            className="w-full justify-between px-0 py-0 mb-4 h-auto"
             onClick={() => toggleSection('distribution')}
-            className="w-full flex items-center justify-between mb-4 text-left"
           >
             <h2 className="text-xl font-semibold text-gray-900">设备分布统计</h2>
             {expandedSections.distribution ? (
@@ -168,7 +169,7 @@ export default function Dashboard() {
             ) : (
               <ChevronDownIcon className="h-5 w-5 text-gray-500" />
             )}
-          </button>
+          </Button>
           
           {expandedSections.distribution && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 3xl:gap-6">
@@ -230,9 +231,10 @@ export default function Dashboard() {
 
         {/* 趋势分析 */}
         <section>
-          <button
+          <Button
+            variant="ghost"
+            className="w-full justify-between px-0 py-0 mb-4 h-auto"
             onClick={() => toggleSection('trends')}
-            className="w-full flex items-center justify-between mb-4 text-left"
           >
             <h2 className="text-xl font-semibold text-gray-900">趋势分析</h2>
             {expandedSections.trends ? (
@@ -240,7 +242,7 @@ export default function Dashboard() {
             ) : (
               <ChevronDownIcon className="h-5 w-5 text-gray-500" />
             )}
-          </button>
+          </Button>
 
           {expandedSections.trends && (
             <ChartCard title="月度活动趋势" description="过去12个月的系统活动统计">
@@ -265,9 +267,10 @@ export default function Dashboard() {
 
         {/* 最近活动 */}
         <section>
-          <button
+          <Button
+            variant="ghost"
+            className="w-full justify-between px-0 py-0 mb-4 h-auto"
             onClick={() => toggleSection('activities')}
-            className="w-full flex items-center justify-between mb-4 text-left"
           >
             <h2 className="text-xl font-semibold text-gray-900">最近活动</h2>
             {expandedSections.activities ? (
@@ -275,10 +278,10 @@ export default function Dashboard() {
             ) : (
               <ChevronDownIcon className="h-5 w-5 text-gray-500" />
             )}
-          </button>
+          </Button>
 
           {expandedSections.activities && (
-            <div className="bg-white rounded-lg shadow-md">
+            <Card className="overflow-hidden">
               <div className="divide-y divide-gray-200">
                 {stats.recentActivities.length > 0 ? (
                   stats.recentActivities.map((activity, index) => (
@@ -305,14 +308,14 @@ export default function Dashboard() {
                         </p>
                       </div>
                       <div className="flex-shrink-0">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        <Badge className={`${
                           activity.type === 'device' ? 'bg-blue-100 text-blue-800' :
                           activity.type === 'issue' ? 'bg-red-100 text-red-800' :
                           'bg-green-100 text-green-800'
                         }`}>
                           {activity.type === 'device' ? '设备' :
                            activity.type === 'issue' ? '问题' : '版本'}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                   ))
@@ -322,7 +325,7 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
           )}
         </section>
       </div>
