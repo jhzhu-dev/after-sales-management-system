@@ -9,6 +9,7 @@ import DeviceForm from '../components/DeviceForm';
 import BundleForm from '../components/BundleForm';
 import ExportButton from '../components/ExportButton';
 import SearchableSelect from '../components/SearchableSelect';
+import { Button } from '../components/ui/button';
 import { exportToExcel } from '../utils/exportUtils';
 import { formatDate, getStatusColor } from '../utils';
 
@@ -1082,22 +1083,19 @@ export default function Devices() {
             </div>
             )}
             {!globalSearch && (viewMode === 'devices' ? (
-              <button
-                onClick={() => handleAddDevice()}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
+              <Button onClick={() => handleAddDevice()}>
+                <PlusIcon className="h-5 w-5" />
                 新增设备
-              </button>
+              </Button>
             ) : (
-              <button
-                onClick={handleAddBundle}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
+              <Button onClick={handleAddBundle}>
+                <PlusIcon className="h-5 w-5" />
                 新建多合一设备
-              </button>
+              </Button>
             ))}
+            <Button variant="outline" size="sm" onClick={() => navigate('/order-import')}>
+              导入订单表
+            </Button>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -1122,13 +1120,10 @@ export default function Devices() {
             <ExportButton
               onExport={viewMode === 'devices' ? handleExport : handleBundleExport}
             />
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <PrinterIcon className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <PrinterIcon className="h-4 w-4" />
               打印
-            </button>
+            </Button>
           </div>
         </div>
 
