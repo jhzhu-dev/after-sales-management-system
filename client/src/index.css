@@ -8,9 +8,9 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans", sans-serif;
   --radius-4xl: 2rem;
   --radius-5xl: 2.5rem;
-  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
-  --shadow-soft-lg: 0 2px 4px rgba(0, 0, 0, 0.04), 0 16px 48px rgba(0, 0, 0, 0.10);
-  --shadow-glass: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(0, 0, 0, 0.08);
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
+  --shadow-soft-lg: 0 2px 4px rgba(15, 23, 42, 0.04), 0 16px 48px rgba(15, 23, 42, 0.09);
+  --shadow-glass: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px rgba(15, 23, 42, 0.07);
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
   --color-primary-200: #bfdbfe;
@@ -58,11 +58,11 @@ html.dark {
 
 body {
   min-height: 100vh;
-  background-color: #eef1f6;
+  background-color: #eaedf1;
   background-image:
-    radial-gradient(1200px 600px at 8% -10%, rgba(148, 163, 184, 0.12), transparent 60%),
-    radial-gradient(1000px 560px at 100% 0%, rgba(203, 213, 225, 0.18), transparent 55%),
-    linear-gradient(180deg, #f4f6fa 0%, #eef1f6 100%);
+    radial-gradient(1200px 600px at 10% -10%, rgba(148, 163, 184, 0.08), transparent 55%),
+    radial-gradient(1000px 560px at 100% 0%, rgba(203, 213, 225, 0.10), transparent 50%),
+    linear-gradient(180deg, #eef0f3 0%, #eaedf1 100%);
   background-attachment: fixed;
   color: #1f2937;
   transition: background-color 0.25s ease, color 0.25s ease;
@@ -80,34 +80,34 @@ html.dark body {
 
 /* Apple 风格设计令牌 */
 :root {
-  --apple-surface: rgba(255, 255, 255, 0.92);
-  --apple-surface-strong: rgba(255, 255, 255, 0.97);
-  --apple-surface-muted: rgba(255, 255, 255, 0.86);
-  --apple-border: rgba(17, 24, 39, 0.14);
-  --apple-border-strong: rgba(17, 24, 39, 0.18);
-  --apple-shadow: 0 1px 3px rgba(17, 24, 39, 0.10), 0 12px 32px rgba(17, 24, 39, 0.10);
-  --apple-shadow-lg: 0 3px 6px rgba(17, 24, 39, 0.10), 0 18px 48px rgba(17, 24, 39, 0.14);
+  --apple-surface: rgba(255, 255, 255, 0.88);
+  --apple-surface-strong: rgba(255, 255, 255, 0.96);
+  --apple-surface-muted: rgba(246, 248, 251, 0.92);
+  --apple-border: rgba(15, 23, 42, 0.08);
+  --apple-border-strong: rgba(15, 23, 42, 0.12);
+  --apple-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 30px rgba(15, 23, 42, 0.06);
+  --apple-shadow-lg: 0 2px 4px rgba(15, 23, 42, 0.06), 0 16px 44px rgba(15, 23, 42, 0.09);
   --apple-blur: 20px;
   /* shadcn 语义令牌（浅色） */
-  --background: #eef1f6;
-  --foreground: #1f2937;
-  --card: rgba(255, 255, 255, 0.95);
-  --card-foreground: #1f2937;
-  --popover: rgba(255, 255, 255, 0.90);
-  --popover-foreground: #1f2937;
-  --primary: #2563eb;
+  --background: #eaedf1;
+  --foreground: #1e293b;
+  --card: #ffffff;
+  --card-foreground: #1e293b;
+  --popover: #ffffff;
+  --popover-foreground: #1e293b;
+  --primary: #3b82f6;
   --primary-foreground: #ffffff;
-  --secondary: rgba(17, 24, 39, 0.04);
-  --secondary-foreground: #1f2937;
-  --muted: rgba(17, 24, 39, 0.05);
-  --muted-foreground: #6b7280;
-  --accent: rgba(59, 130, 246, 0.10);
-  --accent-foreground: #1d4ed8;
+  --secondary: rgba(15, 23, 42, 0.045);
+  --secondary-foreground: #1e293b;
+  --muted: #eef1f4;
+  --muted-foreground: #64748b;
+  --accent: rgba(59, 130, 246, 0.08);
+  --accent-foreground: #2563eb;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: rgba(17, 24, 39, 0.12);
-  --input: rgba(17, 24, 39, 0.14);
-  --ring: rgba(59, 130, 246, 0.5);
+  --border: rgba(15, 23, 42, 0.10);
+  --input: #e2e6ec;
+  --ring: rgba(59, 130, 246, 0.40);
 }
 
 html.dark {
@@ -191,11 +191,11 @@ html.dark {
     @apply text-white;
     background-image: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
     border: none;
-    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.26);
   }
 
   .apple-btn-primary:hover {
-    box-shadow: 0 6px 22px rgba(37, 99, 235, 0.45);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.32);
   }
 
   .apple-input {
@@ -319,12 +319,12 @@ html:not(.dark) .text-gray-600 {
 html:not(.dark) input,
 html:not(.dark) select,
 html:not(.dark) textarea {
-  border-color: #cbd5e1;
+  border-color: #dbe1e8;
 }
 
 html:not(.dark) input::placeholder,
 html:not(.dark) textarea::placeholder {
-  color: #8a94a5;
+  color: #93a2b3;
 }
 
 /* 深色：边框 / 分隔线 */
