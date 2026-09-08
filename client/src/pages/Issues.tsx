@@ -4,6 +4,7 @@ import { PlusIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon
 import { issueApi, customerApi, moduleTypeApi, productLineApi, moduleVersionApi, issueClassificationApi } from '../services/api';
 import { Issue, FilterOptions, IssueFormData, IssueClassification } from '../types';
 import Layout from '../components/Layout';
+import { Button } from '../components/ui/button';
 import KnowledgeBase from '../components/KnowledgeBase';
 import DataTable from '../components/DataTable';
 import IssueForm from '../components/IssueForm';
@@ -1035,20 +1036,14 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
           <ExportButton
             onExport={handleExportIssues}
           />
-          <button
-            onClick={handlePrint}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-          >
-            <PrinterIcon className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" onClick={handlePrint}>
+            <PrinterIcon className="h-4 w-4" />
             打印
-          </button>
-          <button
-            onClick={handleAdd}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-          >
-            <PlusIcon className="h-4 w-4 mr-2" />
+          </Button>
+          <Button onClick={handleAdd}>
+            <PlusIcon className="h-4 w-4" />
             新增问题
-          </button>
+          </Button>
         </div>
 
         {/* 批量操作 */}

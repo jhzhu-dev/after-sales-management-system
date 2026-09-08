@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
+import { Button } from '../components/ui/button';
 import DataTable, { Column } from '../components/DataTable';
 import SearchableSelect, { SearchableSelectOption } from '../components/SearchableSelect';
 import TestTaskForm from '../components/TestTaskForm';
@@ -110,9 +111,9 @@ const TestTasks: React.FC = () => {
             <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">测试管理</h1>
             <p className="mt-1 text-sm text-gray-600">跨区域模型测试任务单管理</p>
           </div>
-          <button onClick={openCreate} className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-            <PlusIcon className="h-4 w-4 mr-2" /> 新建任务单
-          </button>
+          <Button onClick={openCreate}>
+            <PlusIcon className="h-4 w-4" /> 新建任务单
+          </Button>
         </div>
 
         {successMsg && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">{successMsg}</div>}
