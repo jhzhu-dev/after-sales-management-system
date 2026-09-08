@@ -776,16 +776,6 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             </button>
             <div className="flex items-center gap-3">
               <p className="text-sm text-gray-500 whitespace-nowrap">共 {upgradeTotal} 条</p>
-              <ExportButton
-                onExport={handleExportUpgrades}
-              />
-              <button
-                onClick={handlePrint}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              >
-                <PrinterIcon className="h-4 w-4 mr-2" />
-                打印
-              </button>
             </div>
           </div>
           {showUpgradeFilters && (
@@ -1016,6 +1006,15 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 <Button onClick={handleAdd}>
                   <PlusIcon className="h-4 w-4" />
                   新增问题
+                </Button>
+              </div>
+            )}
+            {activeTab === 'upgrades' && (
+              <div className="flex items-center gap-2">
+                <ExportButton onExport={handleExportUpgrades} />
+                <Button variant="outline" size="sm" onClick={handlePrint}>
+                  <PrinterIcon className="h-4 w-4" />
+                  打印
                 </Button>
               </div>
             )}
