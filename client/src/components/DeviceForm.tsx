@@ -11,7 +11,7 @@ interface DeviceFormProps {
   device?: Device | null;
   onClose: () => void;
   onSubmit: (data: DeviceFormData) => Promise<void>;
-  onImported?: () => void;
+  onImported?: (bundleId?: number) => void;
 }
 
 const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onImported }) => {
@@ -410,7 +410,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
           <div className="px-5 py-3 overflow-y-auto flex-1">
             <OrderImportPanel
               onClose={onClose}
-              onDone={() => { onImported?.(); onClose(); }}
+              onDone={(bundleId) => { onImported?.(bundleId); onClose(); }}
             />
           </div>
         ) : (

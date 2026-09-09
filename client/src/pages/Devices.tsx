@@ -270,7 +270,7 @@ export default function Devices() {
       }
     };
     requestAnimationFrame(() => requestAnimationFrame(() => tryScroll(20)));
-  }, [isInitialized, filteredBundles]);
+  }, [isInitialized, filteredBundles, viewMode]);
 
   // 页面可见性变化时重新获取数据
   useEffect(() => {
@@ -628,6 +628,16 @@ export default function Devices() {
   const handleCloseDeviceForm = () => {
     setShowDeviceForm(false);
     setEditingDevice(null);
+  };
+
+  // 订单表导入创建多合一后：刷新设备+多合一列表，并切到多合一列表高亮新记录
+  const handleBundleImported = async (bundleId?: number) => {
+    await Promise.all([fetchAllDevices(), fetchAllBundles()]);
+    if (bundleId) {
+      sessionStorage.setItem('bundles_highlight', String(bundleId));
+      setViewMode('bundles');
+      setSearchParams(p => { p.set('view', 'bundles'); return p; }, { replace: true });
+    }
   };
 
   const handleRowClick = (device: Device) => {
@@ -1549,7 +1559,7 @@ export default function Devices() {
               device={editingDevice}
               onClose={handleCloseDeviceForm}
               onSubmit={handleDeviceSubmit}
-              onImported={fetchAllDevices}
+              onImported={handleBundleImported}
             />
           )
         }
