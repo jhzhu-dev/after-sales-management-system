@@ -40,6 +40,7 @@ const Select: React.FC<SelectProps> = ({
   const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const selectedLabel = useMemo(() => {
     const found = options.find(o => String(o.value) === String(value));
@@ -58,7 +59,9 @@ const Select: React.FC<SelectProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const inContainer = containerRef.current && containerRef.current.contains(e.target as Node);
+      const inPanel = panelRef.current && panelRef.current.contains(e.target as Node);
+      if (!inContainer && !inPanel) {
         setOpen(false);
         setSearch('');
       }
@@ -87,6 +90,7 @@ const Select: React.FC<SelectProps> = ({
   const panel = open && rect ? (
     createPortal(
       <div
+        ref={panelRef}
         className={`bg-popover border border-border rounded-xl shadow-2xl overflow-hidden ${panelClassName}`}
         style={{ position: 'fixed', top: rect.top + 4, left: rect.left, width: rect.width, zIndex: 9999 }}
       >
@@ -109,9 +113,10 @@ const Select: React.FC<SelectProps> = ({
               type="button"
               disabled={disabled}
               onClick={() => handleSelect(o.value)}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-muted disabled:opacity-50 ${
+              className={`w-full text-left px-3 py-2 text-xs whitespace-nowrap truncate hover:bg-muted disabled:opacity-50 ${
                 String(value) === String(o.value) ? 'bg-primary-50 text-primary-700 font-medium' : 'text-foreground'
               }`}
+              title={`${o.label}${o.short_name ? ` (${o.short_name})` : ''}`}
             >
               {o.label}
               {o.short_name && String(o.value) !== '' && (
