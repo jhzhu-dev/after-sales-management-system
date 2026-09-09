@@ -505,8 +505,8 @@ export default function Settings() {
 
             {/* 模块类型表单对话框 */}
             {showModuleTypeModal && (
-              <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 flex items-center justify-center p-4">
-                <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-lg w-full p-4 3xl:p-6">
+              <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-lg flex items-center justify-center p-4">
+                <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-lg w-full p-4 3xl:p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-gray-900">
                       {editingModuleType ? '编辑模块类型' : '新增模块类型'}
@@ -846,8 +846,8 @@ export default function Settings() {
 
             {/* 客户表单对话框 */}
             {showCustomerModal && (
-              <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 flex items-center justify-center p-4">
-                <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-lg w-full p-4 3xl:p-6">
+              <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-lg flex items-center justify-center p-4">
+                <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-lg w-full p-4 3xl:p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-gray-900">
                       {editingCustomer ? '编辑客户' : '新增客户'}
@@ -980,8 +980,8 @@ export default function Settings() {
 
             {/* 分类表单弹窗 */}
             {showClassificationModal && (
-              <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 flex items-center justify-center p-4">
-                <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-md w-full p-6">
+              <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-lg flex items-center justify-center p-4">
+                <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-md w-full p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-gray-900">
                       {editingClassification ? '编辑分类' : '新增分类'}

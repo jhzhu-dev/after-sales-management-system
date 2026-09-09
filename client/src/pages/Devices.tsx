@@ -665,7 +665,7 @@ export default function Devices() {
     );
   };
 
-  const columns = [
+  const deviceColumns = [
     {
       key: 'select' as keyof Device,
       title: (
@@ -716,7 +716,7 @@ export default function Devices() {
           )}
         </div>
       ),
-      width: '240px'
+      width: includeBundleDevices ? '200px' : '240px'
     },
     {
       key: 'product_name' as keyof Device,
@@ -726,7 +726,7 @@ export default function Devices() {
           {record.product_name || '-'}
         </span>
       ),
-      width: '280px'
+      width: includeBundleDevices ? '210px' : '280px'
     },
     {
       key: 'bundle_code' as keyof Device,
@@ -756,7 +756,7 @@ export default function Devices() {
           )}
         </div>
       ),
-      width: '150px'
+      width: includeBundleDevices ? '130px' : '150px'
     },
     {
       key: 'remote_code' as keyof Device,
@@ -851,6 +851,7 @@ export default function Devices() {
     {
       key: 'actions' as keyof Device,
       title: '操作',
+      noShrink: true,
       render: (value: any, record: Device) => (
         <div className="flex items-center space-x-2">
           <Link
@@ -879,6 +880,11 @@ export default function Devices() {
       width: '80px'
     }
   ];
+
+  // 「所属多合一」列仅在开启「包含多合一设备」时显示；显示时压缩部分列宽，保证操作列不溢出
+  const columns = includeBundleDevices
+    ? deviceColumns
+    : deviceColumns.filter(c => c.key !== 'bundle_code');
 
   const BundleSortableHeader = ({ field, title }: { field: string; title: string }) => {
     const isActive = bundleSortField === field;
@@ -998,9 +1004,22 @@ export default function Devices() {
     {
       key: 'remote_code' as keyof DeviceBundle,
       title: <BundleSortableHeader field="remote_code" title="远程码" />,
-      render: (value: string) => {
-        if (!value) return <span className="text-gray-300">—</span>;
-        const display = value.includes(' ') ? value : value.replace(/(\d{3})(?=\d)/g, '$1 ');
+      render: (value: string, record: DeviceBundle) => {
+        const codes: string[] = ((record as any).remote_codes && (record as any).remote_codes.length)
+          ? (record as any).remote_codes
+          : (value ? [value] : []);
+        if (codes.length === 0) return <span className="text-gray-300">—</span>;
+        if (codes.length > 1) {
+          return (
+            <span
+              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200"
+              title={codes.join('、')}
+            >
+              多个远程码
+            </span>
+          );
+        }
+        const display = codes[0].includes(' ') ? codes[0] : codes[0].replace(/(\d{3})(?=\d)/g, '$1 ');
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-white text-primary-600 border border-primary-200">{display}</span>;
       },
       width: '130px'

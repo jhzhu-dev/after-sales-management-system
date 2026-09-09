@@ -10,8 +10,9 @@ import { customerRequirementApi } from '../services/api';
 import { CustomerRequirement, CustomerRequirementFormData, CustomerRequirementAttachment } from '../types';
 import { formatDate, getUrgencyColor, getRequirementTypeColor } from '../utils';
 
-const STATUSES = ['待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
+const STATUSES = ['需求收集', '待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
 const STATUS_COLORS: Record<string, string> = {
+  '需求收集': 'text-teal-600 bg-teal-100',
   '待评估': 'text-gray-600 bg-gray-100',
   '评估中': 'text-blue-600 bg-blue-100',
   '已评估待开发': 'text-indigo-600 bg-indigo-100',
@@ -314,7 +315,7 @@ const CustomerRequirementDetail: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-sm text-gray-600 mb-1">发布时间 <span className="text-red-500">*</span></label>
-                      <input type="datetime-local" value={publishTime} onChange={e => setPublishTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                      <input type="date" value={publishTime ? String(publishTime).slice(0, 10) : ''} onChange={e => setPublishTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
                     </div>
                   </>
                 )}
@@ -413,8 +414,8 @@ const CustomerRequirementDetail: React.FC = () => {
 
       {showSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowSuccess(false)} />
-          <div className="relative z-10 bg-card rounded-2xl border border-border shadow-2xl p-6 w-full max-w-sm mx-4 text-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-lg" onClick={() => setShowSuccess(false)} />
+          <div className="relative z-10 bg-popover rounded-2xl border border-border shadow-soft-lg p-6 w-full max-w-sm mx-4 text-center">
             <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-100 mb-3">
               <CheckIcon className="h-8 w-8 text-green-600" />
             </div>

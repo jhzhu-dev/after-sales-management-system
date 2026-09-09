@@ -7,6 +7,8 @@ export interface Column<T> {
   render?: (value: any, record: T) => React.ReactNode;
   width?: string;
   sortable?: boolean;
+  /** fixedLayout 下不参与压缩，按内容最小宽度完整显示（如操作按钮列） */
+  noShrink?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -26,6 +28,9 @@ interface DataTableProps<T> {
   onLoadMore?: () => void;
   scrollable?: boolean;
   fixedLayout?: boolean;
+  selectable?: boolean;
+  selectedKeys?: Array<string | number>;
+  onSelectionChange?: (keys: Array<string | number>) => void;
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -39,7 +44,10 @@ export default function DataTable<T extends Record<string, any>>({
   compact = false,
   onLoadMore,
   scrollable = false,
-  fixedLayout = false
+  fixedLayout = false,
+  selectable = false,
+  selectedKeys = [],
+  onSelectionChange
 }: DataTableProps<T>) {
   const [sortConfig, setSortConfig] = useState<{
     key: keyof T | null;
@@ -96,6 +104,27 @@ export default function DataTable<T extends Record<string, any>>({
     });
   }, [data, sortConfig]);
 
+  // 勾选逻辑
+  const selectedSet = React.useMemo(() => new Set(selectedKeys), [selectedKeys]);
+  const renderedKeys: Array<string | number> = sortedData.map((r) => r[rowKey] as string | number);
+  const allSelected = renderedKeys.length > 0 && renderedKeys.every((k) => selectedSet.has(k));
+  const someSelected = renderedKeys.some((k) => selectedSet.has(k));
+
+  const toggleAll = () => {
+    if (!onSelectionChange) return;
+    const next = allSelected
+      ? selectedKeys.filter((k) => !renderedKeys.includes(k))
+      : Array.from(new Set([...selectedKeys, ...renderedKeys]));
+    onSelectionChange(next);
+  };
+
+  const toggleRow = (key: string | number) => {
+    if (!onSelectionChange) return;
+    const exists = selectedSet.has(key);
+    const next = exists ? selectedKeys.filter((k) => k !== key) : [...selectedKeys, key];
+    onSelectionChange(next);
+  };
+
   if (loading) {
     return (
       <div className="bg-card rounded-2xl border border-border shadow-soft">
@@ -119,6 +148,17 @@ export default function DataTable<T extends Record<string, any>>({
         <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted backdrop-blur border-b border-border sticky top-0 z-10">
             <tr>
+              {selectable && (
+                <th className={cn('text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap', compact ? 'px-3 py-2' : 'px-4 py-2 3xl:px-6 3xl:py-3')} style={{ width: '44px' }}>
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                    onChange={toggleAll}
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
+                  />
+                </th>
+              )}
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
@@ -171,15 +211,27 @@ export default function DataTable<T extends Record<string, any>>({
                 key={String(record[rowKey])}
                 className={cn(
                   'hover:bg-muted transition-colors duration-150',
-                  onRowClick && 'cursor-pointer'
+                  onRowClick && 'cursor-pointer',
+                  selectedSet.has(record[rowKey] as string | number) && 'bg-primary-50/40'
                 )}
                 onClick={() => onRowClick?.(record)}
               >
+                {selectable && (
+                  <td className={cn('whitespace-nowrap', compact ? 'px-3 py-2.5' : 'px-4 py-3 3xl:px-6 3xl:py-4')} onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedSet.has(record[rowKey] as string | number)}
+                      onChange={() => toggleRow(record[rowKey] as string | number)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
+                    />
+                  </td>
+                )}
                 {columns.map((column) => (
                   <td key={String(column.key)} className={cn(
                     'whitespace-nowrap text-sm text-gray-900',
                     compact ? 'px-3 py-2.5' : 'px-4 py-3 3xl:px-6 3xl:py-4'
-                  )} style={fixedLayout ? { overflow: 'hidden', maxWidth: 0 } : undefined}>
+                  )} style={fixedLayout && !column.noShrink ? { overflow: 'hidden', maxWidth: 0 } : undefined}>
                     {column.render
                       ? column.render(record[column.key], record)
                       : record[column.key]}

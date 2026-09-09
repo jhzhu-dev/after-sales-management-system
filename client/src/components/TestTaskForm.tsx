@@ -24,7 +24,9 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
     target_type: 'product',
     product_ids: [],
     model_name: '',
+    module_category: '',
     model_version: '',
+    current_version: '',
     upgrade_content: '',
     model_features: '',
     test_focus: '',
@@ -103,7 +105,9 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
       target_type: testTask.target_type || 'product',
       product_ids: testTask.product_ids || [],
       model_name: testTask.model_name || '',
+      module_category: testTask.module_category || '',
       model_version: testTask.model_version || '',
+      current_version: testTask.current_version || '',
       upgrade_content: testTask.upgrade_content || '',
       model_features: testTask.model_features || '',
       test_focus: testTask.test_focus || '',
@@ -177,8 +181,8 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-10 bg-card rounded-2xl border border-border shadow-soft-lg w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-lg" onClick={onClose} />
+      <div className="relative z-10 bg-popover rounded-2xl border border-border shadow-soft-lg w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h3 className="text-lg font-semibold text-foreground">{isEdit ? '编辑测试任务单' : '新建测试任务单'}</h3>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600"><XMarkIcon className="h-6 w-6" /></button>
@@ -261,8 +265,8 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
             <div>
               <label className={labelCls}>模块分类</label>
               <Select
-                value={form.model_name || ''}
-                onChange={v => set('model_name', v)}
+                value={form.module_category || ''}
+                onChange={v => set('module_category', v)}
                 placeholder="请选择模块分类"
                 options={[{ value: '', label: '请选择模块分类' }, ...moduleTypes.map(m => ({ value: m.name, label: m.name }))]}
                 className={inputCls}
@@ -271,6 +275,10 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
             <div>
               <label className={labelCls}>测试版本号</label>
               <input value={form.model_version} onChange={e => set('model_version', e.target.value)} className={inputCls} placeholder="填写程序或模型版本号（升级时用于定位产品版本）" />
+            </div>
+            <div>
+              <label className={labelCls}>当前版本</label>
+              <input value={form.current_version || ''} onChange={e => set('current_version', e.target.value)} className={inputCls} placeholder="当前产品版本（升级前的版本）" />
             </div>
             <div>
               <label className={labelCls}>深圳需求人 <span className="text-red-500">*</span></label>
@@ -322,7 +330,7 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
 
           {[
             { key: 'upgrade_content', label: '升级内容' },
-            { key: 'model_features', label: '模型特点' },
+            { key: 'model_features', label: '版本特点' },
             { key: 'test_focus', label: '测试要点' },
             { key: 'test_requirements', label: '测试要求' },
           ].map(({ key, label }) => (

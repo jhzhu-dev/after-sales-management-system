@@ -52,11 +52,11 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachments, initia
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/75" />
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-lg" />
 
       {/* Modal */}
       <div
-        className="relative z-10 flex flex-col bg-card rounded-2xl border border-border shadow-soft-lg max-w-5xl w-full mx-4"
+        className="relative z-10 flex flex-col bg-popover rounded-2xl border border-border shadow-soft-lg max-w-5xl w-full mx-4"
         style={{ maxHeight: '85vh' }}
         onClick={e => e.stopPropagation()}
       >

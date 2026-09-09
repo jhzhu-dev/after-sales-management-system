@@ -374,8 +374,8 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className={`bg-card rounded-2xl border border-border shadow-soft-lg ${mode === 'import' && !device ? 'max-w-5xl' : 'max-w-3xl'} w-full mx-4 max-h-[90vh] flex flex-col`}>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50">
+      <div className={`bg-popover rounded-2xl border border-border shadow-soft-lg ${mode === 'import' && !device ? 'max-w-5xl' : 'max-w-3xl'} w-full mx-4 max-h-[90vh] flex flex-col`}>
         <div className="flex items-center justify-between px-5 py-3 border-b border-border flex-shrink-0 gap-3">
           <h2 className="text-lg font-semibold text-foreground">
             {device ? '编辑设备' : '新增设备'}
