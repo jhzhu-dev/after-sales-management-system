@@ -305,7 +305,7 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className={`bg-card rounded-2xl border border-border shadow-2xl w-full mx-4 ${mode === 'import' && !issue ? 'max-w-7xl' : 'max-w-2xl'} max-h-[88vh] overflow-y-auto`}>
+      <div className={`bg-card rounded-2xl border border-border shadow-2xl w-full mx-4 ${mode === 'import' && !issue ? 'max-w-[1500px]' : 'max-w-2xl'} max-h-[88vh] overflow-y-auto`}>
         <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200 gap-3">
           <h3 className="text-lg font-medium text-gray-900">
             {issue ? '编辑问题' : '新增问题'}
