@@ -54,18 +54,37 @@ router.post('/', [
       return res.status(400).json({ success: false, error: '输入数据无效', details: errors.array() });
     }
 
-    const { name, short_name } = req.body;
+    const name = String(req.body.name || '').trim();
+    const short_name = String(req.body.short_name || '').trim();
+
+    if (!name || !short_name) {
+      return res.status(400).json({ success: false, error: '客户名称和简写不能为空' });
+    }
+    if (short_name.length > 50) {
+      return res.status(400).json({ success: false, error: '客户简写长度不能超过50个字符' });
+    }
+    if (name.length > 255) {
+      return res.status(400).json({ success: false, error: '客户名称长度不能超过255个字符' });
+    }
 
     // 检查简写是否已存在
     const existing = await query('SELECT id FROM customers WHERE short_name = ?', [short_name]);
     if (existing.length > 0) {
-      return res.status(400).json({ success: false, error: '客户简写已存在' });
+      return res.status(400).json({ success: false, error: `客户简写 "${short_name}" 已存在，请更换简写` });
     }
 
-    const result = await query(
-      'INSERT INTO customers (name, short_name) VALUES (?, ?)',
-      [name, short_name]
-    );
+    let result;
+    try {
+      result = await query(
+        'INSERT INTO customers (name, short_name) VALUES (?, ?)',
+        [name, short_name]
+      );
+    } catch (error) {
+      if (error.code === 'ER_DUP_ENTRY') {
+        return res.status(400).json({ success: false, error: `客户简写 "${short_name}" 已存在，请更换简写` });
+      }
+      throw error;
+    }
 
     res.status(201).json({
       success: true,
@@ -90,7 +109,8 @@ router.put('/:id', [
     }
 
     const { id } = req.params;
-    const { name, short_name } = req.body;
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : req.body.name;
+    const short_name = typeof req.body.short_name === 'string' ? req.body.short_name.trim() : req.body.short_name;
 
     // 检查客户是否存在
     const existing = await query('SELECT id, name FROM customers WHERE id = ?', [id]);
@@ -103,7 +123,7 @@ router.put('/:id', [
     if (short_name) {
       const duplicate = await query('SELECT id FROM customers WHERE short_name = ? AND id != ?', [short_name, id]);
       if (duplicate.length > 0) {
-        return res.status(400).json({ success: false, error: '客户简写已被其他客户使用' });
+        return res.status(400).json({ success: false, error: `客户简写 "${short_name}" 已被其他客户使用` });
       }
     }
 
@@ -117,7 +137,14 @@ router.put('/:id', [
     }
 
     updateValues.push(id);
-    await query(`UPDATE customers SET ${updateFields.join(', ')} WHERE id = ?`, updateValues);
+    try {
+      await query(`UPDATE customers SET ${updateFields.join(', ')} WHERE id = ?`, updateValues);
+    } catch (error) {
+      if (error.code === 'ER_DUP_ENTRY') {
+        return res.status(400).json({ success: false, error: `客户简写 "${short_name}" 已被其他客户使用` });
+      }
+      throw error;
+    }
 
     // 客户名称变更时，用 REPLACE() 精准替换 nickname 中的旧客户名，不重算数字后缀
     if (name !== undefined && name !== oldName) {

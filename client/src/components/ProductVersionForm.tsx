@@ -5,6 +5,7 @@ import { ProductVersion, ProductVersionFormData, ProductVersionDocument } from '
 import { productVersionApi } from '../services/api';
 import AttachmentViewer, { Attachment } from './AttachmentViewer';
 import Select from './Select';
+import { confirmDialog } from './DialogHost';
 
 interface ProductVersionFormProps {
     productId: number;
@@ -98,7 +99,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
     };
 
     const handleDeleteDoc = async (docId: number) => {
-        if (!window.confirm('确定要删除此文档吗？')) return;
+        if (!await confirmDialog('确定要删除此文档吗？')) return;
         try {
             await productVersionApi.deleteDocument(docId);
             setExistingDocs(prev => prev.filter(d => d.id !== docId));
@@ -162,8 +163,8 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
 
     return (
     <>
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-2xl w-full mx-4 max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50">
+            <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-2xl w-full mx-4 max-h-[85vh] overflow-y-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
                     <h2 className="text-xl font-semibold text-gray-900">

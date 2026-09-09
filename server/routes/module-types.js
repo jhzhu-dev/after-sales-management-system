@@ -42,7 +42,15 @@ router.get('/', async (req, res) => {
         updated_at
       FROM module_types
       ${whereClause}
-      ORDER BY created_at DESC
+      ORDER BY CASE
+        WHEN name LIKE '%机械%' THEN 0
+        WHEN name LIKE '%电气%' THEN 1
+        WHEN name LIKE '%上位%' THEN 2
+        WHEN name LIKE '%视觉%' THEN 3
+        WHEN name LIKE '%服务器%' THEN 4
+        WHEN name LIKE '%车牌%' THEN 5
+        ELSE 6
+      END, created_at DESC
       LIMIT ${parseInt(limitNum)} OFFSET ${parseInt(offset)}
     `;
     
@@ -84,7 +92,15 @@ router.get('/active', async (req, res) => {
       SELECT id, name, code, description, feishu_user_open_id, feishu_user_name
       FROM module_types
       WHERE is_active = 1
-      ORDER BY name
+      ORDER BY CASE
+        WHEN name LIKE '%机械%' THEN 0
+        WHEN name LIKE '%电气%' THEN 1
+        WHEN name LIKE '%上位%' THEN 2
+        WHEN name LIKE '%视觉%' THEN 3
+        WHEN name LIKE '%服务器%' THEN 4
+        WHEN name LIKE '%车牌%' THEN 5
+        ELSE 6
+      END, name
     `;
     
     const types = await query(typesQuery);

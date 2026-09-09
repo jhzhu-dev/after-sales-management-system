@@ -2,6 +2,7 @@
 import { XMarkIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { DeviceBundle, Device, Customer, NewBundleDevice, FeishuUser } from '../types';
 import { customerApi, deviceApi, bundleApi, productLineApi, productApi, productModuleApi, feishuApi } from '../services/api';
+import { sortByModuleTypeOrder } from '../utils/moduleOrder';
 import { Button } from '../components/ui/button';
 import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 import SearchableSelect from './SearchableSelect';
@@ -240,13 +241,13 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
       let moduleTypes: any[] = [];
       let autoSelectedIds: number[] = [];
       if (modRes.success) {
-        moduleTypes = modRes.data.map((m: any) => ({
+        moduleTypes = sortByModuleTypeOrder(modRes.data.map((m: any) => ({
           id: m.module_type_id,
           name: m.module_type_name,
           code: m.module_type_code,
           is_required: !!m.is_required,
           feishu_user_open_id: m.feishu_user_open_id || null
-        }));
+        })), (m) => m.name);
         autoSelectedIds = moduleTypes.filter((m: any) => m.is_required).map((m: any) => m.id);
       }
       // 计算置顶用户（必选模块关联的飞书用户）

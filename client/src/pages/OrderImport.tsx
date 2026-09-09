@@ -148,7 +148,7 @@ const OrderImport: React.FC = () => {
 
   return (
     <Layout>
-      <div className="p-4 3xl:p-6">
+      <div>
         <button onClick={() => navigate('/devices')} className="inline-flex items-center text-sm text-gray-600 hover:text-primary-600 mb-4">
           <ArrowLeftIcon className="h-4 w-4 mr-1" /> 返回设备管理
         </button>

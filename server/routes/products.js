@@ -259,6 +259,12 @@ router.delete('/:id', async (req, res) => {
         });
     } catch (error) {
         console.error('删除产品失败:', error);
+        if (error.code === 'ER_ROW_IS_REFERENCED' || error.code === 'ER_ROW_IS_REFERENCED_2') {
+            return res.status(400).json({
+                success: false,
+                error: '该产品已关联设备、测试任务或版本记录，无法删除，建议改为停用（编辑中取消勾选启用）'
+            });
+        }
         res.status(500).json({
             success: false,
             error: '删除产品失败',

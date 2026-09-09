@@ -334,15 +334,7 @@ router.post('/', [
       return res.status(400).json({ success: false, error: '版本号不能为空（请直接输入或从版本库选择）' });
     }
 
-    // 检查同一模块的版本号是否已存在
-    const existingVersion = await query(
-      'SELECT id FROM module_versions WHERE module_id = ? AND version_number = ?',
-      [module_id, version_number]
-    );
-    if (existingVersion.length > 0) {
-      console.error(`❌ 版本号冲突: 模块${module_id}已有版本${version_number}`);
-      return res.status(400).json({ success: false, error: `该模块的版本${version_number}已存在，请使用不同的版本号` });
-    }
+    // 允许同一模块重复登记相同版本号（如补登/重登记），不再做唯一性限制
 
     // 生成6位随机ID
     const IDGenerator = require('../../id-generator');

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/ui/button';
-import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PlusIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { Device, DeviceFormData, Customer, FeishuUser } from '../types';
 import { productLineApi, customerApi, productApi, productModuleApi, feishuApi } from '../services/api';
+import { getModuleTypeOrder } from '../utils/moduleOrder';
 import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 import Select from './Select';
 import OrderImportPanel from './OrderImportPanel';
@@ -43,6 +44,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
   const [newCustomerShortName, setNewCustomerShortName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState('');
 
   // 飞书通知
   const [feishuUsers, setFeishuUsers] = useState<FeishuUser[]>([]);
@@ -116,8 +118,13 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
           is_required: !!m.is_required,
           feishu_user_open_id: m.feishu_user_open_id || null
         }));
-        // 排序：可选模块在前，必选模块在后
-        const sorted = [...modules].sort((a: any, b: any) => (a.is_required === b.is_required ? 0 : a.is_required ? 1 : -1));
+        // 排序：按模块类型固定顺序（机械/电气/上位机/视觉/服务器/车牌相机），同序内必选在后
+        const sorted = [...modules].sort((a: any, b: any) => {
+          const oa = getModuleTypeOrder(a.name);
+          const ob = getModuleTypeOrder(b.name);
+          if (oa !== ob) return oa - ob;
+          return a.is_required === b.is_required ? 0 : a.is_required ? 1 : -1;
+        });
         setModuleTypes(sorted);
         // 自动勾选必选模块
         const requiredIds = sorted.filter((m: any) => m.is_required).map((m: any) => m.id);
@@ -159,6 +166,8 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
     setFormData(prev => ({ ...prev, customer_id: customer.id }));
     setCustomerSearch(customer.name);
     setShowCustomerDropdown(false);
+    setErrors(prev => ({ ...prev, customer_id: '' }));
+    setSubmitError('');
   };
 
   const handleClearCustomer = () => {
@@ -183,13 +192,14 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
       } else {
         alert(result.error || '创建客户失败');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('创建客户失败:', error);
-      alert('创建客户失败');
+      alert(error?.response?.data?.error || '创建客户失败');
     }
   };
 
   const handleChange = (field: keyof DeviceFormData, value: string | number | undefined) => {
+    setSubmitError('');
     if (field === 'product_line_id') {
       // 合并成一次 setState，避免覆盖
       setFormData(prev => ({ ...prev, product_line_id: value as string | number, product_id: undefined }));
@@ -322,6 +332,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    setSubmitError('');
     if (!validateForm()) {
       return;
     }
@@ -367,7 +378,14 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
       onClose();
     } catch (error) {
       console.error('保存设备失败:', error);
-      alert('保存设备失败: ' + (error as Error).message);
+      const e = error as Error & { field?: string };
+      if (e.field) {
+        // 字段级冲突（如序列号/设备编码重复）：在对应输入框下方红字提示
+        setErrors(prev => ({ ...prev, [e.field!]: e.message }));
+      } else {
+        // 其他错误：表单顶部统一提示
+        setSubmitError(e.message || '保存设备失败');
+      }
     } finally {
       setLoading(false);
     }
@@ -415,6 +433,12 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
           </div>
         ) : (
         <form onSubmit={handleSubmit} className="px-5 py-3 overflow-y-auto flex-1 space-y-3">
+          {submitError && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
+              <ExclamationCircleIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>{submitError}</span>
+            </div>
+          )}
           {/* 编辑模式：可编辑字段 */}
           {device && (
             <>
@@ -438,9 +462,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
                     type="text"
                     value={formData.device_code || ''}
                     onChange={(e) => handleChange('device_code', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
+                    className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.device_code ? 'border-red-500' : 'border-gray-300'}`}
                     placeholder="请输入设备编码"
                   />
+                  {errors.device_code && <p className="text-red-500 text-xs mt-1">{errors.device_code}</p>}
                 </div>
 
                 {/* 生产序列号 */}
@@ -450,9 +475,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
                     type="text"
                     value={formData.id || ''}
                     onChange={(e) => handleChange('id', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
+                    className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.id ? 'border-red-500' : 'border-gray-300'}`}
                     placeholder="请输入生产序列号"
                   />
+                  {errors.id && <p className="text-red-500 text-xs mt-1">{errors.id}</p>}
                 </div>
 
                 {/* 客户 */}
@@ -475,12 +501,15 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
                       onChange={(v) => {
                         const val = v ? parseInt(v) : undefined;
                         setFormData(prev => ({ ...prev, customer_id: val }));
+                        setErrors(prev => ({ ...prev, customer_id: '' }));
+                        setSubmitError('');
                       }}
                       placeholder="请选择客户"
                       options={customers.map(c => ({ value: c.id, label: `${c.name} (${c.short_name})` }))}
-                      className="w-full px-3 py-1.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
+                      className={`w-full px-3 py-1.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.customer_id ? 'border-red-500' : 'border-gray-300'}`}
                     />
                   )}
+                  {errors.customer_id && <p className="text-red-500 text-xs mt-1">{errors.customer_id}</p>}
                 </div>
 
                 {/* 产品线 / 产品型号 只读展示 */}
@@ -517,9 +546,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
                     type="text"
                     value={formData.remote_code || ''}
                     onChange={(e) => handleChange('remote_code', e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
+                    className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.remote_code ? 'border-red-500' : 'border-gray-300'}`}
                     placeholder="请输入远程码"
                   />
+                  {errors.remote_code && <p className="text-red-500 text-xs mt-1">{errors.remote_code}</p>}
                 </div>
 
                 {/* 远程密码 */}
@@ -583,9 +613,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
                   type="text"
                   value={formData.device_code || ''}
                   onChange={(e) => handleChange('device_code', e.target.value)}
-                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${(errors.identity || errors.device_code) ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="请输入设备编码"
                 />
+                {errors.device_code && <p className="text-red-500 text-xs mt-1">{errors.device_code}</p>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">生产序列号</label>
@@ -593,9 +624,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
                   type="text"
                   value={formData.id || ''}
                   onChange={(e) => handleChange('id', e.target.value)}
-                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${(errors.identity || errors.id) ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="请输入生产序列号"
                 />
+                {errors.id && <p className="text-red-500 text-xs mt-1">{errors.id}</p>}
               </div>
 
               {/* Row 2: 远程码 | 商户号 | 商户密码 */}
@@ -605,10 +637,11 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
                   type="text"
                   value={formData.remote_code || ''}
                   onChange={(e) => handleChange('remote_code', e.target.value)}
-                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.identity ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${(errors.identity || errors.remote_code) ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="请输入远程码"
                 />
-                {errors.identity && <p className="text-red-500 text-xs mt-1 col-span-3">{errors.identity}</p>}
+                {errors.identity && <p className="text-red-500 text-xs mt-1">{errors.identity}</p>}
+                {errors.remote_code && <p className="text-red-500 text-xs mt-1">{errors.remote_code}</p>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">商户号</label>
@@ -632,6 +665,8 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
                       setCustomerSearch(e.target.value);
                       setShowCustomerDropdown(true);
                       if (!e.target.value) setFormData(prev => ({ ...prev, customer_id: undefined }));
+                      setErrors(prev => ({ ...prev, customer_id: '' }));
+                      setSubmitError('');
                     }}
                     onFocus={() => setShowCustomerDropdown(true)}
                     className={`w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.customer_id ? 'border-red-500' : 'border-gray-300'}`}
@@ -706,9 +741,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
                   onChange={(v) => handleChange('product_id', v ? parseInt(v) : undefined)}
                   placeholder={products.length === 0 ? '请先选产品线' : '请选择产品型号'}
                   options={[{ value: '', label: products.length === 0 ? '请先选产品线' : '请选择产品型号' }, ...products.map((p) => ({ value: p.id, label: `${p.name}${p.model ? ` (${p.model})` : ''}` }))]}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm"
+                  className={`w-full px-3 py-1.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.product_id ? 'border-red-500' : 'border-gray-300'}`}
                   disabled={products.length === 0}
                 />
+                {errors.product_id && <p className="text-red-500 text-xs mt-1">{errors.product_id}</p>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">备注</label>

@@ -4,6 +4,7 @@ import './App.css';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import PrivateRoute from './components/PrivateRoute';
+import DialogHost from './components/DialogHost';
 
 const Login = React.lazy(() => import('./pages/Login'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
@@ -22,6 +23,8 @@ const CustomerRequirements = React.lazy(() => import('./pages/CustomerRequiremen
 const CustomerRequirementDetail = React.lazy(() => import('./pages/CustomerRequirementDetail'));
 const TestTasks = React.lazy(() => import('./pages/TestTasks'));
 const TestTaskDetail = React.lazy(() => import('./pages/TestTaskDetail'));
+const OrderImport = React.lazy(() => import('./pages/OrderImport'));
+const KnowledgeBasePage = React.lazy(() => import('./pages/KnowledgeBasePage'));
 
 function App() {
   return (
@@ -29,6 +32,7 @@ function App() {
       <ThemeProvider>
       <Router>
         <div className="App">
+          <DialogHost />
           <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">加载中...</div>}>
             <Routes>
               {/* 公开路由 */}
@@ -42,6 +46,7 @@ function App() {
               <Route path="/bundles/:id" element={<PrivateRoute><BundleDetail /></PrivateRoute>} />
               <Route path="/issues" element={<PrivateRoute><Issues /></PrivateRoute>} />
               <Route path="/issues/:id" element={<PrivateRoute><IssueDetail /></PrivateRoute>} />
+              <Route path="/knowledge" element={<PrivateRoute><KnowledgeBasePage /></PrivateRoute>} />
               <Route path="/releases" element={<PrivateRoute><ReleaseLibrary /></PrivateRoute>} />
               <Route path="/product-lines" element={<PrivateRoute><ProductLines /></PrivateRoute>} />
               <Route path="/products" element={<PrivateRoute><Products /></PrivateRoute>} />
@@ -53,6 +58,7 @@ function App() {
               <Route path="/customer-requirements" element={<PrivateRoute><CustomerRequirements /></PrivateRoute>} />
               <Route path="/customer-requirements/:id" element={<PrivateRoute><CustomerRequirementDetail /></PrivateRoute>} />
               <Route path="/test-tasks" element={<PrivateRoute><TestTasks /></PrivateRoute>} />
+              <Route path="/order-import" element={<PrivateRoute><OrderImport /></PrivateRoute>} />
               <Route path="/test-tasks/:id" element={<PrivateRoute><TestTaskDetail /></PrivateRoute>} />
             </Routes>
           </React.Suspense>

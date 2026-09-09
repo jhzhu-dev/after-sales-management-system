@@ -1,10 +1,10 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { confirmDialog } from '../components/DialogHost';
 import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
-  CogIcon,
   ClipboardDocumentCheckIcon,
   XMarkIcon,
   UserGroupIcon,
@@ -167,7 +167,7 @@ export default function Settings() {
   };
 
   const handleDelete = async (moduleType: ModuleType) => {
-    if (!window.confirm(`确定要删除模块类型"${moduleType.name}"吗？`)) {
+    if (!await confirmDialog(`确定要删除模块类型"${moduleType.name}"吗？`)) {
       return;
     }
 
@@ -249,7 +249,7 @@ export default function Settings() {
   };
 
   const handleDeleteCustomer = async (customer: Customer) => {
-    if (!window.confirm(`确定要删除客户"${customer.name}"吗？`)) {
+    if (!await confirmDialog(`确定要删除客户"${customer.name}"吗？`)) {
       return;
     }
     try {
@@ -321,7 +321,7 @@ export default function Settings() {
   const handleDeleteSopTemplate = async (moduleTypeId: number) => {
     const tpl = sopTemplatesMap[moduleTypeId];
     if (!tpl) return;
-    if (!window.confirm('确定要删除该模块类型的SOP模板吗？')) return;
+    if (!await confirmDialog('确定要删除该模块类型的SOP模板吗？')) return;
     try {
       await sopTemplateApi.delete(tpl.id);
       await fetchSopTemplates();
@@ -386,7 +386,7 @@ export default function Settings() {
   };
 
   const handleDeleteClassification = async (c: IssueClassification) => {
-    if (!window.confirm(`确定删除分类"${c.name}"吗？`)) return;
+    if (!await confirmDialog(`确定删除分类"${c.name}"吗？`)) return;
     try {
       const res = await issueClassificationApi.delete(c.id);
       if (res.success) {
@@ -402,9 +402,8 @@ export default function Settings() {
   return (
     <Layout>
       <div className="space-y-4 3xl:space-y-6">
-        <div className="flex items-center space-x-3">
-          <CogIcon className="h-8 w-8 text-primary-600" />
-          <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">基础设置</h1>
+        <div className="flex items-center h-10">
+          <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">基础设置</h1>
         </div>
 
         <div className="border-b border-gray-200">

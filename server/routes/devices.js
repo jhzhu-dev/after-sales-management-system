@@ -7,7 +7,7 @@ const feishuService = require('../services/feishu-service');
 // 获取所有设备
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 10, type, status, search, bundle_id, unbundled } = req.query;
+    const { page = 1, limit = 10, type, status, search, device_code, bundle_id, unbundled } = req.query;
 
 
     // 参数验证
@@ -31,6 +31,11 @@ router.get('/', async (req, res) => {
     if (search) {
       whereConditions.push('(d.name LIKE ? OR d.id LIKE ? OR d.device_code LIKE ? OR c.name LIKE ? OR d.remote_code LIKE ? OR p.name LIKE ? OR d.nickname LIKE ?)');
       params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    if (device_code) {
+      whereConditions.push('d.device_code LIKE ?');
+      params.push(`%${device_code}%`);
     }
 
     if (bundle_id) {
@@ -168,7 +173,15 @@ router.get('/:id', async (req, res) => {
       LEFT JOIN module_types mt ON m.type_id = mt.id
       LEFT JOIN module_versions mv ON m.id = mv.module_id
       WHERE m.device_id = ?
-      ORDER BY mt.name
+      ORDER BY CASE
+        WHEN mt.name LIKE '%机械%' THEN 0
+        WHEN mt.name LIKE '%电气%' THEN 1
+        WHEN mt.name LIKE '%上位%' THEN 2
+        WHEN mt.name LIKE '%视觉%' THEN 3
+        WHEN mt.name LIKE '%服务器%' THEN 4
+        WHEN mt.name LIKE '%车牌%' THEN 5
+        ELSE 6
+      END, mt.name
         `;
 
     const modules = await query(modulesQuery, [id]);
@@ -263,10 +276,35 @@ router.post('/', [
       });
     }
 
-    const { id, name, device_code, product_line_id, product_id, customer_id, status = '使用中(正常)', remote_code, password, merchant_id, merchant_password, notes } = req.body;
+    let { id, name, device_code, product_line_id, product_id, customer_id, status = '使用中(正常)', remote_code, password, merchant_id, merchant_password, notes } = req.body;
+
+    // 统一去除首尾空格，避免因空格绕过重复校验
+    const trimStr = (v) => (typeof v === 'string' ? v.trim() : v);
+    id = trimStr(id);
+    name = trimStr(name);
+    device_code = trimStr(device_code);
+    remote_code = trimStr(remote_code);
+    password = trimStr(password);
+    merchant_id = trimStr(merchant_id);
+    merchant_password = trimStr(merchant_password);
+    notes = trimStr(notes);
+
+    // 字段长度前置校验（与表结构一致，避免 ER_DATA_TOO_LONG 抛出无明确提示的500）
+    if (id && id.length > 50) {
+      return res.status(400).json({ success: false, error_code: 'DEVICE_ID_TOO_LONG', error: '生产序列号长度不能超过50个字符' });
+    }
+    if (device_code && device_code.length > 100) {
+      return res.status(400).json({ success: false, error_code: 'DEVICE_CODE_TOO_LONG', error: '设备编码长度不能超过100个字符' });
+    }
+    if (remote_code && remote_code.length > 100) {
+      return res.status(400).json({ success: false, error_code: 'REMOTE_CODE_TOO_LONG', error: '远程码长度不能超过100个字符' });
+    }
+    if (name && name.length > 255) {
+      return res.status(400).json({ success: false, error: '订单号长度不能超过255个字符' });
+    }
 
     // 如果提供了ID，使用用户提供的ID，否则自动生成
-    let deviceId = typeof id === 'string' ? id.trim() : id;
+    let deviceId = id;
     if (!deviceId) {
       const IDGenerator = require('../../id-generator');
       const idGenerator = new IDGenerator();
@@ -284,17 +322,68 @@ router.post('/', [
         return res.status(503).json({ success: false, error_code: 'DEVICE_ID_GENERATION_FAILED', error: '自动生成设备ID失败，请重试' });
       }
     } else {
-      // 检查设备ID是否已存在
-      const existingDevice = await query('SELECT id FROM devices WHERE id = ?', [deviceId]);
+      // 检查生产序列号是否已存在（附带客户信息，便于在设备列表中定位冲突记录）
+      const existingDevice = await query(
+        `SELECT d.id, c.name AS customer_name
+         FROM devices d LEFT JOIN customers c ON c.id = d.customer_id
+         WHERE d.id = ?`,
+        [deviceId]
+      );
       if (existingDevice.length > 0) {
-        return res.status(400).json({ success: false, error_code: 'DEVICE_ID_DUPLICATED', error: '设备ID已存在', data: { id: deviceId } });
+        const owner = existingDevice[0].customer_name ? `（客户：${existingDevice[0].customer_name}）` : '';
+        return res.status(400).json({
+          success: false,
+          error_code: 'DEVICE_ID_DUPLICATED',
+          error: `生产序列号 "${deviceId}" 已存在${owner}，请勿重复录入，可在设备列表搜索该序列号定位已有设备`,
+          data: { id: deviceId }
+        });
       }
     }
+
+    // 检查设备编码是否已被其他设备占用（问题单导入按设备编码匹配设备，重复会导致匹配错乱）
+    if (device_code) {
+      const dupCode = await query(
+        `SELECT d.id, c.name AS customer_name
+         FROM devices d LEFT JOIN customers c ON c.id = d.customer_id
+         WHERE d.device_code = ?`,
+        [device_code]
+      );
+      if (dupCode.length > 0) {
+        const owner = dupCode[0].customer_name ? `（客户：${dupCode[0].customer_name}）` : '';
+        return res.status(400).json({
+          success: false,
+          error_code: 'DEVICE_CODE_DUPLICATED',
+          error: `设备编码 "${device_code}" 已被设备 ${dupCode[0].id}${owner} 使用，请勿重复录入`,
+          data: { device_code, device_id: dupCode[0].id }
+        });
+      }
+    }
+
+    // 远程码允许重复（多合一设备的多台成员设备可能共用同一远程码），此处不做唯一校验
 
     // 检查产品线是否存在
     const productLine = await query('SELECT id FROM product_lines WHERE id = ?', [product_line_id]);
     if (productLine.length === 0) {
-      return res.status(400).json({ success: false, error_code: 'PRODUCT_LINE_NOT_FOUND', error: '产品线不存在', data: { product_line_id } });
+      return res.status(400).json({ success: false, error_code: 'PRODUCT_LINE_NOT_FOUND', error: '所选产品线不存在或已被删除，请刷新后重新选择', data: { product_line_id } });
+    }
+
+    // 检查客户是否存在
+    if (customer_id) {
+      const customer = await query('SELECT id FROM customers WHERE id = ?', [customer_id]);
+      if (customer.length === 0) {
+        return res.status(400).json({ success: false, error_code: 'CUSTOMER_NOT_FOUND', error: '所选客户不存在或已被删除，请刷新后重新选择' });
+      }
+    }
+
+    // 检查产品型号是否存在且属于所选产品线
+    if (product_id) {
+      const product = await query('SELECT id, product_line_id FROM products WHERE id = ?', [product_id]);
+      if (product.length === 0) {
+        return res.status(400).json({ success: false, error_code: 'PRODUCT_NOT_FOUND', error: '所选产品型号不存在或已停用，请刷新后重新选择' });
+      }
+      if (product[0].product_line_id !== product_line_id) {
+        return res.status(400).json({ success: false, error_code: 'PRODUCT_LINE_MISMATCH', error: '所选产品型号与产品线不匹配，请重新选择产品型号' });
+      }
     }
 
     const insertQuery = `
@@ -332,7 +421,18 @@ router.post('/', [
       console.warn('生成设备俗称失败:', e.message);
     }
 
-    await query(insertQuery, [deviceId, name ?? null, nickname, device_code || null, product_line_id, product_id || null, customer_id || null, status, remote_code || null, password || null, merchant_id || null, merchant_password || null, notes || null]);
+    try {
+      await query(insertQuery, [deviceId, name ?? null, nickname, device_code || null, product_line_id, product_id || null, customer_id || null, status, remote_code || null, password || null, merchant_id || null, merchant_password || null, notes || null]);
+    } catch (e) {
+      // 并发录入等场景下前置校验后仍可能触发唯一键冲突，需给出具体提示而非500
+      if (e.code === 'ER_DUP_ENTRY') {
+        return res.status(400).json({ success: false, error_code: 'DEVICE_ID_DUPLICATED', error: `生产序列号 "${deviceId}" 已存在，请勿重复录入` });
+      }
+      if (e.code === 'ER_DATA_TOO_LONG') {
+        return res.status(400).json({ success: false, error: '提交内容过长，请检查生产序列号、设备编码、远程码等字段长度' });
+      }
+      throw e;
+    }
 
     // ── 飞书通知（异步，支持多人）──
     const { notify_open_id, notify_open_ids, send_notify } = req.body;
@@ -394,7 +494,7 @@ router.put('/:id', [
     const updates = req.body;
 
     // 检查设备是否存在
-    const existingDevice = await query('SELECT id, customer_id, product_id, bundle_id, status FROM devices WHERE id = ?', [id]);
+    const existingDevice = await query('SELECT id, customer_id, product_id, bundle_id, status, device_code, remote_code FROM devices WHERE id = ?', [id]);
     if (existingDevice.length === 0) {
       return res.status(404).json({ success: false, error: '设备不存在' });
     }
@@ -413,25 +513,89 @@ router.put('/:id', [
     }
 
     // 提取new_id（如果要修改序列号）
-    const newId = updates.new_id;
+    let newId = typeof updates.new_id === 'string' ? updates.new_id.trim() : updates.new_id;
     delete updates.new_id;
 
-    // 如果要修改序列号，检查新ID是否已存在
+    // 如果要修改序列号，检查长度与新ID是否已存在
     if (newId && newId !== id) {
-      const existingNew = await query('SELECT id FROM devices WHERE id = ?', [newId]);
+      if (newId.length > 50) {
+        return res.status(400).json({ success: false, error_code: 'DEVICE_ID_TOO_LONG', error: '生产序列号长度不能超过50个字符' });
+      }
+      const existingNew = await query(
+        `SELECT d.id, c.name AS customer_name
+         FROM devices d LEFT JOIN customers c ON c.id = d.customer_id
+         WHERE d.id = ?`,
+        [newId]
+      );
       if (existingNew.length > 0) {
-        return res.status(400).json({ success: false, error: '该生产序列号已存在' });
+        const owner = existingNew[0].customer_name ? `（客户：${existingNew[0].customer_name}）` : '';
+        return res.status(400).json({
+          success: false,
+          error_code: 'DEVICE_ID_DUPLICATED',
+          error: `生产序列号 "${newId}" 已存在${owner}，无法修改为该序列号`,
+          data: { id: newId }
+        });
       }
     }
 
+    // 字符串字段去除首尾空格
+    ['name', 'device_code', 'remote_code', 'password', 'merchant_id', 'merchant_password', 'notes', 'nickname'].forEach(k => {
+      if (typeof updates[k] === 'string') updates[k] = updates[k].trim();
+    });
+
+    // 长度校验
+    if (updates.device_code && updates.device_code.length > 100) {
+      return res.status(400).json({ success: false, error_code: 'DEVICE_CODE_TOO_LONG', error: '设备编码长度不能超过100个字符' });
+    }
+    if (updates.remote_code && updates.remote_code.length > 100) {
+      return res.status(400).json({ success: false, error_code: 'REMOTE_CODE_TOO_LONG', error: '远程码长度不能超过100个字符' });
+    }
+    if (updates.name && updates.name.length > 255) {
+      return res.status(400).json({ success: false, error: '订单号长度不能超过255个字符' });
+    }
+
     // 只允许更新存在的字段（白名单）
-    const allowedFields = ['name', 'nickname', 'device_code', 'product_line_id', 'product_id', 'customer_id', 'status', 'remote_code', 'password', 'merchant_id', 'merchant_password', 'notes', 'factory_docs_complete'];
+    const allowedFields = ['name', 'nickname', 'device_code', 'product_line_id', 'product_id', 'customer_id', 'status', 'remote_code', 'password', 'merchant_id', 'merchant_password', 'notes', 'factory_docs_complete', 'is_primary'];
     const filteredUpdates = {};
     Object.keys(updates).forEach(key => {
       if (allowedFields.includes(key) && updates[key] !== undefined) {
         filteredUpdates[key] = updates[key];
       }
     });
+
+    // 客户/产品型号存在性校验
+    if (filteredUpdates.customer_id) {
+      const customer = await query('SELECT id FROM customers WHERE id = ?', [filteredUpdates.customer_id]);
+      if (customer.length === 0) {
+        return res.status(400).json({ success: false, error_code: 'CUSTOMER_NOT_FOUND', error: '所选客户不存在或已被删除，请刷新后重新选择' });
+      }
+    }
+    if (filteredUpdates.product_id) {
+      const product = await query('SELECT id FROM products WHERE id = ?', [filteredUpdates.product_id]);
+      if (product.length === 0) {
+        return res.status(400).json({ success: false, error_code: 'PRODUCT_NOT_FOUND', error: '所选产品型号不存在或已停用，请刷新后重新选择' });
+      }
+    }
+
+    // 设备编码唯一性校验（仅在值发生变化时检查，避免存量数据阻断无关编辑）
+    if (filteredUpdates.device_code && filteredUpdates.device_code !== (existingDevice[0].device_code || null)) {
+      const dupCode = await query(
+        `SELECT d.id, c.name AS customer_name
+         FROM devices d LEFT JOIN customers c ON c.id = d.customer_id
+         WHERE d.device_code = ? AND d.id != ?`,
+        [filteredUpdates.device_code, id]
+      );
+      if (dupCode.length > 0) {
+        const owner = dupCode[0].customer_name ? `（客户：${dupCode[0].customer_name}）` : '';
+        return res.status(400).json({
+          success: false,
+          error_code: 'DEVICE_CODE_DUPLICATED',
+          error: `设备编码 "${filteredUpdates.device_code}" 已被设备 ${dupCode[0].id}${owner} 使用，请勿重复录入`
+        });
+      }
+    }
+
+    // 远程码允许重复（多合一成员设备可共用），不做唯一校验
 
     // 构建更新语句
     const updateFields = [];
@@ -493,24 +657,35 @@ router.put('/:id', [
       WHERE id = ?
       `;
 
-    if (newId && newId !== id) {
-      // 序列号变更：子表（modules/device_documents/device_upgrades/issues）均无 ON UPDATE CASCADE，
-      // 需临时关闭 FK 检查，先更新主键，再级联更新所有子表的 device_id
-      await transaction(async (connection) => {
-        try {
-          await connection.execute('SET FOREIGN_KEY_CHECKS=0');
-          await connection.execute(updateQuery, updateValues);
-          // 级联更新子表
-          await connection.execute('UPDATE modules SET device_id = ? WHERE device_id = ?', [newId, id]);
-          await connection.execute('UPDATE device_documents SET device_id = ? WHERE device_id = ?', [newId, id]);
-          await connection.execute('UPDATE device_upgrades SET device_id = ? WHERE device_id = ?', [newId, id]);
-          await connection.execute('UPDATE issues SET device_id = ? WHERE device_id = ?', [newId, id]);
-        } finally {
-          await connection.execute('SET FOREIGN_KEY_CHECKS=1');
-        }
-      });
-    } else {
-      await query(updateQuery, updateValues);
+    try {
+      if (newId && newId !== id) {
+        // 序列号变更：子表（modules/device_documents/device_upgrades/issues）均无 ON UPDATE CASCADE，
+        // 需临时关闭 FK 检查，先更新主键，再级联更新所有子表的 device_id
+        await transaction(async (connection) => {
+          try {
+            await connection.execute('SET FOREIGN_KEY_CHECKS=0');
+            await connection.execute(updateQuery, updateValues);
+            // 级联更新子表
+            await connection.execute('UPDATE modules SET device_id = ? WHERE device_id = ?', [newId, id]);
+            await connection.execute('UPDATE device_documents SET device_id = ? WHERE device_id = ?', [newId, id]);
+            await connection.execute('UPDATE device_upgrades SET device_id = ? WHERE device_id = ?', [newId, id]);
+            await connection.execute('UPDATE issues SET device_id = ? WHERE device_id = ?', [newId, id]);
+          } finally {
+            await connection.execute('SET FOREIGN_KEY_CHECKS=1');
+          }
+        });
+      } else {
+        await query(updateQuery, updateValues);
+      }
+    } catch (e) {
+      if (e.code === 'ER_DUP_ENTRY') {
+        const conflictId = (newId && newId !== id) ? newId : id;
+        return res.status(400).json({ success: false, error_code: 'DEVICE_ID_DUPLICATED', error: `生产序列号 "${conflictId}" 已存在，保存失败` });
+      }
+      if (e.code === 'ER_DATA_TOO_LONG') {
+        return res.status(400).json({ success: false, error: '提交内容过长，请检查各字段长度后重试' });
+      }
+      throw e;
     }
 
     // 客户变更时，用 REPLACE() 替换 nickname 中的旧客户名
@@ -584,6 +759,9 @@ router.delete('/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('删除设备失败:', error);
+    if (error.code === 'ER_ROW_IS_REFERENCED' || error.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(400).json({ success: false, error: '该设备存在关联记录（如出厂资料、客户需求等），无法直接删除，请先解除相关关联' });
+    }
     res.status(500).json({ success: false, error: '删除设备失败' });
   }
 });

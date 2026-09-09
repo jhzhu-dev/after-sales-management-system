@@ -1,0 +1,98 @@
+# =============================================================================
+# docker-compose.preview.yml — 预览展示版专用配置（与生产完全隔离）
+#
+# 用途：在 192.168.0.181 上以独立端口/独立数据库/独立容器运行最新版系统，
+#       用于预览展示，绝不影响生产环境（device-manager-app/db/db-backup）。
+#
+# 与 docker-compose.linux.yml（生产）的关键差异：
+#   1. 项目名 manger-preview，容器名均带 preview 后缀，与生产容器互不干扰
+#   2. 独立 MySQL 容器 + 独立数据卷（首次部署从生产最新备份导入数据）
+#   3. 应用端口 5010（生产占用 5000/5001），不做 HTTPS
+#   4. OSS_BASE_PATH 追加 -preview 后缀：预览新增附件与生产 OSS 文件隔离
+#   5. 不包含 db-backup 备份容器：预览库不写 NAS
+#   6. 飞书：部署脚本会在导入数据后清空 feishu_config 表，阻断对外通知
+#
+# 部署命令（由 deploy-to-181-preview.ps1 在远端调用）：
+#   docker compose up -d
+#   docker compose down        # 停止（数据保留）
+#   docker compose down -v     # 彻底删除（含数据卷）
+# =============================================================================
+
+name: manger-preview
+
+services:
+  # ─── 预览版 MySQL（独立实例，独立数据卷，不映射宿主机端口） ──────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: device-manager-preview-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: preview_root_2026
+      MYSQL_DATABASE: device_management
+      MYSQL_USER: preview_user
+      MYSQL_PASSWORD: preview_pass_2026
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - preview-network
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --innodb-buffer-pool-size=256M
+      --max-connections=50
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    mem_limit: 512m
+    memswap_limit: 512m
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "preview_user", "-ppreview_pass_2026"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ─── 预览版应用（端口 5010） ─────────────────────────────────────────────────
+  app:
+    image: device-manager-app:preview
+    container_name: device-manager-preview-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: preview_user
+      DB_PASSWORD: preview_pass_2026
+      DB_NAME: device_management
+      OSS_REGION: ${OSS_REGION:-oss-cn-shanghai}
+      OSS_BUCKET: ${OSS_BUCKET:-els-pub-04}
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
+      # 预览版独立 OSS 目录：新增附件存放到 -preview 前缀下，不污染生产目录
+      OSS_BASE_PATH: ${OSS_BASE_PATH:-static/After-sales management system-preview}
+      USE_OSS_STORAGE: ${USE_OSS_STORAGE:-false}
+      # 预览版使用独立 JWT 密钥，与生产的登录令牌互不通用
+      JWT_SECRET: ${JWT_SECRET:-preview_jwt_secret_2026}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      LOGIN_USERNAME: ${LOGIN_USERNAME:-elsvision}
+      LOGIN_PASSWORD: ${LOGIN_PASSWORD:-elsvisiongo666}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SYSTEM_BASE_URL: ${SYSTEM_BASE_URL:-http://192.168.0.181:5010}
+    volumes:
+      - ./uploads:/app/uploads
+    ports:
+      - "5010:5000"                # 仅 HTTP，局域网内访问
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - preview-network
+    mem_limit: 768m
+
+volumes:
+  mysql_data:
+    name: manger-preview_mysql_data   # 预览独立数据卷，与生产 device-manager_mysql_data 无关
+
+networks:
+  preview-network:
+    driver: bridge

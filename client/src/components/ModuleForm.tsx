@@ -97,8 +97,8 @@ const ModuleForm: React.FC<ModuleFormProps> = ({ module, deviceId, onClose, onSu
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50">
+      <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-md w-full mx-4">
         <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">
             {module ? '编辑模块' : '添加模块'}

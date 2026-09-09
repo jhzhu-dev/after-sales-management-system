@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
+import ExportButton from '../components/ExportButton';
 import DataTable, { Column } from '../components/DataTable';
 import SearchableSelect, { SearchableSelectOption } from '../components/SearchableSelect';
 import Select from '../components/Select';
@@ -10,12 +11,14 @@ import CustomerRequirementForm from '../components/CustomerRequirementForm';
 import { customerRequirementApi, customerApi } from '../services/api';
 import { CustomerRequirement, CustomerRequirementFormData, Customer } from '../types';
 import { formatDate, getUrgencyColor, getRequirementTypeColor } from '../utils';
+import { exportToExcel } from '../utils/exportUtils';
 
 const REQ_TYPES = ['接口对接', '功能定制', '输出结果定制'];
 const URGENCIES = ['高', '中', '低'];
-const STATUSES = ['待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
+const STATUSES = ['需求收集', '待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
 
 const STATUS_COLORS: Record<string, string> = {
+  '需求收集': 'text-teal-600 bg-teal-100',
   '待评估': 'text-gray-600 bg-gray-100',
   '评估中': 'text-blue-600 bg-blue-100',
   '已评估待开发': 'text-indigo-600 bg-indigo-100',
@@ -38,6 +41,10 @@ const CustomerRequirements: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [editing, setEditing] = useState<CustomerRequirement | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
+  const [printAll, setPrintAll] = useState<CustomerRequirement[] | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(20);
+  const [selectedIds, setSelectedIds] = useState<Array<string | number>>([]);
 
   const [filters, setFilters] = useState({
     page: 1,
@@ -60,8 +67,8 @@ const CustomerRequirements: React.FC = () => {
     setLoading(true);
     try {
       const res = await customerRequirementApi.getList({
-        page: filters.page,
-        limit: filters.limit,
+        page: 1,
+        limit: 9999,
         customer_id: filters.customer_id || undefined,
         requirement_type: filters.requirement_type || undefined,
         urgency: filters.urgency || undefined,
@@ -72,6 +79,8 @@ const CustomerRequirements: React.FC = () => {
       });
       setData(res.data || []);
       setTotal(res.total || 0);
+      setVisibleCount(20);
+      setSelectedIds([]);
     } catch (e) {
       console.error('获取需求列表失败:', e);
     } finally {
@@ -131,25 +140,107 @@ const CustomerRequirements: React.FC = () => {
     { key: 'updated_at', title: '更新时间', render: (v: any) => formatDate(v, 'yyyy-MM-dd HH:mm') },
   ];
 
+  const EXPORT_COLUMNS = [
+    { key: 'req_code', label: '需求编号' },
+    { key: 'customer_name', label: '客户' },
+    { key: 'device_names', label: '涉及设备' },
+    { key: 'requirement_type', label: '分类' },
+    { key: 'urgency', label: '紧急程度' },
+    { key: 'status', label: '状态' },
+    { key: 'proposed_date', label: '提出日期' },
+    { key: 'publish_version', label: '发布版本' },
+    { key: 'updated_at', label: '更新时间' },
+  ];
+
+  const handleExport = async (ids?: Array<string | number>) => {
+    setExporting(true);
+    try {
+      const res = await customerRequirementApi.getList({
+        page: 1, limit: 9999,
+        customer_id: filters.customer_id || undefined,
+        requirement_type: filters.requirement_type || undefined,
+        urgency: filters.urgency || undefined,
+        status: filters.status || undefined,
+        proposed_date_from: filters.proposed_date_from || undefined,
+        proposed_date_to: filters.proposed_date_to || undefined,
+        search: filters.search || undefined,
+      });
+      let list = res.data || [];
+      if (ids && ids.length) list = list.filter((r: any) => ids.includes(r.id));
+      const rows = list.map((r: any) => ({
+        ...r,
+        proposed_date: r.proposed_date ? new Date(r.proposed_date).toLocaleDateString('zh-CN') : '',
+        updated_at: r.updated_at ? new Date(r.updated_at).toLocaleString('zh-CN') : '',
+      }));
+      const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '');
+      exportToExcel(rows, EXPORT_COLUMNS, `需求管理_${timestamp}`);
+    } catch (e) {
+      console.error('导出需求失败:', e);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handlePrint = async (ids?: Array<string | number>) => {
+    try {
+      const res = await customerRequirementApi.getList({
+        page: 1, limit: 9999,
+        customer_id: filters.customer_id || undefined,
+        requirement_type: filters.requirement_type || undefined,
+        urgency: filters.urgency || undefined,
+        status: filters.status || undefined,
+        proposed_date_from: filters.proposed_date_from || undefined,
+        proposed_date_to: filters.proposed_date_to || undefined,
+        search: filters.search || undefined,
+      });
+      let list = res.data || [];
+      if (ids && ids.length) list = list.filter((r: any) => ids.includes(r.id));
+      setPrintAll(list);
+    } catch (e) {
+      console.error('获取打印数据失败:', e);
+      window.print();
+    }
+  };
+
+  useEffect(() => {
+    if (printAll !== null) {
+      setTimeout(() => { window.print(); setPrintAll(null); }, 100);
+    }
+  }, [printAll]);
+
   return (
     <Layout>
-      <div className="p-4 3xl:p-6">
-        <div className="flex justify-between items-center mb-4">
+      <div className="space-y-4 3xl:space-y-6">
+        <div className="flex justify-between items-center h-10 no-print">
           <div>
-            <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">需求管理</h1>
-            <p className="mt-1 text-sm text-gray-600">登记客户需求并跟踪评估到发布全流程</p>
+            <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">需求管理</h1>
           </div>
-          <Button onClick={openCreate}>
-            <PlusIcon className="h-4 w-4" /> 新增需求
-          </Button>
+          <div className="flex items-center gap-2">
+            <ExportButton onExport={handleExport} disabled={exporting} />
+            <Button variant="outline" size="sm" onClick={() => handlePrint()}>
+              <PrinterIcon className="h-4 w-4" /> 打印
+            </Button>
+            <Button onClick={openCreate}>
+              <PlusIcon className="h-4 w-4" /> 新增需求
+            </Button>
+          </div>
         </div>
 
         {successMsg && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">{successMsg}</div>
+          <div className="p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm no-print">{successMsg}</div>
+        )}
+
+        {selectedIds.length > 0 && (
+          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print">
+            <span className="text-sm text-blue-800">已选 {selectedIds.length} 条</span>
+            <Button size="sm" variant="outline" onClick={() => handleExport(selectedIds)} disabled={exporting}>导出选中</Button>
+            <Button size="sm" variant="outline" onClick={() => handlePrint(selectedIds)}>打印选中</Button>
+            <button onClick={() => setSelectedIds([])} className="text-sm text-gray-500 hover:text-gray-700">取消选择</button>
+          </div>
         )}
 
         {/* 筛选区 */}
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 mb-4 relative z-20">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 relative z-20 no-print">
           <button
             type="button"
             onClick={() => setShowFilters(f => !f)}
@@ -203,18 +294,64 @@ const CustomerRequirements: React.FC = () => {
 
         {/* 列表 */}
         <DataTable
-          data={data}
+          data={data.slice(0, visibleCount)}
           columns={columns}
           loading={loading}
           rowKey="id"
+          className="print:hidden"
           onRowClick={(r) => navigate(`/customer-requirements/${r.id}`)}
-          pagination={{
-            current: filters.page,
-            pageSize: filters.limit,
-            total,
-            onChange: (page, pageSize) => setFilters(f => ({ ...f, page, limit: pageSize })),
-          }}
+          onLoadMore={visibleCount < data.length ? () => setVisibleCount(p => p + 20) : undefined}
+          scrollable
+          selectable
+          selectedKeys={selectedIds}
+          onSelectionChange={setSelectedIds}
         />
+      </div>
+
+      {/* 打印专用页眉 */}
+      <div className="hidden print:block print-header">
+        <div className="flex items-center justify-between" style={{marginBottom: '3pt'}}>
+          <span style={{fontSize: '8pt', color: '#6b7280'}}>售后登记系统</span>
+          <span style={{fontSize: '8pt', color: '#6b7280'}}>打印时间：{new Date().toLocaleString('zh-CN')}</span>
+        </div>
+        <h1 style={{fontSize: '13pt', fontWeight: 'bold', margin: '0 0 3pt 0', color: '#111827'}}>需求管理</h1>
+        <div className="print-flex-row" style={{marginTop: '2pt'}}>
+          <span style={{fontSize: '8pt', color: '#6b7280'}}>共 {(printAll ?? data).length} 条记录</span>
+        </div>
+      </div>
+
+      {/* 打印专用表格 */}
+      <div className="hidden print:block">
+        <table style={{width:'100%', borderCollapse:'collapse', fontSize:'8pt'}}>
+          <thead>
+            <tr style={{borderBottom:'1pt solid #374151', backgroundColor:'#f9fafb'}}>
+              <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>需求编号</th>
+              <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>客户</th>
+              <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>涉及设备</th>
+              <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>分类</th>
+              <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>紧急程度</th>
+              <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>状态</th>
+              <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>提出日期</th>
+              <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>发布版本</th>
+              <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>更新时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(printAll ?? data).map((r, i) => (
+              <tr key={r.id} style={{borderBottom:'0.5pt solid #e5e7eb', backgroundColor: i%2===0?'white':'#f9fafb'}}>
+                <td style={{padding:'3pt 6pt'}}>{r.req_code || '-'}</td>
+                <td style={{padding:'3pt 6pt'}}>{r.customer_name || '-'}</td>
+                <td style={{padding:'3pt 6pt'}}>{r.device_names || '-'}</td>
+                <td style={{padding:'3pt 6pt'}}>{r.requirement_type || '-'}</td>
+                <td style={{padding:'3pt 6pt'}}>{r.urgency || '-'}</td>
+                <td style={{padding:'3pt 6pt'}}>{r.status || '-'}</td>
+                <td style={{padding:'3pt 6pt'}}>{r.proposed_date ? new Date(r.proposed_date).toLocaleDateString('zh-CN') : '-'}</td>
+                <td style={{padding:'3pt 6pt'}}>{r.publish_version || '-'}</td>
+                <td style={{padding:'3pt 6pt'}}>{r.updated_at ? new Date(r.updated_at).toLocaleString('zh-CN') : '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {showForm && (

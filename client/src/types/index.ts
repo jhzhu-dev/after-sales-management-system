@@ -725,9 +725,13 @@ export interface TestTask {
   id: number;
   task_code: string;
   product_id: number;
+  target_type?: 'model' | 'product';
+  product_names?: string;
+  product_ids?: number[];
   product_name?: string;
   product_model?: string;
   model_name?: string | null;
+  module_category?: string | null;
   model_version?: string | null;
   current_version?: string | null;
   upgrade_content?: string | null;
@@ -755,8 +759,12 @@ export interface TestTask {
 
 export interface TestTaskFormData {
   product_id: number;
+  target_type?: 'model' | 'product';
+  product_ids?: number[];
   model_name?: string;
+  module_category?: string;
   model_version?: string;
+  current_version?: string;
   upgrade_content?: string;
   model_features?: string;
   test_focus?: string;

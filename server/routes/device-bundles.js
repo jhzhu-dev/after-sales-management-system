@@ -43,6 +43,9 @@ router.get('/', async (req, res) => {
         COUNT(DISTINCT d.id) as device_count,
         (SELECT COUNT(*) FROM device_documents dd WHERE dd.bundle_id = b.id) as document_count,
         (SELECT d2.remote_code FROM devices d2 WHERE d2.bundle_id = b.id AND d2.remote_code IS NOT NULL LIMIT 1) as remote_code,
+        (SELECT COUNT(*) FROM devices d4 WHERE d4.bundle_id = b.id AND d4.is_primary = 1 AND d4.remote_code IS NOT NULL) as primary_count,
+        (SELECT GROUP_CONCAT(d5.remote_code SEPARATOR ',') FROM devices d5 WHERE d5.bundle_id = b.id AND d5.is_primary = 1 AND d5.remote_code IS NOT NULL) as primary_remote_codes,
+        (SELECT GROUP_CONCAT(d6.remote_code SEPARATOR ',') FROM devices d6 JOIN product_lines pl6 ON d6.product_line_id = pl6.id WHERE d6.bundle_id = b.id AND pl6.name LIKE '%龙门%' AND d6.remote_code IS NOT NULL) as longmen_remote_codes,
         (SELECT d2.merchant_id FROM devices d2 WHERE d2.bundle_id = b.id AND d2.merchant_id IS NOT NULL LIMIT 1) as merchant_id,
         (SELECT d2.merchant_password FROM devices d2 WHERE d2.bundle_id = b.id AND d2.merchant_password IS NOT NULL LIMIT 1) as merchant_password,
         (SELECT COUNT(*) FROM issues i WHERE i.device_id IN (SELECT d3.id FROM devices d3 WHERE d3.bundle_id = b.id) AND i.status = 'open') as open_issues,
@@ -62,6 +65,17 @@ router.get('/', async (req, res) => {
     params.push(limitNum, offset);
 
     const bundles = await query(bundlesQuery, params);
+
+    // 远程码展示规则：优先主设备远程码；否则用龙门设备；都为空则无
+    bundles.forEach((b) => {
+      const hasPrimary = Number(b.primary_count) > 0;
+      const primaryCodes = b.primary_remote_codes ? String(b.primary_remote_codes).split(',') : [];
+      const longmenCodes = b.longmen_remote_codes ? String(b.longmen_remote_codes).split(',') : [];
+      const remoteCodes = hasPrimary ? primaryCodes : longmenCodes;
+      b.remote_codes = remoteCodes;
+      b.primary_set = hasPrimary;
+      b.remote_code = remoteCodes[0] || null;
+    });
 
     const countQuery = `
       SELECT COUNT(DISTINCT b.id) as total
@@ -134,6 +148,18 @@ router.get('/:id', async (req, res) => {
       ORDER BY d.created_at ASC
     `;
     const devices = await query(devicesQuery, [id]);
+
+    // 远程码展示规则：优先主设备；否则用龙门设备；都没有则提示设置主设备
+    const primaryDevices = devices.filter(d => Number(d.is_primary) === 1 && d.remote_code);
+    const longMenDevices = devices.filter(d => (d.product_line_name || '').includes('龙门') && d.remote_code);
+    const remoteCodes = primaryDevices.length > 0
+      ? primaryDevices.map(d => d.remote_code)
+      : longMenDevices.length > 0
+        ? longMenDevices.map(d => d.remote_code)
+        : [];
+    bundle.remote_code = remoteCodes[0] || null;
+    bundle.remote_codes = remoteCodes;
+    bundle.primary_set = primaryDevices.length > 0;
 
     // 统计
     const statsQuery = `
@@ -256,19 +282,48 @@ router.post('/', [
 
     // 校验新设备信息
     const newDeviceIds = [];
+    const newDeviceCodes = [];
     for (const nd of new_devices) {
+      nd.id = typeof nd.id === 'string' ? nd.id.trim() : nd.id;
+      nd.device_code = typeof nd.device_code === 'string' ? nd.device_code.trim() : nd.device_code;
       if (!nd.id || !nd.product_line_id) {
         return res.status(400).json({ success: false, error: '新增设备必须填写生产序列号和产品线' });
+      }
+      if (nd.id.length > 50) {
+        return res.status(400).json({ success: false, error: `设备序列号 "${nd.id}" 长度不能超过50个字符` });
       }
       // 检查 ID 唯一
       const dup = await query('SELECT id FROM devices WHERE id = ?', [nd.id]);
       if (dup.length > 0) {
-        return res.status(400).json({ success: false, error: `设备序列号 "${nd.id}" 已存在` });
+        return res.status(400).json({ success: false, error_code: 'DEVICE_ID_DUPLICATED', error: `设备序列号 "${nd.id}" 已存在，请勿重复录入` });
       }
       if (device_ids.includes(nd.id) || newDeviceIds.includes(nd.id)) {
-        return res.status(400).json({ success: false, error: `设备序列号 "${nd.id}" 重复` });
+        return res.status(400).json({ success: false, error: `设备序列号 "${nd.id}" 在本次提交中重复` });
       }
       newDeviceIds.push(nd.id);
+      // 产品线存在性校验
+      const plRows = await query('SELECT id FROM product_lines WHERE id = ?', [nd.product_line_id]);
+      if (plRows.length === 0) {
+        return res.status(400).json({ success: false, error: `设备 ${nd.id} 的产品线不存在，请刷新后重试` });
+      }
+      // 产品型号存在性校验
+      if (nd.product_id) {
+        const pRows = await query('SELECT id FROM products WHERE id = ?', [nd.product_id]);
+        if (pRows.length === 0) {
+          return res.status(400).json({ success: false, error: `设备 ${nd.id} 的产品型号不存在，请刷新后重试` });
+        }
+      }
+      // 设备编码唯一性校验（库内 + 本次提交内）
+      if (nd.device_code) {
+        const dupCode = await query('SELECT id FROM devices WHERE device_code = ?', [nd.device_code]);
+        if (dupCode.length > 0) {
+          return res.status(400).json({ success: false, error_code: 'DEVICE_CODE_DUPLICATED', error: `设备编码 "${nd.device_code}" 已被设备 ${dupCode[0].id} 使用（设备 ${nd.id}），请勿重复录入` });
+        }
+        if (newDeviceCodes.includes(nd.device_code)) {
+          return res.status(400).json({ success: false, error: `设备编码 "${nd.device_code}" 在本次提交中重复` });
+        }
+        newDeviceCodes.push(nd.device_code);
+      }
     }
 
     // 创建多合一设备、新增设备、绑定所有设备（事务）
@@ -403,6 +458,21 @@ router.post('/', [
     }
   } catch (error) {
     console.error('创建多合一设备失败:', error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      const sqlMessage = String(error.sqlMessage || '');
+      let friendly = '提交的数据与已有记录冲突，请检查序列号、设备编码、订单号是否重复';
+      if (sqlMessage.includes("'PRIMARY'")) {
+        friendly = '设备序列号已存在，请勿重复录入';
+      } else if (sqlMessage.includes('unique_bundle_code')) {
+        friendly = `多合一设备订单号 "${finalCode}" 已存在`;
+      } else if (sqlMessage.includes('unique_device_module')) {
+        friendly = '同一设备的模块类型重复，请调整选配模块后重试';
+      }
+      return res.status(400).json({ success: false, error: friendly });
+    }
+    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+      return res.status(400).json({ success: false, error: '关联的客户、产品线或产品型号不存在，请刷新页面后重试' });
+    }
     res.status(500).json({ success: false, error: '创建多合一设备失败' });
   }
 });

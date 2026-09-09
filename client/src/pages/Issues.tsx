@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { PlusIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon, ChatBubbleLeftRightIcon, ArrowPathIcon, MagnifyingGlassIcon, PrinterIcon, BookOpenIcon } from '@heroicons/react/24/outline';
+import { confirmDialog } from '../components/DialogHost';
+import { PlusIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon, ChatBubbleLeftRightIcon, ArrowPathIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { issueApi, customerApi, moduleTypeApi, productLineApi, moduleVersionApi, issueClassificationApi } from '../services/api';
 import { Issue, FilterOptions, IssueFormData, IssueClassification } from '../types';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
-import KnowledgeBase from '../components/KnowledgeBase';
 import DataTable from '../components/DataTable';
 import SearchableSelect from '../components/SearchableSelect';
 import Select from '../components/Select';
@@ -17,13 +17,13 @@ import { formatDate, getStatusColor, getSeverityColor } from '../utils';
 export default function Issues() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'issues' | 'upgrades' | 'knowledge'>('issues');
+  const [activeTab, setActiveTab] = useState<'issues' | 'upgrades'>('issues');
 
   // 从URL参数读取tab
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
-    if (tab === 'issues' || tab === 'upgrades' || tab === 'knowledge') {
+    if (tab === 'issues' || tab === 'upgrades') {
       setActiveTab(tab);
     }
   }, [location.search]);
@@ -55,6 +55,8 @@ export default function Issues() {
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedIssues, setSelectedIssues] = useState<number[]>([]);
+  const [selectedUpgrades, setSelectedUpgrades] = useState<Array<string | number>>([]);
+  const [printUpgrades, setPrintUpgrades] = useState<any[] | null>(null);
   const [showIssueForm, setShowIssueForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showUpgradeFilters, setShowUpgradeFilters] = useState(false);
@@ -320,7 +322,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
       event.stopPropagation();
     }
     
-    if (window.confirm('确定要删除这个问题吗？')) {
+    if (await confirmDialog('确定要删除这个问题吗？')) {
       try {
         const response = await issueApi.deleteIssue(id.toString());
         if (response.success) {
@@ -364,6 +366,10 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
           return;
         }
       } catch (e) {}
+    } else if (activeTab === 'upgrades' && selectedUpgrades.length > 0) {
+      // 有勾选：只打印选中的版本演进
+      setPrintUpgrades(upgrades.filter(u => selectedUpgrades.includes(u.id)));
+      return;
     }
     window.print();
   };
@@ -427,7 +433,8 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
 
   const handleExportUpgrades = () => {
     const versionTypeMap: Record<string, string> = { factory: '出厂', update: '更新' };
-    const rows = upgrades.map((v: any) => ({
+    const list = selectedUpgrades.length > 0 ? upgrades.filter((v: any) => selectedUpgrades.includes(v.id)) : upgrades;
+    const rows = list.map((v: any) => ({
       ...v,
       version_label: versionTypeMap[v.version_type] || v.version_type,
       release_date: v.release_date ? new Date(v.release_date).toLocaleDateString('zh-CN') : '',
@@ -444,6 +451,12 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
       setTimeout(() => { window.print(); setPrintAllIssues(null); }, 100);
     }
   }, [printAllIssues]);
+
+  useEffect(() => {
+    if (printUpgrades !== null) {
+      setTimeout(() => { window.print(); setPrintUpgrades(null); }, 100);
+    }
+  }, [printUpgrades]);
 
   const handleIssueSubmit = async (data: IssueFormData) => {
     try {
@@ -492,6 +505,18 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
       setSelectedIssues([]);
     } else {
       setSelectedIssues(issues.map(issue => issue.id));
+    }
+  };
+
+  const handleSelectUpgrade = (id: string | number) => {
+    setSelectedUpgrades(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleSelectAllUpgrades = () => {
+    if (selectedUpgrades.length === upgrades.length) {
+      setSelectedUpgrades([]);
+    } else {
+      setSelectedUpgrades(upgrades.map(u => u.id));
     }
   };
 
@@ -823,6 +848,14 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted backdrop-blur border-b border-border sticky top-0 z-10">
                 <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider whitespace-nowrap" style={{ width: '44px' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedUpgrades.length === upgrades.length && upgrades.length > 0}
+                      onChange={handleSelectAllUpgrades}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
+                    />
+                  </th>
                   {['订单号','设备简称','客户','模块类型','版本号','变更说明','操作人','发布日期','检查项'].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
@@ -845,6 +878,14 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                   return (
                     <React.Fragment key={item.id}>
                       <tr className="hover:bg-muted transition-colors duration-150">
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedUpgrades.includes(item.id)}
+                            onChange={() => handleSelectUpgrade(item.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
+                          />
+                        </td>
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-900 text-sm">{item.device_name || '-'}</div>
                           <div className="text-xs text-gray-400">{item.device_id}</div>
@@ -986,13 +1027,11 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         </div>
 
         {/* 顶部标题与Tab切换 */}
-        <div className="bg-white p-4 3xl:p-6 rounded-2xl shadow-sm border border-gray-100 no-print">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl 3xl:text-2xl font-black text-gray-900 tracking-tight">运维中心</h1>
-              <p className="text-gray-500 text-sm mt-1 font-medium">统一管理全生命周期的运维问题与升级演进</p>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap md:justify-end">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
+          <div>
+            <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">运维中心</h1>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap md:justify-end">
             {activeTab === 'issues' && (
               <div className="flex items-center gap-2">
                 <ExportButton onExport={handleExportIssues} />
@@ -1018,8 +1057,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
             <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
               {[
                 { id: 'issues' as const, label: '问题记录', icon: ChatBubbleLeftRightIcon },
-                { id: 'upgrades' as const, label: '版本演进', icon: ArrowPathIcon },
-                { id: 'knowledge' as const, label: '知识库', icon: BookOpenIcon }
+                { id: 'upgrades' as const, label: '版本演进', icon: ArrowPathIcon }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -1035,15 +1073,19 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 </button>
               ))}
             </div>
-            </div>
           </div>
         </div>
 
         {/* 版本演进内容 */}
+        {activeTab === 'upgrades' && selectedUpgrades.length > 0 && (
+          <div className="mb-4 flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print">
+            <span className="text-sm text-blue-800">已选 {selectedUpgrades.length} 条</span>
+            <Button size="sm" variant="outline" onClick={handleExportUpgrades}>导出选中</Button>
+            <Button size="sm" variant="outline" onClick={handlePrint}>打印选中</Button>
+            <button onClick={() => setSelectedUpgrades([])} className="text-sm text-gray-500 hover:text-gray-700">取消选择</button>
+          </div>
+        )}
         {activeTab === 'upgrades' && <div className="no-print">{renderUpgrades()}</div>}
-
-        {/* 运维知识库 */}
-        {activeTab === 'knowledge' && <div className="no-print"><KnowledgeBase productLines={productLines} /></div>}
 
         {/* 故障管理内容 */}
         {activeTab === 'issues' && (<>
@@ -1179,6 +1221,15 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
           )}
         </div>
 
+        {selectedIssues.length > 0 && (
+          <div className="mb-4 flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print">
+            <span className="text-sm text-blue-800">已选 {selectedIssues.length} 条</span>
+            <Button size="sm" variant="outline" onClick={() => handleExportIssues()}>导出选中</Button>
+            <Button size="sm" variant="outline" onClick={() => handlePrint()}>打印选中</Button>
+            <button onClick={() => setSelectedIssues([])} className="text-sm text-gray-500 hover:text-gray-700">取消选择</button>
+          </div>
+        )}
+
         {/* 数据表格 */}
         <div className="print:hidden">
           <DataTable
@@ -1252,7 +1303,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 </tr>
               </thead>
               <tbody>
-                {upgrades.map((v, i) => (
+                {(printUpgrades ?? upgrades).map((v, i) => (
                   <tr key={v.id} style={{borderBottom:'0.5pt solid #e5e7eb',backgroundColor:i%2===0?'white':'#f9fafb'}}>
                     <td style={{padding:'3pt 6pt'}}>{v.device_name || '-'}</td>
                     <td style={{padding:'3pt 6pt'}}>{v.device_type || '-'}</td>
@@ -1275,6 +1326,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
           <IssueForm
             onClose={() => setShowIssueForm(false)}
             onSubmit={handleIssueSubmit}
+            onImported={fetchIssues}
           />
         )}
       </div>

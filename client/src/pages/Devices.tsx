@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { confirmDialog } from '../components/DialogHost';
 import { PencilIcon, TrashIcon, EyeIcon, ChevronUpIcon, ChevronDownIcon, PlusIcon, PrinterIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { deviceApi, moduleApi, productLineApi, bundleApi, customerApi } from '../services/api';
 import { Device, DeviceBundle, FilterOptions, DeviceFormData, Customer } from '../types';
@@ -390,7 +391,7 @@ export default function Devices() {
       event.stopPropagation();
     }
 
-    if (window.confirm('确定要删除这个设备吗？')) {
+    if (await confirmDialog('确定要删除这个设备吗？')) {
       try {
         const response = await deviceApi.deleteDevice(id);
         if (response.success) {
@@ -476,7 +477,7 @@ export default function Devices() {
 
   const handleDeleteBundle = async (id: number, event?: React.MouseEvent) => {
     if (event) event.stopPropagation();
-    if (window.confirm('确定要删除这个多合一设备吗？内部设备不会被删除。')) {
+    if (await confirmDialog('确定要删除这个多合一设备吗？内部设备不会被删除。')) {
       try {
         await bundleApi.deleteBundle(id);
         await fetchAllBundles();
@@ -614,14 +615,24 @@ export default function Devices() {
     } catch (error) {
       console.error('保存设备失败:', error);
       const apiError = (error as any)?.response?.data;
-      let msg = apiError?.error || apiError?.details?.[0]?.msg || (error as Error)?.message || '保存设备失败';
-      if (apiError?.error_code === 'DEVICE_ID_DUPLICATED' && apiError?.data?.id) {
-        msg = `生产序列号已存在：${apiError.data.id}`;
-      }
-      if (apiError?.error_code === 'PRODUCT_LINE_NOT_FOUND' && apiError?.data?.product_line_id) {
-        msg = `产品线不存在（ID: ${apiError.data.product_line_id}）`;
-      }
-      throw new Error(msg);
+      const errorCode: string | undefined = apiError?.error_code;
+      const msg = apiError?.error || apiError?.details?.[0]?.msg || (error as Error)?.message || '保存设备失败';
+      // 将后端错误码映射到具体表单字段，供 DeviceForm 在字段下方内联展示
+      const FIELD_BY_CODE: Record<string, string> = {
+        DEVICE_ID_DUPLICATED: 'id',
+        DEVICE_ID_TOO_LONG: 'id',
+        DEVICE_CODE_DUPLICATED: 'device_code',
+        DEVICE_CODE_TOO_LONG: 'device_code',
+        REMOTE_CODE_TOO_LONG: 'remote_code',
+        CUSTOMER_NOT_FOUND: 'customer_id',
+        PRODUCT_NOT_FOUND: 'product_id',
+        PRODUCT_LINE_MISMATCH: 'product_id',
+        PRODUCT_LINE_NOT_FOUND: 'product_line_id',
+      };
+      const wrapped = new Error(msg) as Error & { errorCode?: string; field?: string };
+      wrapped.errorCode = errorCode;
+      wrapped.field = errorCode ? FIELD_BY_CODE[errorCode] : undefined;
+      throw wrapped;
     }
   };
 
@@ -1116,7 +1127,7 @@ export default function Devices() {
         {/* 页面标题和操作 */}
         <div className="flex justify-between items-center no-print">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">设备管理</h1>
+            <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">设备管理</h1>
             {/* Tab 切换（无全局搜索词时显示） */}
             {!globalSearch && (
             <div className="flex rounded-md border border-gray-300 overflow-hidden">

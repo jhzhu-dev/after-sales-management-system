@@ -53,7 +53,15 @@ router.get('/', async (req, res) => {
         )
       ) mv ON m.id = mv.module_id
       ${whereClause}
-      ORDER BY m.created_at DESC
+      ORDER BY CASE
+        WHEN mt.name LIKE '%机械%' THEN 0
+        WHEN mt.name LIKE '%电气%' THEN 1
+        WHEN mt.name LIKE '%上位%' THEN 2
+        WHEN mt.name LIKE '%视觉%' THEN 3
+        WHEN mt.name LIKE '%服务器%' THEN 4
+        WHEN mt.name LIKE '%车牌%' THEN 5
+        ELSE 6
+      END, m.created_at DESC
       LIMIT ${parseInt(limitNum)} OFFSET ${parseInt(offset)}
     `;
     

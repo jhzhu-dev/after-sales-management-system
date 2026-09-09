@@ -205,7 +205,7 @@ const IssueImportPanel: React.FC<IssueImportPanelProps> = ({ onClose, onDone }) 
                               <input type="text" value={r.feedback_no || ''} onChange={e => setCell(r.rowIndex, { feedback_no: e.target.value })} className={cellInputCls} />
                             </td>
                             <td className="px-3 py-2 min-w-[110px]">
-                              <Select value={r.region || ''} onChange={v => setCell(r.rowIndex, { region: v })} options={[{ value: '', label: '国内/国外' }, { value: '国内', label: '国内' }, { value: '国外', label: '国外' }]} className={cellSelectCls} />
+                              <Select value={r.region || ''} onChange={v => setCell(r.rowIndex, { region: v })} placeholder="请选择区域" options={[{ value: '国内', label: '国内' }, { value: '国外', label: '国外' }]} className={cellSelectCls} />
                             </td>
                             <td className="px-3 py-2 min-w-[110px]">
                               <input type="number" min={0} value={r.occurrence_count ?? ''} onChange={e => setCell(r.rowIndex, { occurrence_count: e.target.value === '' ? null : Number(e.target.value) })} className={cellInputCls} placeholder="次数" />

@@ -137,8 +137,8 @@ const FeishuSettings: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto py-8 px-4 space-y-8">
-        <h1 className="text-2xl font-bold text-gray-900">飞书通知设置</h1>
+      <div className="max-w-2xl mx-auto space-y-8">
+        <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">飞书通知设置</h1>
 
         {/* Mock mode banner */}
         {MOCK_MODE && (

@@ -191,18 +191,11 @@ router.get('/:id', async (req, res) => {
             [id]
         );
 
-        // 关联设备数量
-        const deviceCount = await query(
-            'SELECT COUNT(*) as count FROM devices WHERE product_version_id = ?',
-            [id]
-        );
-
         res.json({
             success: true,
             data: {
                 ...versions[0],
-                documents,
-                device_count: deviceCount[0]?.count || 0
+                documents
             }
         });
     } catch (error) {
@@ -335,15 +328,6 @@ router.delete('/:id', async (req, res) => {
         const existing = await query('SELECT * FROM product_versions WHERE id = ?', [id]);
         if (existing.length === 0) {
             return res.status(404).json({ success: false, error: '迭代版本不存在' });
-        }
-
-        // 检查是否有关联设备
-        const devices = await query('SELECT COUNT(*) as count FROM devices WHERE product_version_id = ?', [id]);
-        if (devices[0].count > 0) {
-            return res.status(400).json({
-                success: false,
-                error: `该版本下有 ${devices[0].count} 台关联设备，无法删除。请先取消设备关联。`
-            });
         }
 
         // 删除相关文档文件

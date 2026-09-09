@@ -103,3 +103,10 @@ client/build/
 test-*.js
 debug-*.js
 *.test.js
+
+# Runtime uploads & local DB dumps
+uploads/
+doc/data/*.sql
+
+# local verification screenshots
+_*.png

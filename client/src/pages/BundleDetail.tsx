@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { confirmDialog } from '../components/DialogHost';
 import {
   ArrowLeftIcon,
   PencilIcon,
@@ -266,7 +267,7 @@ const BundleDetail: React.FC = () => {
     if (!bundle || !bundleId) return;
     const next = !isFactoryDocsComplete(bundle.factory_docs_complete);
     const action = next ? '标记为已完成全部上传' : '取消已完成标记';
-    if (!window.confirm(`确定要${action}吗？`)) return;
+    if (!await confirmDialog(`确定要${action}吗？`)) return;
     try {
       const response = await bundleApi.updateBundle(bundleId, { factory_docs_complete: next } as any);
       if (response.success) {
@@ -290,7 +291,7 @@ const BundleDetail: React.FC = () => {
     const devices = bundle.devices || [];
     const allProduction = devices.length > 0 && devices.every((d: any) => d.status === '生产中');
     if (!allProduction) return;
-    if (!window.confirm(`确认将多合一设备「${bundle.bundle_code}」的全部 ${devices.length} 台设备标记为已发货吗？`)) return;
+    if (!await confirmDialog(`确认将多合一设备「${bundle.bundle_code}」的全部 ${devices.length} 台设备标记为已发货吗？`)) return;
     setShipping(true);
     try {
       const response = await bundleApi.shipBundle(bundle.id);
@@ -314,7 +315,7 @@ const BundleDetail: React.FC = () => {
     const confirmMsg = isLast
       ? '移出最后一台设备后，该多合一组合会整体移除，是否继续？'
       : '确定要从多合一设备中移除该设备吗？';
-    if (window.confirm(confirmMsg)) {
+    if (await confirmDialog(confirmMsg)) {
       try {
         await bundleApi.removeDevice(bundleId, deviceId);
         if (isLast) {
@@ -472,7 +473,7 @@ const BundleDetail: React.FC = () => {
   };
 
   const handleDeleteDoc = async (docId: number) => {
-    if (window.confirm('确定要删除这个文件吗？')) {
+    if (await confirmDialog('确定要删除这个文件吗？')) {
       try {
         await api.delete(`/device-documents/${docId}`);
         await fetchDocuments();
@@ -565,7 +566,7 @@ const BundleDetail: React.FC = () => {
 
   const handleBatchDeleteDocs = async () => {
     if (selectedDocIds.size === 0) return;
-    if (!window.confirm(`确定要删除选中的 ${selectedDocIds.size} 个文件吗？`)) return;
+    if (!await confirmDialog(`确定要删除选中的 ${selectedDocIds.size} 个文件吗？`)) return;
     try {
       const { data: result } = await api.post('/device-documents/batch-delete', { ids: Array.from(selectedDocIds) });
       if (result.success) {
@@ -638,7 +639,7 @@ const BundleDetail: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (window.confirm('确定要删除这个多合一设备吗？内部设备不会被删除。')) {
+    if (await confirmDialog('确定要删除这个多合一设备吗？内部设备不会被删除。')) {
       try {
         await bundleApi.deleteBundle(bundleId);
         navigate('/devices?view=bundles');
@@ -1141,8 +1142,8 @@ const BundleDetail: React.FC = () => {
 
       {/* 上传资料弹窗 */}
       {showDocUploadModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50">
+          <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-lg w-full mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 3xl:px-6 3xl:py-4 border-b border-gray-200 bg-green-50">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <ArrowUpTrayIcon className="h-5 w-5 text-green-600" />

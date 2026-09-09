@@ -18,16 +18,17 @@ export default function ThemeToggle() {
         <button
           key={opt.value}
           type="button"
+          title={opt.label}
+          aria-label={opt.label}
           onClick={() => setTheme(opt.value)}
           className={cn(
-            'flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors',
+            'flex items-center justify-center p-1.5 rounded-md transition-colors',
             theme === opt.value
               ? 'bg-white text-primary-600 shadow-sm'
               : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'
           )}
         >
           {opt.icon}
-          <span className="hidden lg:inline">{opt.label}</span>
         </button>
       ))}
     </div>

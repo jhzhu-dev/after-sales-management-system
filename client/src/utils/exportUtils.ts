@@ -37,7 +37,8 @@ export async function exportToExcel(
           accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] }
         }]
       });
-      const buffer: ArrayBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+      // 使用 'array' 输出干净的 ArrayBuffer，避免 'buffer'(Uint8Array) 写入文件流时的兼容问题
+      const buffer: ArrayBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
       const writable = await handle.createWritable();
       await writable.write(buffer);
       await writable.close();

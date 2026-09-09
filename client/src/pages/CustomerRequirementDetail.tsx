@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { confirmDialog } from '../components/DialogHost';
 import { ArrowLeftIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, TrashIcon, EyeIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import SectionCard from '../components/SectionCard';
@@ -134,7 +135,7 @@ const CustomerRequirementDetail: React.FC = () => {
   };
 
   const handleDeleteAtt = async (attId: number) => {
-    if (!window.confirm('确定删除该附件吗？')) return;
+    if (!await confirmDialog('确定删除该附件吗？')) return;
     try {
       const res = await customerRequirementApi.deleteAttachment(attId);
       if (res.success) fetchDetail();
@@ -185,7 +186,7 @@ const CustomerRequirementDetail: React.FC = () => {
 
   return (
     <Layout>
-      <div className="p-4 3xl:p-6">
+      <div>
         <button onClick={() => navigate('/customer-requirements')} className="inline-flex items-center text-sm text-gray-600 hover:text-primary-600 mb-4">
           <ArrowLeftIcon className="h-4 w-4 mr-1" /> 返回需求列表
         </button>

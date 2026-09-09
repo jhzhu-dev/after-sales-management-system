@@ -183,10 +183,10 @@ const VersionReleaseForm: React.FC<VersionReleaseFormProps> = ({ versionRelease,
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-2xl w-full mx-4 max-h-[85vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50">
+      <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-2xl w-full mx-4 max-h-[85vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
+        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-popover/90 backdrop-blur z-10">
           <h2 className="text-xl font-semibold text-gray-800">
             {versionRelease ? '编辑版本' : '发布新版本'} - {moduleType?.name}
           </h2>

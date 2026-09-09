@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { confirmDialog } from '../components/DialogHost';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import ProductLineForm from '../components/ProductLineForm';
@@ -81,7 +82,7 @@ const ProductLines: React.FC = () => {
     };
 
     const handleDeleteProductLine = async (productLine: ProductLine) => {
-        if (!window.confirm(`确定要删除产品线"${productLine.name}"吗？此操作不可恢复。`)) {
+        if (!await confirmDialog(`确定要删除产品线"${productLine.name}"吗？此操作不可恢复。`)) {
             return;
         }
 
@@ -118,19 +119,16 @@ const ProductLines: React.FC = () => {
 
     return (
         <Layout>
-            <div className="p-6">
+            <div className="space-y-4 3xl:space-y-6">
                 {/* 打印专用页眉 */}
                 <div className="hidden print:block print-header" style={{marginBottom:'8pt'}}>
                   <h1 style={{fontSize:'13pt',fontWeight:'800',margin:0}}>产品线管理</h1>
                   <p style={{fontSize:'8pt',color:'#6b7280',marginTop:'2pt'}}>打印时间：{new Date().toLocaleString('zh-CN')}</p>
                 </div>
 
-                <div className="flex justify-between items-center mb-6 print:hidden">
+                <div className="flex justify-between items-center h-10 print:hidden">
                     <div>
-                        <h1 className="text-xl 3xl:text-2xl font-bold text-gray-900">产品线管理</h1>
-                        <p className="mt-1 text-sm text-gray-600">
-                            管理公司的核心产品线系列
-                        </p>
+                        <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">产品线管理</h1>
                     </div>
                     <div className="flex items-center gap-3">
                         <Button variant="outline" size="sm" onClick={handlePrint}>
@@ -162,7 +160,7 @@ const ProductLines: React.FC = () => {
 
                 {/* 成功消息提示 */}
                 {successMessage && (
-                    <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                         <p className="text-green-700">{successMessage}</p>
                     </div>
                 )}

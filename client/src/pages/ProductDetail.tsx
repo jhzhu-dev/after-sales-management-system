@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { confirmDialog } from '../components/DialogHost';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import { Product, ProductDocument, ProductModule, ModuleType, ProductVersion } from '../types';
@@ -116,7 +117,7 @@ const ProductDetail: React.FC = () => {
     };
 
     const handleDeleteVersion = async (versionId: number, versionNumber: string) => {
-        if (!window.confirm(`确定要删除版本「${versionNumber}」吗？此操作不可恢复。`)) return;
+        if (!await confirmDialog(`确定要删除版本「${versionNumber}」吗？此操作不可恢复。`)) return;
         try {
             const res = await productVersionApi.deleteVersion(versionId);
             if (res.success) {
@@ -179,7 +180,7 @@ const ProductDetail: React.FC = () => {
     };
 
     const handleDeleteModule = async (moduleId: number, moduleName: string) => {
-        if (!window.confirm(`确定要删除 ${moduleName} 模块配置吗？此操作不可恢复。`)) {
+        if (!await confirmDialog(`确定要删除 ${moduleName} 模块配置吗？此操作不可恢复。`)) {
             return;
         }
 
@@ -265,7 +266,7 @@ const ProductDetail: React.FC = () => {
     };
 
     const handleDeleteDocument = async (docId: number, title: string) => {
-        if (!window.confirm(`确定要删除文档「${title}」吗？此操作不可恢复。`)) {
+        if (!await confirmDialog(`确定要删除文档「${title}」吗？此操作不可恢复。`)) {
             return;
         }
         try {
@@ -334,7 +335,7 @@ const ProductDetail: React.FC = () => {
 
     return (
         <Layout>
-            <div className="p-4 3xl:p-6">
+            <div>
                 {/* 顶部面包屑和标题 */}
                 <div className="mb-6">
                     <div className="flex items-center text-sm text-gray-500 mb-2">

@@ -17,6 +17,7 @@ import { kbArticleApi, moduleTypeApi } from '../services/api';
 import { KbArticle } from '../types';
 import AttachmentViewer, { Attachment } from './AttachmentViewer';
 import Select from './Select';
+import { confirmDialog } from './DialogHost';
 
 const CAT_PALETTE = [
   'bg-blue-100 text-blue-700',
@@ -73,6 +74,7 @@ export default function KnowledgeBase({ productLines }: Props) {
   const [tagFilter, setTagFilter] = useState('');
   const [detail, setDetail] = useState<KbArticle | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [moduleTypes, setModuleTypes] = useState<{ id: number; name: string }[]>([]);
 
@@ -161,7 +163,7 @@ export default function KnowledgeBase({ productLines }: Props) {
   };
 
   const handleDelete = async (a: KbArticle) => {
-    if (!window.confirm(`确定删除"${a.title}"吗？`)) return;
+    if (!await confirmDialog(`确定删除"${a.title}"吗？`)) return;
     await kbArticleApi.deleteArticle(a.id);
     setArticles(prev => prev.filter(x => x.id !== a.id));
     if (detail?.id === a.id) setDetail(null);
@@ -257,8 +259,31 @@ export default function KnowledgeBase({ productLines }: Props) {
   return (
     <div className="space-y-4">
       {/* 工具栏 */}
-      <div className="bg-card rounded-2xl border border-border shadow-soft p-4">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-20">
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <button
+            type="button"
+            onClick={() => setShowFilters(f => !f)}
+            className="flex items-center text-sm font-medium text-gray-700 hover:text-primary-600"
+          >
+            <span>筛选</span>
+            <span className="text-xs ml-2">{showFilters ? '▲ 收起' : '▼ 展开'}</span>
+          </button>
+          <div className="flex items-center gap-3">
+            {tagFilter && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-primary-200 text-primary-700 rounded-lg text-xs font-medium">
+                #{tagFilter}
+                <button onClick={() => setTagFilter('')} className="ml-0.5 hover:text-primary-700">
+                  <XMarkIcon className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+            <span className="text-sm text-gray-400">共 {displayedArticles.length} 条</span>
+            <Button onClick={openCreate}><PlusIcon className="h-4 w-4" />新增词条</Button>
+          </div>
+        </div>
+        {showFilters && (
+        <div className="flex flex-wrap items-center gap-3 p-2 3xl:p-3">
           <div className="relative flex-1 min-w-48">
             <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             <input
@@ -283,18 +308,8 @@ export default function KnowledgeBase({ productLines }: Props) {
             options={[{ value: '', label: '全部产品线' }, ...productLines.map(pl => ({ value: String(pl.id), label: pl.name }))]}
             className="px-3 py-2 border border-gray-300 rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary-500/40"
           />
-          <div className="flex-1" />
-          {tagFilter && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-primary-200 text-primary-700 rounded-lg text-xs font-medium">
-              #{tagFilter}
-              <button onClick={() => setTagFilter('')} className="ml-0.5 hover:text-primary-700">
-                <XMarkIcon className="h-3 w-3" />
-              </button>
-            </span>
-          )}
-          <span className="text-sm text-gray-400">共 {displayedArticles.length} 条</span>
-          <Button onClick={openCreate}><PlusIcon className="h-4 w-4" />新增词条</Button>
         </div>
+        )}
       </div>
 
       {/* 列表 */}
@@ -386,9 +401,9 @@ export default function KnowledgeBase({ productLines }: Props) {
 
       {/* 详情弹窗 */}
       {detail && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto">
-            <div className="flex items-start justify-between p-5 border-b sticky top-0 bg-white z-10">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50 p-4">
+          <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+            <div className="flex items-start justify-between p-5 border-b sticky top-0 bg-popover/90 backdrop-blur z-10">
               <div className="flex-1 pr-4">
                 <div className="flex items-center gap-2 mb-1">
                   {detail.is_pinned && <StarIcon className="h-4 w-4 text-yellow-400 flex-shrink-0" />}
@@ -498,9 +513,9 @@ export default function KnowledgeBase({ productLines }: Props) {
 
       {/* 新增 / 编辑弹窗 */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-white z-10">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50 p-4">
+          <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-popover/90 backdrop-blur z-10">
               <h2 className="text-lg font-bold text-gray-900">{editId ? '编辑词条' : '新增知识词条'}</h2>
               <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
                 <XMarkIcon className="h-5 w-5" />

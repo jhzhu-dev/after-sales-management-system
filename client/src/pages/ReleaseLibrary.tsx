@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { confirmDialog } from '../components/DialogHost';
 import {
     BuildingOfficeIcon,
     CpuChipIcon,
@@ -185,7 +186,7 @@ const ReleaseLibrary: React.FC = () => {
     };
 
     const handleDeleteRelease = async (release: VersionRelease) => {
-        if (!window.confirm(`确定要删除版本"${release.version_number}"吗？此操作不可恢复。`)) {
+        if (!await confirmDialog(`确定要删除版本"${release.version_number}"吗？此操作不可恢复。`)) {
             return;
         }
 
@@ -245,7 +246,7 @@ const ReleaseLibrary: React.FC = () => {
     };
 
     const handleDeleteAttachment = async (attachment: any) => {
-        if (!window.confirm(`确定要删除附件"${attachment.original_name}"吗？`)) return;
+        if (!await confirmDialog(`确定要删除附件"${attachment.original_name}"吗？`)) return;
         try {
             const res = await api.delete(`/version-releases/attachments/${attachment.id}`);
             if (res.data.success) {
@@ -274,10 +275,9 @@ const ReleaseLibrary: React.FC = () => {
         <>
         <Layout>
             <div className="space-y-4 3xl:space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between h-10">
                     <div>
                         <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">版本发布中心</h1>
-                        <p className="text-gray-600 mt-1">管理各模块类型的正式发布版本</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <Button variant="outline" size="sm" onClick={handlePrint}>
@@ -753,8 +753,8 @@ const ReleaseLibrary: React.FC = () => {
 
             {/* 版本详情 Modal */}
             {showDetailModal && selectedRelease && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-3xl w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50 p-4">
+                    <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-3xl w-full overflow-hidden animate-in fade-in zoom-in duration-200">
                         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-blue-50 to-purple-50">
                             <div className="flex items-center gap-3">
                                 <h3 className="text-xl font-bold text-gray-900">版本详情</h3>

@@ -129,6 +129,21 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+    // 版本发布库表 - 必须早于 version_release_products / release_attachments 创建（外键依赖）
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS version_releases (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        module_type_id INT NOT NULL,
+        version_number VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        change_log TEXT,
+        category VARCHAR(100) DEFAULT NULL,
+        release_date DATE DEFAULT (CURRENT_DATE),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (module_type_id) REFERENCES module_types(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     // 版本发布与产品型号关联表（多对多，依赖 version_releases 和 products）
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS version_release_products (
@@ -250,21 +265,6 @@ async function createTables() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL,
         FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE SET NULL
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-
-    // 版本发布库表 - 用于存储可供选择的正式发布的版本
-    await pool.execute(`
-      CREATE TABLE IF NOT EXISTS version_releases (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        module_type_id INT NOT NULL,
-        version_number VARCHAR(100) NOT NULL,
-        title VARCHAR(255) NOT NULL,
-        change_log TEXT,
-        category VARCHAR(100) DEFAULT NULL,
-        release_date DATE DEFAULT (CURRENT_DATE),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (module_type_id) REFERENCES module_types(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
@@ -518,8 +518,10 @@ async function createTables() {
       CREATE TABLE IF NOT EXISTS test_tasks (
         id INT AUTO_INCREMENT PRIMARY KEY,
         task_code VARCHAR(50) NOT NULL UNIQUE COMMENT '任务编号（服务端自动生成：T-YYYYMMDD-NN）',
-        product_id INT NOT NULL COMMENT '对应产品',
+        product_id INT NOT NULL COMMENT '对应产品（代表产品，用于升级决策）',
+        target_type ENUM('model','product') DEFAULT 'product' COMMENT '目标类型：model=产品型号，product=具体产品',
         model_name VARCHAR(255) COMMENT '模型名称',
+        module_category VARCHAR(100) COMMENT '模块分类（对应模块类型管理）',
         model_version VARCHAR(100) COMMENT '模型版本号',
         current_version VARCHAR(100) COMMENT '当前版本（读取产品最新版本快照）',
         upgrade_content TEXT COMMENT '升级内容',
@@ -547,6 +549,19 @@ async function createTables() {
         INDEX idx_status (status),
         INDEX idx_priority (priority),
         INDEX idx_tester (shanghai_tester)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 测试任务关联产品表（具体产品模式可多选）
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS test_task_products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        task_id INT NOT NULL,
+        product_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES test_tasks(id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        UNIQUE KEY uq_task_product (task_id, product_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
@@ -593,6 +608,22 @@ async function createTables() {
         console.log('✅ test_tasks.shenzhen_requester_name 字段添加成功');
       }
     } catch (e) { console.warn('⚠️ test_tasks.shenzhen_requester_name 迁移警告:', e.message); }
+
+    try {
+      const [ttTypeCols] = await pool.execute("SHOW COLUMNS FROM test_tasks LIKE 'target_type'");
+      if (ttTypeCols.length === 0) {
+        await pool.execute("ALTER TABLE test_tasks ADD COLUMN target_type ENUM('model','product') NOT NULL DEFAULT 'product' COMMENT '目标类型：model=产品型号，product=具体产品' AFTER product_id");
+        console.log('✅ test_tasks.target_type 字段添加成功');
+      }
+    } catch (e) { console.warn('⚠️ test_tasks.target_type 迁移警告:', e.message); }
+
+    try {
+      const [catCols] = await pool.execute("SHOW COLUMNS FROM test_tasks LIKE 'module_category'");
+      if (catCols.length === 0) {
+        await pool.execute("ALTER TABLE test_tasks ADD COLUMN module_category VARCHAR(100) COMMENT '模块分类（对应模块类型管理）' AFTER model_name");
+        console.log('✅ test_tasks.module_category 字段添加成功');
+      }
+    } catch (e) { console.warn('⚠️ test_tasks.module_category 迁移警告:', e.message); }
 
     try {
       const [attStatusCols] = await pool.execute("SHOW COLUMNS FROM customer_requirement_attachments LIKE 'status'");
@@ -1136,6 +1167,77 @@ async function createTables() {
       }
     } catch (err) {
       console.warn('⚠️ issues.assignee_open_id 迁移警告:', err.message);
+    }
+
+    // 问题归属分类表（历史上仅存在于生产库，补齐全新部署的建表）
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS issue_classification_types (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        sort_order INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // issues 表新增 classification_id 列及外键
+    try {
+      const [clsCols] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'classification_id'");
+      if (clsCols.length === 0) {
+        await pool.execute("ALTER TABLE issues ADD COLUMN classification_id INT DEFAULT NULL");
+        try {
+          await pool.execute("ALTER TABLE issues ADD CONSTRAINT fk_issue_classification FOREIGN KEY (classification_id) REFERENCES issue_classification_types(id) ON DELETE SET NULL");
+        } catch (e) {
+          console.warn('⚠️ issues.classification_id 外键警告:', e.message);
+        }
+        console.log('✅ issues.classification_id 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ issues.classification_id 迁移警告:', err.message);
+    }
+
+    // issues 表新增跟进人姓名快照列
+    try {
+      const [fnjCols] = await pool.execute("SHOW COLUMNS FROM issues LIKE 'follower_names_json'");
+      if (fnjCols.length === 0) {
+        await pool.execute("ALTER TABLE issues ADD COLUMN follower_names_json TEXT DEFAULT NULL");
+        console.log('✅ issues.follower_names_json 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ issues.follower_names_json 迁移警告:', err.message);
+    }
+
+    // devices 表新增商户号/商户密码列（订单导入使用）
+    try {
+      const [midCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'merchant_id'");
+      if (midCols.length === 0) {
+        await pool.execute("ALTER TABLE devices ADD COLUMN merchant_id VARCHAR(100) DEFAULT NULL AFTER password");
+        await pool.execute("ALTER TABLE devices ADD COLUMN merchant_password VARCHAR(100) DEFAULT NULL AFTER merchant_id");
+        console.log('✅ devices.merchant_id/merchant_password 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ devices 商户号字段迁移警告:', err.message);
+    }
+
+    // devices 表新增安装位置列（设备列表/详情查询使用）
+    try {
+      const [locCols] = await pool.execute("SHOW COLUMNS FROM devices LIKE 'location'");
+      if (locCols.length === 0) {
+        await pool.execute("ALTER TABLE devices ADD COLUMN location VARCHAR(255) DEFAULT NULL");
+        console.log('✅ devices.location 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ devices.location 迁移警告:', err.message);
+    }
+
+    // module_types 表新增飞书负责人姓名列（模块类型列表查询使用）
+    try {
+      const [funCols] = await pool.execute("SHOW COLUMNS FROM module_types LIKE 'feishu_user_name'");
+      if (funCols.length === 0) {
+        await pool.execute("ALTER TABLE module_types ADD COLUMN feishu_user_name VARCHAR(100) DEFAULT NULL COMMENT '关联飞书负责人姓名'");
+        console.log('✅ module_types.feishu_user_name 字段添加成功');
+      }
+    } catch (err) {
+      console.warn('⚠️ module_types.feishu_user_name 迁移警告:', err.message);
     }
 
     // module_types 表新增 feishu_user_open_id 列（关联飞书默认负责人）

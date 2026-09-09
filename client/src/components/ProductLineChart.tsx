@@ -9,7 +9,7 @@ interface ProductLineData {
   name?: string; // 兼容旧的type字段
   type?: string;
   count: number;
-  percentage: number;
+  percentage?: number;
 }
 
 interface ProductLineChartProps {
@@ -34,7 +34,7 @@ const ProductLineChart: React.FC<ProductLineChartProps> = React.memo(({ data }) 
   const normalizedData = data.map(item => ({
     name: item.name || item.type || '未知',
     count: item.count,
-    percentage: item.percentage
+    percentage: item.percentage ?? 0
   }));
 
   // 自定义标签渲染

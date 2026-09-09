@@ -144,6 +144,19 @@ export const issueApi = {
     api.patch('/issues/batch/status', { issue_ids: issueIds, status }).then(res => res.data),
 };
 
+// 反馈单导入 API
+export const issueImportApi = {
+  // 解析反馈单模板（预览）
+  preview: (file: File): Promise<any> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/issues/import/preview', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 }).then(res => res.data);
+  },
+  // 批量创建问题
+  confirm: (rows: any[]): Promise<any> =>
+    api.post('/issues/import/confirm', { rows }).then(res => res.data),
+};
+
 // 售后统计相关API
 export const afterSalesApi = {
   // 获取售后趋势

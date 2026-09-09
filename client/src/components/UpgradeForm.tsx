@@ -77,8 +77,8 @@ const UpgradeForm: React.FC<UpgradeFormProps> = ({ deviceId, onClose, onSubmit }
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50 p-4">
+            <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200">
                 <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                     <h3 className="text-lg font-bold text-gray-900">登记设备升级记录</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">

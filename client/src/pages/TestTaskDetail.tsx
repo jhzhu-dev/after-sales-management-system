@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { confirmDialog } from '../components/DialogHost';
 import { ArrowLeftIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, TrashIcon, EyeIcon, PencilIcon } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
@@ -87,7 +88,7 @@ const TestTaskDetail: React.FC = () => {
   };
 
   const handleDeleteAtt = async (attId: number) => {
-    if (!window.confirm('确定删除该附件吗？')) return;
+    if (!await confirmDialog('确定删除该附件吗？')) return;
     try {
       const res = await testTaskApi.deleteAttachment(attId);
       if (res.success) fetchDetail();
@@ -157,7 +158,7 @@ const TestTaskDetail: React.FC = () => {
 
   return (
     <Layout>
-      <div className="p-4 3xl:p-6">
+      <div>
         <button onClick={() => navigate('/test-tasks')} className="inline-flex items-center text-sm text-gray-600 hover:text-primary-600 mb-4">
           <ArrowLeftIcon className="h-4 w-4 mr-1" /> 返回测试管理
         </button>
@@ -182,8 +183,8 @@ const TestTaskDetail: React.FC = () => {
 
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {field('对应产品', data.product_name ? `${data.product_name}${data.product_model ? ` (${data.product_model})` : ''}` : null)}
-            {field('模型名称', data.model_name)}
-            {field('模型版本号', data.model_version)}
+            {field('模块分类', data.module_category || null)}
+            {field('测试版本号', data.model_version)}
             {field('当前版本', data.current_version)}
             {field('紧急程度', <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getUrgencyColor(data.priority)}`}>{data.priority}</span>)}
             {field('深圳需求人', data.shenzhen_requester_name)}
@@ -195,19 +196,17 @@ const TestTaskDetail: React.FC = () => {
         {/* 业务详情 */}
         {[
           { label: '升级内容', value: data.upgrade_content },
-          { label: '模型特点', value: data.model_features },
+          { label: '版本特点', value: data.model_features },
           { label: '测试要点', value: data.test_focus },
           { label: '测试要求', value: data.test_requirements },
           { label: '车型要求', value: data.vehicle_requirements },
           { label: '测试场景', value: data.test_scenarios },
-        ].map(({ label, value }) =>
-          value ? (
-            <div key={label} className="bg-card rounded-2xl border border-border shadow-soft p-6 mb-4">
-              <dt className="text-xs text-gray-500 mb-1">{label}</dt>
-              <dd className="text-sm text-gray-900 whitespace-pre-wrap">{value}</dd>
-            </div>
-          ) : null
-        )}
+        ].map(({ label, value }) => (
+          <div key={label} className="bg-card rounded-2xl border border-border shadow-soft p-6 mb-4">
+            <dt className="text-xs text-gray-500 mb-1">{label}</dt>
+            <dd className="text-sm text-gray-900 whitespace-pre-wrap">{value || '—'}</dd>
+          </div>
+        ))}
 
         {/* 测试总结（已填则展示） */}
         {data.test_summary && (

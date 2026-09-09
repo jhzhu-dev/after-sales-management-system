@@ -59,6 +59,9 @@ const issueClassificationRoutes = require('./routes/issue-classifications');
 const customerRequirementRoutes = require('./routes/customer-requirements');
 const testTaskRoutes = require('./routes/test-tasks');
 
+// 订单信息表导入路由
+const orderImportRoutes = require('./routes/order-import');
+
 const app = express();
 const HTTP_PORT = Number(process.env.PORT || 5000);
 const HTTPS_PORT = HTTP_PORT + 1;
@@ -207,6 +210,9 @@ app.use('/api/feishu', authenticate, feishuRoutes);
 // 问题归属分类路由
 app.use('/api/issue-classifications', issueClassificationRoutes);
 
+
+// 订单信息表导入路由
+app.use('/api/orders-import', orderImportRoutes);
 // 客户需求登记 / 测试管理路由
 app.use('/api/customer-requirements', customerRequirementRoutes);
 app.use('/api/test-tasks', testTaskRoutes);

@@ -24,7 +24,7 @@ const cqUploadStorage = multer.diskStorage({
 const cqUpload = multer({ storage: cqUploadStorage, limits: { fileSize: 50 * 1024 * 1024 } });
 
 // 允许的状态集合（用于校验）
-const CQ_STATUSES = ['待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
+const CQ_STATUSES = ['需求收集', '待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
 const REQ_TYPES = ['接口对接', '功能定制', '输出结果定制'];
 const URGENCIES = ['低', '中', '高'];
 

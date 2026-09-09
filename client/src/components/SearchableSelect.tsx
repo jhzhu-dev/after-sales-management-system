@@ -26,7 +26,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   options,
   placeholder = '请选择',
   searchPlaceholder = '搜索...',
-  className = 'w-full px-3 py-2 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40',
+  className,
 }) => {
   return (
     <Select

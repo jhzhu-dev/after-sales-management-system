@@ -22,7 +22,15 @@ router.get('/:productId/modules', async (req, res) => {
       FROM product_modules pm
       LEFT JOIN module_types mt ON pm.module_type_id = mt.id
       WHERE pm.product_id = ?
-      ORDER BY mt.name
+      ORDER BY CASE
+        WHEN mt.name LIKE '%机械%' THEN 0
+        WHEN mt.name LIKE '%电气%' THEN 1
+        WHEN mt.name LIKE '%上位%' THEN 2
+        WHEN mt.name LIKE '%视觉%' THEN 3
+        WHEN mt.name LIKE '%服务器%' THEN 4
+        WHEN mt.name LIKE '%车牌%' THEN 5
+        ELSE 6
+      END, mt.name
     `, [productId]);
     
     res.json({
