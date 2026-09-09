@@ -20,6 +20,8 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
 
   const [form, setForm] = useState<TestTaskFormData>({
     product_id: 0,
+    target_type: 'product',
+    product_ids: [],
     model_name: '',
     model_version: '',
     upgrade_content: '',
@@ -50,6 +52,8 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
     if (!isEdit || !testTask) return;
     setForm({
       product_id: testTask.product_id,
+      target_type: testTask.target_type || 'product',
+      product_ids: testTask.product_ids || [],
       model_name: testTask.model_name || '',
       model_version: testTask.model_version || '',
       upgrade_content: testTask.upgrade_content || '',
@@ -71,6 +75,26 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
     [products]
   );
 
+  const modelOptions: SearchableSelectOption[] = useMemo(() => {
+    const seen = new Set<string>();
+    const arr: SearchableSelectOption[] = [];
+    products.forEach(p => {
+      if (p.model && !seen.has(p.model)) {
+        seen.add(p.model);
+        // 型号作为主显示，中文产品名作为辅助名称
+        arr.push({ id: p.model, name: p.model, short_name: p.name });
+      }
+    });
+    return arr;
+  }, [products]);
+
+  const toggleProduct = (id: number) => {
+    setForm(f => {
+      const ids = f.product_ids || [];
+      return { ...f, product_ids: ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id] };
+    });
+  };
+
   const handleRequesterSelect = (value: string) => {
     if (!value) { setForm(f => ({ ...f, shenzhen_requester: '', shenzhen_requester_name: '' })); return; }
     const user = feishuUsers.find(u => u.open_id === value);
@@ -81,7 +105,11 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
 
   const validate = (): boolean => {
     const ne: { [key: string]: string } = {};
-    if (!form.product_id) ne.product_id = '请选择对应产品';
+    if (form.target_type === 'model') {
+      if (!form.model_name?.trim()) ne.product_id = '请选择对应产品型号';
+    } else if (!form.product_ids || form.product_ids.length === 0) {
+      ne.product_id = '请选择对应产品';
+    }
     if (!form.shenzhen_requester_name.trim()) ne.shenzhen_requester_name = '请填写深圳需求人';
     if (!form.priority) ne.priority = '请选择优先级别';
     setErrors(ne);
@@ -94,7 +122,11 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
     setSubmitting(true);
     setServerError('');
     try {
-      await onSubmit({ ...form, product_id: Number(form.product_id) });
+      await onSubmit({
+        ...form,
+        product_id: form.target_type === 'product' ? (form.product_ids?.[0] || 0) : 0,
+        product_ids: form.target_type === 'product' ? (form.product_ids || []) : [],
+      });
       onClose();
     } catch (err: any) {
       setServerError(err?.response?.data?.error || '提交失败，请稍后重试');
@@ -121,7 +153,31 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>对应产品 <span className="text-red-500">*</span></label>
-              <SearchableSelect value={form.product_id ? String(form.product_id) : ''} onChange={v => set('product_id', v ? Number(v) : 0)} options={productOptions} placeholder="请选择产品" />
+              <div className="flex gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => set('target_type', 'model')}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${form.target_type === 'model' ? 'bg-primary-500 text-white border-transparent' : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400 hover:text-primary-600'}`}
+                >产品型号</button>
+                <button
+                  type="button"
+                  onClick={() => set('target_type', 'product')}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${form.target_type === 'product' ? 'bg-primary-500 text-white border-transparent' : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400 hover:text-primary-600'}`}
+                >具体产品</button>
+              </div>
+              {form.target_type === 'model' ? (
+                <SearchableSelect value={form.model_name || ''} onChange={v => set('model_name', v)} options={modelOptions} placeholder="请选择产品型号" />
+              ) : (
+                <div className="border border-gray-300 rounded-md max-h-44 overflow-y-auto p-2 space-y-1">
+                  {products.map(p => (
+                    <label key={p.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" checked={(form.product_ids || []).includes(p.id)} onChange={() => toggleProduct(p.id)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40" />
+                      <span className="text-gray-700">{p.name}{p.model ? ` (${p.model})` : ''}</span>
+                    </label>
+                  ))}
+                  {products.length === 0 && <div className="text-xs text-gray-400 py-2">暂无产品</div>}
+                </div>
+              )}
               {errors.product_id && <p className="mt-1 text-xs text-red-500">{errors.product_id}</p>}
             </div>
             <div>
