@@ -1222,38 +1222,28 @@ const DeviceDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* 所属多合一 · 成员设备明细 */}
+        {/* 所属多合一 · 成员设备（单行简版：设备编码 + 产品名称） */}
         {device.bundle_id && bundleDevices.length > 0 && (
           <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 mb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-medium text-gray-900">所属多合一 · 成员设备（{bundleDevices.length}）</h3>
-              <Link to={`/bundles/${device.bundle_id_val || device.bundle_id}`} className="text-sm text-primary-600 hover:text-primary-700">查看多合一详情</Link>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base font-medium text-foreground">所属多合一 · 成员设备（{bundleDevices.length}）</h3>
+              <Link to={`/bundles/${device.bundle_id_val || device.bundle_id}`} className="text-sm text-primary-600 hover:text-primary-700 flex-shrink-0 ml-4">查看多合一详情</Link>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">生产序列号</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">设备编码</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">产品名称</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">远程码</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">主设备</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {bundleDevices.map((m: any) => (
-                    <tr key={m.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/devices/${m.id}`)}>
-                      <td className="px-4 py-3"><span className="text-primary-600 font-mono font-medium">{m.id}</span></td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{m.device_code || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{m.product_name || '-'}</td>
-                      <td className="px-4 py-3 text-sm font-mono text-gray-700">{m.remote_code || '-'}</td>
-                      <td className="px-4 py-3 text-sm">{Number(m.is_primary) === 1 ? <span className="text-primary-600 font-medium">★ 主设备</span> : '-'}</td>
-                      <td className="px-4 py-3"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(m.status)}`}>{m.status}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
+              {bundleDevices.map((m: any, idx: number) => (
+                <React.Fragment key={m.id}>
+                  {idx > 0 && <span className="text-gray-400 flex-shrink-0">·</span>}
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/devices/${m.id}?from=bundle&bundleId=${device.bundle_id_val || device.bundle_id}`)}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-muted/50 hover:border-primary-400 hover:bg-muted transition-colors flex-shrink-0"
+                    title={`${m.device_code || '-'} ${m.product_name || ''}`}
+                  >
+                    <span className="text-xs font-mono font-medium text-primary-600">{m.device_code || '-'}</span>
+                    <span className="text-sm text-foreground truncate max-w-[260px]">{m.product_name || '-'}</span>
+                  </button>
+                </React.Fragment>
+              ))}
             </div>
           </div>
         )}
