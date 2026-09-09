@@ -3,7 +3,7 @@ import { XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import SearchableSelect, { SearchableSelectOption } from './SearchableSelect';
 import Select from './Select';
 import ButtonGroup from './ButtonGroup';
-import { testTaskApi, productApi, feishuApi, customerApi, deviceApi } from '../services/api';
+import { testTaskApi, productApi, feishuApi, customerApi, deviceApi, moduleTypeApi } from '../services/api';
 import { Button } from '../components/ui/button';
 import { TestTask, TestTaskFormData, Product, FeishuUser, Customer, Device } from '../types';
 import { getUrgencyColor } from '../utils';
@@ -40,6 +40,7 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
 
   const [products, setProducts] = useState<Product[]>([]);
   const [feishuUsers, setFeishuUsers] = useState<FeishuUser[]>([]);
+  const [moduleTypes, setModuleTypes] = useState<{ id: number; name: string }[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [devices, setDevices] = useState<Device[]>([]);
@@ -63,6 +64,7 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
   useEffect(() => {
     productApi.getProducts().then(res => setProducts(res.data || [])).catch(e => console.error('加载产品失败:', e));
     feishuApi.getUsers().then(res => setFeishuUsers(res.data || [])).catch(() => {});
+    moduleTypeApi.getActiveModuleTypes().then(res => setModuleTypes(res.data || [])).catch(() => {});
     customerApi.getCustomers().then(res => setCustomers(res.data || [])).catch(() => {});
     setLoadingDevices(true);
     deviceApi.getDevices({ page: 1, limit: 1000 })
@@ -176,9 +178,9 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-10 bg-card rounded-2xl border border-border shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">{isEdit ? '编辑测试任务单' : '新建测试任务单'}</h3>
+      <div className="relative z-10 bg-card rounded-2xl border border-border shadow-soft-lg w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h3 className="text-lg font-semibold text-foreground">{isEdit ? '编辑测试任务单' : '新建测试任务单'}</h3>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600"><XMarkIcon className="h-6 w-6" /></button>
         </div>
 
@@ -257,12 +259,18 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
               <input type="date" value={form.planned_completion_date} onChange={e => set('planned_completion_date', e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>模型名称</label>
-              <input value={form.model_name} onChange={e => set('model_name', e.target.value)} className={inputCls} placeholder="待测模型名称" />
+              <label className={labelCls}>模块分类</label>
+              <Select
+                value={form.model_name || ''}
+                onChange={v => set('model_name', v)}
+                placeholder="请选择模块分类"
+                options={[{ value: '', label: '请选择模块分类' }, ...moduleTypes.map(m => ({ value: m.name, label: m.name }))]}
+                className={inputCls}
+              />
             </div>
             <div>
-              <label className={labelCls}>模型版本号</label>
-              <input value={form.model_version} onChange={e => set('model_version', e.target.value)} className={inputCls} placeholder="待测模型版本号（升级时用于定位产品版本）" />
+              <label className={labelCls}>测试版本号</label>
+              <input value={form.model_version} onChange={e => set('model_version', e.target.value)} className={inputCls} placeholder="填写程序或模型版本号（升级时用于定位产品版本）" />
             </div>
             <div>
               <label className={labelCls}>深圳需求人 <span className="text-red-500">*</span></label>

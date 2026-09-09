@@ -5,14 +5,17 @@ import { Device, DeviceFormData, Customer, FeishuUser } from '../types';
 import { productLineApi, customerApi, productApi, productModuleApi, feishuApi } from '../services/api';
 import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 import Select from './Select';
+import OrderImportPanel from './OrderImportPanel';
 
 interface DeviceFormProps {
   device?: Device | null;
   onClose: () => void;
   onSubmit: (data: DeviceFormData) => Promise<void>;
+  onImported?: () => void;
 }
 
-const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) => {
+const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onImported }) => {
+  const [mode, setMode] = useState<'manual' | 'import'>('manual');
   const [formData, setFormData] = useState<DeviceFormData>({
     id: '',
     name: '',
@@ -372,11 +375,29 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 flex-shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900">
+      <div className={`bg-card rounded-2xl border border-border shadow-soft-lg ${mode === 'import' && !device ? 'max-w-5xl' : 'max-w-3xl'} w-full mx-4 max-h-[90vh] flex flex-col`}>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border flex-shrink-0 gap-3">
+          <h2 className="text-lg font-semibold text-foreground">
             {device ? '编辑设备' : '新增设备'}
           </h2>
+          {!device && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setMode('manual')}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${mode === 'manual' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                手动登记
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('import')}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${mode === 'import' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                导入订单表
+              </button>
+            </div>
+          )}
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -385,6 +406,14 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
           </button>
         </div>
 
+        {mode === 'import' && !device ? (
+          <div className="px-5 py-3 overflow-y-auto flex-1">
+            <OrderImportPanel
+              onClose={onClose}
+              onDone={() => { onImported?.(); onClose(); }}
+            />
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="px-5 py-3 overflow-y-auto flex-1 space-y-3">
           {/* 编辑模式：可编辑字段 */}
           {device && (
@@ -762,6 +791,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit }) =>
             <Button type="submit" disabled={loading}>{loading ? '保存中...' : (device ? '更新' : '新增')}</Button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

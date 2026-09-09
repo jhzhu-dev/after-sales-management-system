@@ -287,32 +287,32 @@ const OrderImportPanel: React.FC<OrderImportPanelProps> = ({ onClose, onDone }) 
 
           {/* 设备清单 */}
           <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
-              <h2 className="text-sm font-semibold text-gray-800">设备清单（共 {devices.length} 台）</h2>
-              <p className="text-xs text-gray-400">型号已自动识别，请确认/编辑设备编码并填写序列号</p>
+            <div className="flex items-center justify-between px-5 py-3 bg-muted border-b border-border">
+              <h2 className="text-sm font-semibold text-foreground">设备清单（共 {devices.length} 台）</h2>
+              <p className="text-xs text-muted-foreground">型号已自动识别，请确认/编辑设备编码并填写序列号</p>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted backdrop-blur border-b border-border">
                   <tr>
-                    <th className="text-left text-xs font-medium text-gray-500 px-4 py-2">产品 / 型号</th>
-                    <th className="text-left text-xs font-medium text-gray-500 px-4 py-2">数量</th>
-                    <th className="text-left text-xs font-medium text-gray-500 px-4 py-2">识别状态</th>
-                    <th className="text-left text-xs font-medium text-gray-500 px-4 py-2">产品（简称）</th>
-                    <th className="text-left text-xs font-medium text-gray-500 px-4 py-2">设备编码</th>
-                    <th className="text-left text-xs font-medium text-gray-500 px-4 py-2">序列号 *</th>
+                    <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-4 py-2">产品 / 型号</th>
+                    <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-4 py-2">数量</th>
+                    <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-4 py-2">识别状态</th>
+                    <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-4 py-2">产品（简称）</th>
+                    <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-4 py-2">设备编码</th>
+                    <th className="text-left text-xs font-semibold text-foreground uppercase tracking-wider px-4 py-2">序列号 *</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border">
                   {devices.map((d, idx) => (
                     <tr key={idx}>
-                      <td className="px-4 py-2 text-sm text-gray-800">
+                      <td className="px-4 py-2 text-sm text-foreground">
                         <div>{d.fullName}</div>
-                        <div className="text-xs text-gray-400">{d.model}</div>
+                        <div className="text-xs text-muted-foreground">{d.model}</div>
                       </td>
-                      <td className="px-4 py-2 text-sm text-gray-800">{d.quantity}</td>
+                      <td className="px-4 py-2 text-sm text-foreground">{d.quantity}</td>
                       <td className={`px-4 py-2 text-sm font-medium ${nameColor(d.status)}`}>{STATUS_LABEL[d.status] || d.status}</td>
-                      <td className="px-4 py-2 text-sm text-gray-800">{d.product_short_name || '-'}</td>
+                      <td className="px-4 py-2 text-sm text-foreground">{d.product_short_name || '-'}</td>
                       <td className="px-4 py-2">
                         <input value={d.device_code} onChange={(e) => updateDevice(idx, { device_code: e.target.value })} className={inputCls} placeholder="设备编码" />
                       </td>

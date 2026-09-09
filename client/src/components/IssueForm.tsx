@@ -307,9 +307,9 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className={`bg-card rounded-2xl border border-border shadow-2xl w-full mx-4 ${mode === 'import' && !issue ? 'max-w-[1500px]' : 'max-w-2xl'} max-h-[88vh] overflow-y-auto`}>
-        <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-gray-200 gap-3">
-          <h3 className="text-lg font-medium text-gray-900">
+      <div className={`bg-card rounded-2xl border border-border shadow-soft-lg w-full mx-4 ${mode === 'import' && !issue ? 'max-w-[1500px]' : 'max-w-2xl'} max-h-[88vh] overflow-y-auto`}>
+        <div className="flex items-center justify-between p-4 3xl:p-6 border-b border-border gap-3">
+          <h3 className="text-lg font-medium text-foreground">
             {issue ? '编辑问题' : '新增问题'}
           </h3>
           {!issue && (
@@ -541,9 +541,9 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">反馈时间</label>
               <input
-                type="datetime-local"
+                type="date"
                 name="feedback_time"
-                value={formData.feedback_time}
+                value={formData.feedback_time ? String(formData.feedback_time).slice(0, 10) : ''}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               />

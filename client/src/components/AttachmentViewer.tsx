@@ -56,14 +56,14 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachments, initia
 
       {/* Modal */}
       <div
-        className="relative z-10 flex flex-col bg-card rounded-2xl border border-border shadow-2xl max-w-5xl w-full mx-4"
+        className="relative z-10 flex flex-col bg-card rounded-2xl border border-border shadow-soft-lg max-w-5xl w-full mx-4"
         style={{ maxHeight: '85vh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="font-medium text-gray-900 truncate">{att.title || att.name}</span>
+            <span className="font-medium text-foreground truncate">{att.title || att.name}</span>
             {att.size && <span className="text-xs text-gray-400 flex-shrink-0">{formatFileSize(att.size)}</span>}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 ml-3">
