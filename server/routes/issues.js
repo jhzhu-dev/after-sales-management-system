@@ -922,6 +922,15 @@ function mapFirstOccurrence(v) {
   const s = clean(v).toLowerCase();
   return s === '1' || s === '首次' || s === '是' || s === 'true';
 }
+function mapRegion(v) {
+  const s = clean(v);
+  if (!s) return '';
+  // 将区域归一到 国内 / 国外
+  if (s.includes('国') && (s.includes('内') || s.includes('中') || s === '国内')) return '国内';
+  if (s.includes('外') || s === '国外' || s.includes('出海')) return '国外';
+  // 默认非"国内"、可判断为地区/国家的按国外处理；否则原样返回
+  return s;
+}
 
 // POST /api/issues/import/preview — 解析反馈单模板，返回预览
 router.post('/import/preview', importUpload.single('file'), async (req, res) => {
@@ -985,7 +994,7 @@ router.post('/import/preview', importUpload.single('file'), async (req, res) => 
           feedback_no: get(r, '反馈单号'),
           type: get(r, '类型'),
           customer: get(r, '客户/地区'),
-          region: get(r, '区域'),
+          region: mapRegion(get(r, '区域')),
           device_type: get(r, '设备类型'),
           device_code: deviceCode,
           severity,

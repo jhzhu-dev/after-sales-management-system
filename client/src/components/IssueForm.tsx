@@ -557,13 +557,16 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">区域</label>
-              <input
-                type="text"
-                name="region"
+              <Select
                 value={formData.region || ''}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-                placeholder="请输入区域"
+                onChange={v => setFormData(prev => ({ ...prev, region: v }))}
+                placeholder="请选择区域"
+                options={[
+                  { value: '', label: '请选择区域' },
+                  { value: '国内', label: '国内' },
+                  { value: '国外', label: '国外' },
+                ]}
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               />
             </div>
             <div>
