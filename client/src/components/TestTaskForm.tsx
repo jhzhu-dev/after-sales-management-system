@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import SearchableSelect, { SearchableSelectOption } from './SearchableSelect';
 import Select from './Select';
-import { testTaskApi, productApi, feishuApi } from '../services/api';
+import { testTaskApi, productApi, feishuApi, customerApi, deviceApi } from '../services/api';
 import { Button } from '../components/ui/button';
-import { TestTask, TestTaskFormData, Product, FeishuUser } from '../types';
+import { TestTask, TestTaskFormData, Product, FeishuUser, Customer } from '../types';
 import { getUrgencyColor } from '../utils';
 
 interface TestTaskFormProps {
@@ -39,6 +39,11 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
 
   const [products, setProducts] = useState<Product[]>([]);
   const [feishuUsers, setFeishuUsers] = useState<FeishuUser[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  // 该客户名下设备所拥有的产品ID集合
+  const [ownedProductIds, setOwnedProductIds] = useState<number[]>([]);
+  const [loadingCustomer, setLoadingCustomer] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [serverError, setServerError] = useState('');
@@ -46,7 +51,34 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
   useEffect(() => {
     productApi.getProducts().then(res => setProducts(res.data || [])).catch(e => console.error('加载产品失败:', e));
     feishuApi.getUsers().then(res => setFeishuUsers(res.data || [])).catch(() => {});
+    customerApi.getCustomers().then(res => setCustomers(res.data || [])).catch(() => {});
   }, []);
+
+  // 选择客户后，加载该客户名下设备，提取其拥有的产品ID，用于过滤产品列表
+  const handleCustomerChange = (customerId: string) => {
+    setSelectedCustomerId(customerId);
+    setOwnedProductIds([]);
+    if (!customerId) return;
+    setLoadingCustomer(true);
+    deviceApi.getDevices({ page: 1, limit: 1000 })
+      .then(res => {
+        const devices = (res as any).data || [];
+        const owned: number[] = Array.from(new Set(
+          devices
+            .filter((d: any) => String(d.customer_id || '') === String(customerId) && d.product_id)
+            .map((d: any) => Number(d.product_id))
+        ));
+        setOwnedProductIds(owned);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingCustomer(false));
+  };
+
+  // 过滤产品：选了客户时仅展示该客户拥有的产品
+  const visibleProducts = useMemo(() => {
+    if (!selectedCustomerId) return products;
+    return products.filter(p => ownedProductIds.includes(p.id));
+  }, [products, selectedCustomerId, ownedProductIds]);
 
   useEffect(() => {
     if (!isEdit || !testTask) return;
@@ -71,14 +103,14 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
   }, [isEdit, testTask]);
 
   const productOptions: SearchableSelectOption[] = useMemo(
-    () => products.map(p => ({ id: String(p.id), name: `${p.name}${p.model ? ` (${p.model})` : ''}` })),
-    [products]
+    () => visibleProducts.map(p => ({ id: String(p.id), name: `${p.name}${p.model ? ` (${p.model})` : ''}` })),
+    [visibleProducts]
   );
 
   const modelOptions: SearchableSelectOption[] = useMemo(() => {
     const seen = new Set<string>();
     const arr: SearchableSelectOption[] = [];
-    products.forEach(p => {
+    visibleProducts.forEach(p => {
       if (p.model && !seen.has(p.model)) {
         seen.add(p.model);
         // 型号作为主显示，中文产品名作为辅助名称
@@ -86,7 +118,7 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
       }
     });
     return arr;
-  }, [products]);
+  }, [visibleProducts]);
 
   const toggleProduct = (id: number) => {
     setForm(f => {
@@ -150,6 +182,23 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           {serverError && <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">{serverError}</div>}
 
+          {/* 客户筛选：选择后仅展示该客户拥有的产品/型号 */}
+          <div>
+            <label className={labelCls}>客户</label>
+            <SearchableSelect
+              value={selectedCustomerId}
+              onChange={handleCustomerChange}
+              options={customers.map(c => ({ id: String(c.id), name: c.name, short_name: c.short_name }))}
+              placeholder="全部客户"
+              searchPlaceholder="搜索客户名称或简称"
+            />
+            {selectedCustomerId && (
+              <p className="mt-1 text-xs text-gray-400">
+                {loadingCustomer ? '正在加载该客户产品...' : `已按客户筛选，仅显示该客户名下的 ${visibleProducts.length} 个产品`}
+              </p>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>对应产品 <span className="text-red-500">*</span></label>
@@ -169,13 +218,13 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
                 <SearchableSelect value={form.model_name || ''} onChange={v => set('model_name', v)} options={modelOptions} placeholder="请选择产品型号" />
               ) : (
                 <div className="border border-gray-300 rounded-md max-h-44 overflow-y-auto p-2 space-y-1">
-                  {products.map(p => (
+                  {visibleProducts.map(p => (
                     <label key={p.id} className="flex items-center gap-2 text-sm cursor-pointer">
                       <input type="checkbox" checked={(form.product_ids || []).includes(p.id)} onChange={() => toggleProduct(p.id)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40" />
                       <span className="text-gray-700">{p.name}{p.model ? ` (${p.model})` : ''}</span>
                     </label>
                   ))}
-                  {products.length === 0 && <div className="text-xs text-gray-400 py-2">暂无产品</div>}
+                  {visibleProducts.length === 0 && <div className="text-xs text-gray-400 py-2">{selectedCustomerId ? (loadingCustomer ? '加载该客户产品中...' : '该客户暂无产品') : '暂无产品'}</div>}
                 </div>
               )}
               {errors.product_id && <p className="mt-1 text-xs text-red-500">{errors.product_id}</p>}
