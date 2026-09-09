@@ -6,7 +6,9 @@ import { deviceApi, moduleApi, feishuApi, issueClassificationApi } from '../serv
 import api from '../services/api';
 import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 import Select from './Select';
+import ButtonGroup from './ButtonGroup';
 import IssueImportPanel from './IssueImportPanel';
+import { getSeverityColor, getStatusColor } from '../utils';
 
 interface UploadedAttachment {
   name: string;
@@ -483,11 +485,12 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 紧急程度 <span className="text-red-500">*</span>
               </label>
-              <Select
+              <ButtonGroup
                 value={formData.severity}
                 onChange={v => handleInputChange({ target: { name: 'severity', value: v } } as any)}
                 options={[{ value: 'high', label: '高' }, { value: 'medium', label: '中' }, { value: 'low', label: '低' }]}
-                className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${errors.severity ? 'border-red-500' : 'border-gray-300'}`}
+                colorClass={getSeverityColor}
+                error={!!errors.severity}
               />
               {errors.severity && <p className="mt-1 text-sm text-red-600">{errors.severity}</p>}
             </div>
@@ -495,11 +498,12 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 状态 <span className="text-red-500">*</span>
               </label>
-              <Select
+              <ButtonGroup
                 value={formData.status}
                 onChange={v => handleInputChange({ target: { name: 'status', value: v } } as any)}
                 options={[{ value: 'open', label: '待处理' }, { value: 'in_progress', label: '处理中' }, { value: 'closed', label: '已解决' }]}
-                className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 ${errors.status ? 'border-red-500' : 'border-gray-300'}`}
+                colorClass={getStatusColor}
+                error={!!errors.status}
               />
               {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
             </div>

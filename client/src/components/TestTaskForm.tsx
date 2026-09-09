@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import SearchableSelect, { SearchableSelectOption } from './SearchableSelect';
 import Select from './Select';
+import ButtonGroup from './ButtonGroup';
 import { testTaskApi, productApi, feishuApi, customerApi, deviceApi } from '../services/api';
 import { Button } from '../components/ui/button';
 import { TestTask, TestTaskFormData, Product, FeishuUser, Customer, Device } from '../types';
@@ -46,6 +47,18 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [serverError, setServerError] = useState('');
+  const [requesterOpen, setRequesterOpen] = useState(false);
+  const requesterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (requesterRef.current && !requesterRef.current.contains(e.target as Node)) {
+        setRequesterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   useEffect(() => {
     productApi.getProducts().then(res => setProducts(res.data || [])).catch(e => console.error('加载产品失败:', e));
@@ -123,12 +136,6 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
     });
   };
 
-  const handleRequesterSelect = (value: string) => {
-    if (!value) { setForm(f => ({ ...f, shenzhen_requester: '', shenzhen_requester_name: '' })); return; }
-    const user = feishuUsers.find(u => u.open_id === value);
-    setForm(f => ({ ...f, shenzhen_requester: value, shenzhen_requester_name: user?.name || '' }));
-  };
-
   const set = (key: keyof TestTaskFormData, value: any) => setForm(f => ({ ...f, [key]: value }));
 
   const validate = (): boolean => {
@@ -189,9 +196,18 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
               searchPlaceholder="搜索客户名称或简称"
             />
             {selectedCustomerId && (
-              <p className="mt-1 text-xs text-gray-400">
-                {loadingDevices ? '正在加载该客户设备...' : `已按客户筛选，仅显示该客户名下的 ${visibleDevices.length} 台设备`}
-              </p>
+              <div className="mt-1 flex items-center gap-3">
+                <p className="text-xs text-gray-400">
+                  {loadingDevices ? '正在加载该客户设备...' : `已按客户筛选，仅显示该客户名下的 ${visibleDevices.length} 台设备`}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCustomerId('')}
+                  className="text-xs text-primary-600 hover:text-primary-700 underline"
+                >
+                  清除筛选
+                </button>
+              </div>
             )}
           </div>
 
@@ -217,8 +233,8 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
                   {visibleDevices.map(d => (
                     <label key={d.id} className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
                       <input type="checkbox" checked={(form.product_ids || []).includes(d.product_id as number)} onChange={() => toggleProduct(d.product_id as number)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40" />
-                      <span className="text-gray-700 truncate" title={`${d.device_code || ''} ${d.name || d.product_name || ''}`}>
-                        {d.device_code ? `${d.device_code} - ` : ''}{d.name || d.product_name}
+                      <span className="text-gray-700 truncate" title={`${d.device_code || ''} ${d.nickname || ''}`}>
+                        {d.nickname ? `${d.device_code ? d.device_code + ' - ' : ''}${d.nickname}` : (d.device_code || '无简称')}
                       </span>
                     </label>
                   ))}
@@ -229,22 +245,12 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
             </div>
             <div>
               <label className={labelCls}>紧急程度 <span className="text-red-500">*</span></label>
-              <div className="flex flex-wrap gap-2">
-                {PRIORITIES.map(p => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => set('priority', p)}
-                    className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                      form.priority === p
-                        ? `${getUrgencyColor(p)} border-transparent ring-2 ring-primary-500/50 ring-offset-1`
-                        : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400 hover:text-primary-600'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
+              <ButtonGroup
+                value={form.priority}
+                onChange={v => set('priority', v)}
+                options={PRIORITIES.map(p => ({ value: p, label: p }))}
+                colorClass={getUrgencyColor}
+              />
             </div>
             <div>
               <label className={labelCls}>计划完成时间</label>
@@ -260,20 +266,44 @@ const TestTaskForm: React.FC<TestTaskFormProps> = ({ testTask, onClose, onSubmit
             </div>
             <div>
               <label className={labelCls}>深圳需求人 <span className="text-red-500">*</span></label>
-              {feishuUsers.length > 0 ? (
-                <Select
-                  value={form.shenzhen_requester || ''}
-                  onChange={v => handleRequesterSelect(v)}
-                  placeholder="选择需求人"
-                  options={[{ value: '', label: '选择需求人' }, ...feishuUsers.map(u => ({ value: u.open_id, label: `${u.name}${u.department ? ` · ${u.department}` : ''}` }))]}
+              <div className="relative" ref={requesterRef}>
+                <input
+                  type="text"
+                  value={form.shenzhen_requester_name}
+                  onChange={e => {
+                    const name = e.target.value;
+                    const user = feishuUsers.find(u => u.name === name);
+                    setForm(f => ({ ...f, shenzhen_requester_name: name, shenzhen_requester: user?.open_id || '' }));
+                  }}
                   className={inputCls}
+                  placeholder="选择或输入需求人姓名"
                 />
-              ) : (
-                <input value={form.shenzhen_requester_name} onChange={e => set('shenzhen_requester_name', e.target.value)} className={inputCls} placeholder="请输入深圳需求人姓名" />
-              )}
-              {(feishuUsers.length > 0 && !form.shenzhen_requester_name) && (
-                <input value={form.shenzhen_requester_name} onChange={e => set('shenzhen_requester_name', e.target.value)} className={`${inputCls} mt-2`} placeholder="或手动输入需求人姓名" />
-              )}
+                {feishuUsers.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setRequesterOpen(o => !o)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <ChevronDownIcon className="h-4 w-4" />
+                  </button>
+                )}
+                {requesterOpen && feishuUsers.length > 0 && (
+                  <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-xl shadow-2xl overflow-hidden">
+                    <div className="max-h-56 overflow-y-auto no-scrollbar">
+                      {feishuUsers.map(u => (
+                        <button
+                          key={u.open_id}
+                          type="button"
+                          onClick={() => { setForm(f => ({ ...f, shenzhen_requester: u.open_id, shenzhen_requester_name: u.name })); setRequesterOpen(false); }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted text-foreground"
+                        >
+                          {u.name}{u.department ? ` · ${u.department}` : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               {errors.shenzhen_requester_name && <p className="mt-1 text-xs text-red-500">{errors.shenzhen_requester_name}</p>}
             </div>
             <div>

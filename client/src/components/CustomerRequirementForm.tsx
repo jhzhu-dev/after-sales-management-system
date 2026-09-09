@@ -2,9 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import SearchableSelect, { SearchableSelectOption } from './SearchableSelect';
 import Select from './Select';
+import ButtonGroup from './ButtonGroup';
 import { customerRequirementApi, customerApi, deviceApi } from '../services/api';
 import { Button } from '../components/ui/button';
 import { CustomerRequirement, CustomerRequirementFormData, Customer, Device, RequirementType, RequirementUrgency } from '../types';
+import { getUrgencyColor } from '../utils';
 
 interface CustomerRequirementFormProps {
   requirement?: CustomerRequirement | null;
@@ -79,6 +81,7 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
     return devices.filter(d =>
       (d.name && d.name.toLowerCase().includes(q)) ||
       (d.id && String(d.id).toLowerCase().includes(q)) ||
+      (d.device_code && String(d.device_code).toLowerCase().includes(q)) ||
       (d.nickname && d.nickname.toLowerCase().includes(q))
     );
   }, [devices, deviceSearch]);
@@ -159,7 +162,7 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">紧急程度</label>
-              <Select value={urgency} onChange={v => setUrgency(v as any)} options={URGENCIES.map(u => ({ value: u, label: u }))} className={inputCls} />
+              <ButtonGroup value={urgency} onChange={v => setUrgency(v as RequirementUrgency)} options={URGENCIES.map(u => ({ value: u, label: u }))} colorClass={getUrgencyColor} />
             </div>
           </div>
 
@@ -189,8 +192,8 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
                   <label key={d.id} className="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer select-none hover:bg-gray-50">
                     <input type="checkbox" checked={deviceIds.includes(d.id)} onChange={() => toggleDevice(d.id)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40" />
                     <span className="text-sm text-gray-800">
-                      {d.name || d.id}
-                      {d.nickname ? <span className="text-gray-400 ml-1">({d.nickname})</span> : null}
+                      <span className="font-medium">{d.id || d.name}</span>
+                      {d.nickname ? <span className="text-gray-400 ml-2">· {d.nickname}</span> : null}
                     </span>
                   </label>
                 ))}
