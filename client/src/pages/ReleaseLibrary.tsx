@@ -755,7 +755,7 @@ const ReleaseLibrary: React.FC = () => {
             {showDetailModal && selectedRelease && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50 p-4">
                     <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-3xl w-full overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-blue-50 to-purple-50">
+                        <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-popover/90 backdrop-blur">
                             <div className="flex items-center gap-3">
                                 <h3 className="text-xl font-bold text-gray-900">版本详情</h3>
                                 <span className="px-3 py-1 bg-primary-500 text-white text-sm font-bold font-mono rounded-md shadow-sm">

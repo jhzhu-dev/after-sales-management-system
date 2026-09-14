@@ -638,7 +638,8 @@ export interface DeviceBundleFormData {
 
 // ==================== 客户需求登记 ====================
 
-export type RequirementType = '接口对接' | '功能定制' | '输出结果定制';
+// 需求分类：支持自定义输入，不再是固定枚举（历史分类作为建议项）
+export type RequirementType = string;
 export type RequirementUrgency = '低' | '中' | '高';
 export type RequirementStatus = '需求收集' | '待评估' | '评估中' | '已评估待开发' | '开发中' | '已开发待测试' | '测试中' | '已测试待发布' | '已发布' | '废弃';
 

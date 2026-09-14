@@ -25,7 +25,7 @@ const cqUpload = multer({ storage: cqUploadStorage, limits: { fileSize: 50 * 102
 
 // 允许的状态集合（用于校验）
 const CQ_STATUSES = ['需求收集', '待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
-const REQ_TYPES = ['接口对接', '功能定制', '输出结果定制'];
+// 需求分类已支持自定义输入（VARCHAR），基础三分类仅作为前端建议项
 const URGENCIES = ['低', '中', '高'];
 
 // 生成需求编号：XQ-YYYYMMDD-NN（当日序号）。必须传 conn（在事务内调用，取最大序号）
@@ -114,6 +114,23 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/customer-requirements/categories - 历史使用过的需求分类（去重，供表单建议；必须在 /:id 之前注册）
+router.get('/categories', async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT requirement_type AS name, COUNT(*) AS count
+       FROM customer_requirements
+       WHERE requirement_type IS NOT NULL AND requirement_type <> ''
+       GROUP BY requirement_type
+       ORDER BY count DESC, name ASC`
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('获取需求分类失败:', error);
+    fail(res, 500, '获取需求分类失败');
+  }
+});
+
 // GET /api/customer-requirements/:id - 详情
 router.get('/:id', async (req, res) => {
   try {
@@ -149,7 +166,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/customer-requirements - 新增需求
 router.post('/', [
   body('customer_id').notEmpty().withMessage('客户名称必填'),
-  body('requirement_type').isIn(REQ_TYPES).withMessage('需求分类非法'),
+  body('requirement_type').trim().notEmpty().withMessage('请填写需求分类').isLength({ max: 50 }).withMessage('需求分类不能超过50字'),
   body('proposed_date').notEmpty().withMessage('需求提出日期必填'),
   body('description').notEmpty().withMessage('需求详情描述必填'),
   body('device_ids').optional().isArray().withMessage('设备列表格式错误')
@@ -208,7 +225,7 @@ router.post('/', [
 // PUT /api/customer-requirements/:id - 编辑需求
 router.put('/:id', [
   body('customer_id').optional().notEmpty(),
-  body('requirement_type').optional().isIn(REQ_TYPES),
+  body('requirement_type').optional().trim().notEmpty().isLength({ max: 50 }),
   body('proposed_date').optional().notEmpty(),
   body('description').optional().notEmpty(),
   body('device_ids').optional().isArray()

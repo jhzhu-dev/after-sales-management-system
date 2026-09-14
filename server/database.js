@@ -446,7 +446,7 @@ async function createTables() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         req_code VARCHAR(50) NOT NULL UNIQUE COMMENT '需求编号（服务端自动生成：XQ-YYYYMMDD-NN，唯一）',
         customer_id INT NOT NULL COMMENT '客户名称',
-        requirement_type ENUM('接口对接','功能定制','输出结果定制') NOT NULL COMMENT '需求分类',
+        requirement_type VARCHAR(50) NOT NULL COMMENT '需求分类（可自定义输入）',
         proposed_date DATE NOT NULL COMMENT '需求提出日期（区别于系统登记时间，必填）',
         urgency ENUM('低','中','高') DEFAULT '中' COMMENT '紧急程度',
         status ENUM('需求收集','待评估','评估中','已评估待开发','开发中','已开发待测试','测试中','已测试待发布','已发布','废弃')
@@ -600,6 +600,16 @@ async function createTables() {
         console.log('✅ customer_requirements.status 增加「需求收集」成功');
       }
     } catch (e) { console.warn('⚠️ customer_requirements.status ENUM 迁移警告:', e.message); }
+
+    // 迁移：需求分类由固定 ENUM 改为 VARCHAR（支持自定义输入，幂等）
+    try {
+      const [rtCols] = await pool.execute("SHOW COLUMNS FROM customer_requirements LIKE 'requirement_type'");
+      const rtType = rtCols[0] ? String(rtCols[0].Type) : '';
+      if (rtType.startsWith('enum')) {
+        await pool.execute("ALTER TABLE customer_requirements MODIFY COLUMN requirement_type VARCHAR(50) NOT NULL COMMENT '需求分类（可自定义输入）'");
+        console.log('✅ customer_requirements.requirement_type 已迁移为 VARCHAR(50)（支持自定义分类）');
+      }
+    } catch (e) { console.warn('⚠️ customer_requirements.requirement_type 迁移警告:', e.message); }
 
     try {
       const [nameCols] = await pool.execute("SHOW COLUMNS FROM test_tasks LIKE 'shenzhen_requester_name'");

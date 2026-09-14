@@ -45,6 +45,8 @@ const CustomerRequirements: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [visibleCount, setVisibleCount] = useState(20);
   const [selectedIds, setSelectedIds] = useState<Array<string | number>>([]);
+  // 需求分类筛选选项：基础分类 + 历史使用过的自定义分类
+  const [typeOptions, setTypeOptions] = useState<string[]>([...REQ_TYPES]);
 
   const [filters, setFilters] = useState({
     page: 1,
@@ -90,6 +92,16 @@ const CustomerRequirements: React.FC = () => {
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
+  const loadTypeOptions = useCallback(async () => {
+    try {
+      const res = await customerRequirementApi.getCategories();
+      const history = ((res.data || []) as Array<{ name: string }>).map(c => c.name).filter(Boolean);
+      setTypeOptions(Array.from(new Set([...REQ_TYPES, ...history])));
+    } catch { /* 加载失败时保留基础分类 */ }
+  }, []);
+
+  useEffect(() => { loadTypeOptions(); }, [loadTypeOptions]);
+
   useEffect(() => {
     customerApi.getCustomers({ search: '' }).then(res => setCustomers(res.data || [])).catch(() => {});
   }, []);
@@ -108,6 +120,7 @@ const CustomerRequirements: React.FC = () => {
     setSuccessMsg(editing ? '需求更新成功' : '需求登记成功');
     setTimeout(() => setSuccessMsg(''), 3000);
     fetchList();
+    loadTypeOptions();
   };
 
   const renderStatusBadge = (status: string) => (
@@ -258,7 +271,7 @@ const CustomerRequirements: React.FC = () => {
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">分类</label>
-            <Select value={filters.requirement_type} onChange={v => setFilters(f => ({ ...f, requirement_type: v, page: 1 }))} placeholder="全部" options={REQ_TYPES.map(t => ({ value: t, label: t }))} />
+            <Select value={filters.requirement_type} onChange={v => setFilters(f => ({ ...f, requirement_type: v, page: 1 }))} placeholder="全部" options={typeOptions.map(t => ({ value: t, label: t }))} />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">紧急程度</label>

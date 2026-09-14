@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import SearchableSelect, { SearchableSelectOption } from './SearchableSelect';
-import Select from './Select';
 import ButtonGroup from './ButtonGroup';
 import { customerRequirementApi, customerApi, deviceApi } from '../services/api';
 import { Button } from '../components/ui/button';
@@ -22,6 +21,8 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
 
   const [customerId, setCustomerId] = useState('');
   const [requirementType, setRequirementType] = useState<RequirementType>('接口对接');
+  const [typeOptions, setTypeOptions] = useState<string[]>([...REQ_TYPES]);
+  const [typeOpen, setTypeOpen] = useState(false);
   const [proposedDate, setProposedDate] = useState('');
   const [urgency, setUrgency] = useState<RequirementUrgency>('中');
   const [description, setDescription] = useState('');
@@ -39,12 +40,16 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
   useEffect(() => {
     (async () => {
       try {
-        const [custRes, devRes] = await Promise.all([
+        const [custRes, devRes, catRes] = await Promise.all([
           customerApi.getCustomers({ search: '' }),
           deviceApi.getDevices({ limit: 500 }),
+          customerRequirementApi.getCategories().catch(() => ({ data: [] })),
         ]);
         setCustomers(custRes.data || []);
         setDevices(devRes.data || []);
+        // 合并历史使用过的分类作为建议项（去重）
+        const historyTypes = ((catRes && catRes.data) || []).map((c: any) => c.name).filter(Boolean);
+        setTypeOptions(Array.from(new Set([...REQ_TYPES, ...historyTypes])));
       } catch (e) {
         console.error('加载选项失败:', e);
       }
@@ -75,6 +80,13 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
     [customers]
   );
 
+  const filteredTypes = useMemo(() => {
+    const q = requirementType.trim();
+    // 值为空、或恰好等于某个已有分类（聚焦选择场景）→ 展示全部建议；否则按包含关系过滤
+    if (!q || typeOptions.includes(q)) return typeOptions;
+    return typeOptions.filter(t => t.includes(q));
+  }, [typeOptions, requirementType]);
+
   const filteredDevices = useMemo(() => {
     const q = deviceSearch.trim().toLowerCase();
     if (!q) return devices;
@@ -93,7 +105,7 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
   const validate = (): boolean => {
     const ne: { [key: string]: string } = {};
     if (!customerId) ne.customerId = '请选择客户名称';
-    if (!requirementType) ne.requirementType = '请选择需求分类';
+    if (!requirementType.trim()) ne.requirementType = '请填写需求分类';
     if (!proposedDate) ne.proposedDate = '请选择需求提出日期';
     if (!description.trim()) ne.description = '请填写需求详情描述';
     if (deviceIds.length === 0) ne.deviceIds = '请至少选择一台涉及设备';
@@ -109,7 +121,7 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
     try {
       await onSubmit({
         customer_id: Number(customerId),
-        requirement_type: requirementType,
+        requirement_type: requirementType.trim(),
         proposed_date: proposedDate,
         urgency,
         description,
@@ -151,7 +163,33 @@ const CustomerRequirementForm: React.FC<CustomerRequirementFormProps> = ({ requi
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">需求分类 <span className="text-red-500">*</span></label>
-              <Select value={requirementType} onChange={v => setRequirementType(v as RequirementType)} options={REQ_TYPES.map(t => ({ value: t, label: t }))} className={inputCls} />
+              {/* 可自由输入 + 历史分类建议的组合框（容器需 relative z-20 保证下拉在后续内容之上） */}
+              <div className="relative z-20">
+                <input
+                  type="text"
+                  value={requirementType}
+                  onChange={e => { setRequirementType(e.target.value); setTypeOpen(true); }}
+                  onFocus={() => setTypeOpen(true)}
+                  onBlur={() => setTimeout(() => setTypeOpen(false), 120)}
+                  placeholder="输入自定义分类，或从列表选择"
+                  autoComplete="off"
+                  className={inputCls}
+                />
+                {typeOpen && filteredTypes.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-popover rounded-lg border border-border shadow-soft-lg max-h-44 overflow-y-auto z-30">
+                    {filteredTypes.map(t => (
+                      <div
+                        key={t}
+                        onMouseDown={e => { e.preventDefault(); setRequirementType(t); setTypeOpen(false); }}
+                        className="px-3 py-2 text-sm cursor-pointer text-gray-800 hover:bg-gray-50"
+                      >
+                        {t}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {errors.requirementType && <p className="mt-1 text-xs text-red-500">{errors.requirementType}</p>}
             </div>
 
             <div>
