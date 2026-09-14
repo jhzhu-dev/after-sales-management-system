@@ -14,7 +14,9 @@ param(
     [string]$RemotePath  = "/home/els/manger",
     [string]$ImageName   = "device-manager-app",
     [string]$Version     = "latest",
-    [switch]$SkipBuild   = $false          # 跳过镜像构建步骤
+    [switch]$SkipBuild   = $false,         # 跳过镜像构建步骤
+    [switch]$SkipEnv     = $false,         # 跳过 .env 上传（保留远端现有生产配置）
+    [string]$DeployMode  = "app"           # app=仅重建应用容器(推荐,MySQL不停) | full=全量重启
 )
 
 $TarFile    = "device-manager-app-$Version.tar"
@@ -109,9 +111,18 @@ Write-Host "  传输 docker-compose.yml ..." -ForegroundColor DarkGray
 scp docker-compose.linux.yml "${RemoteUser}@${RemoteHost}:${RemotePath}/docker-compose.yml"
 if ($LASTEXITCODE -ne 0) { Step-Fail "docker-compose.yml 传输失败" }
 
-if (Test-Path ".env") {
+if ($SkipEnv) {
+    Write-Host "  [SKIP] 按参数跳过 .env 上传（远端保留现有配置）" -ForegroundColor DarkYellow
+} elseif (Test-Path ".env") {
+    # 安全措施：先备份远端已有 .env，防止本地开发配置覆盖生产配置后无法回滚
+    # （JWT_SECRET 被覆盖会导致全员登录失效；登录/管理员密码会被本地值回退）
+    $stamp = Get-Date -Format 'MMddHHmm'
+    Write-Host "  备份远端 .env → .env.bak-$stamp ..." -ForegroundColor DarkGray
+    ssh "${RemoteUser}@${RemoteHost}" "if [ -f $RemotePath/.env ]; then cp $RemotePath/.env $RemotePath/.env.bak-$stamp; fi"
+    if ($LASTEXITCODE -ne 0) { Step-Fail "备份远端 .env 失败，中止以防覆盖后无法回滚" }
     Write-Host "  传输 .env ..." -ForegroundColor DarkGray
     scp .env "${RemoteUser}@${RemoteHost}:${RemotePath}/.env"
+    if ($LASTEXITCODE -ne 0) { Step-Fail ".env 传输失败" }
 } elseif (Test-Path "env.example") {
     Write-Host "  [WARN] 未找到 .env，上传 env.example（请在远端手动修改）" -ForegroundColor DarkYellow
     scp env.example "${RemoteUser}@${RemoteHost}:${RemotePath}/.env"
@@ -124,8 +135,8 @@ if ($LASTEXITCODE -ne 0) { Step-Fail "部署脚本传输失败" }
 Step-OK
 
 # ── Step 5：远端加载镜像并重启服务 ─────────────────────────
-Step-Header "远端加载镜像并重启服务"
-ssh "${RemoteUser}@${RemoteHost}" "chmod +x $RemotePath/remote-deploy.sh && bash $RemotePath/remote-deploy.sh $TarFile"
+Step-Header "远端加载镜像并重启服务 (模式: $DeployMode)"
+ssh "${RemoteUser}@${RemoteHost}" "chmod +x $RemotePath/remote-deploy.sh && bash $RemotePath/remote-deploy.sh $TarFile $DeployMode"
 if ($LASTEXITCODE -ne 0) { Step-Fail "远端操作失败，可通过 ssh 登录查看日志" }
 Step-OK
 

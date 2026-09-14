@@ -106,6 +106,7 @@ debug-*.js
 
 # Runtime uploads & local DB dumps
 uploads/
+uploads-localtest/
 doc/data/*.sql
 
 # local verification screenshots

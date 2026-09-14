@@ -1,0 +1,99 @@
+# =============================================================================
+# docker-compose.localtest.yml — 本地生产数据部署测试专用
+#
+# 用途：把生产数据库备份导入本地容器，在本地完整跑一遍"部署 → 迁移 → 功能"
+#       验证流程，确认无误后再执行正式的生产部署。
+#
+# 与生产 (docker-compose.linux.yml) 的差异（均为隔离措施）：
+#   1. 独立项目名 manger-localtest、独立容器名 dm-localtest-*、独立数据卷
+#      mysql_data_localtest，绝不触碰本机其他栈或生产环境
+#   2. 应用端口 5020（避免与本机 5000 冲突），MySQL 暴露 3308
+#   3. OSS 写入路径追加 -localtest 后缀，生产 OSS 数据零污染
+#   4. JWT_SECRET 使用独立测试值（与生产 token 体系隔离）
+#   5. 上传目录使用 ./uploads-localtest，与开发目录隔离
+#
+# ⚠️ 导入生产备份后必须清空 feishu_config 表（阻断真实飞书通知），
+#    scripts/local-deploy-test.ps1 已内置该步骤。
+#
+# 一键执行：.\scripts\local-deploy-test.ps1
+# 测试完清理：docker compose -p manger-localtest -f docker-compose.localtest.yml down -v
+# =============================================================================
+
+services:
+  # ─── MySQL 数据库（本地测试实例）────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: dm-localtest-db
+    environment:
+      MYSQL_ROOT_PASSWORD: localtest_root_2026
+      MYSQL_DATABASE: device_management
+      MYSQL_USER: device_user
+      MYSQL_PASSWORD: device_pass_123
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql_data_localtest:/var/lib/mysql
+    ports:
+      - "3308:3306"   # 避开本机 3306(开发MySQL) 与 3307(Windows compose 约定)
+    networks:
+      - localtest-network
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --innodb-buffer-pool-size=256M
+      --max-connections=50
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    mem_limit: 512m
+    memswap_limit: 512m
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "device_user", "-pdevice_pass_123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ─── 应用服务 ───────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dm-localtest-app:latest
+    container_name: dm-localtest-app
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: device_user
+      DB_PASSWORD: device_pass_123
+      DB_NAME: device_management
+      # 阿里云 OSS（密钥从根目录 .env 读取；写入路径追加 -localtest 后缀隔离）
+      OSS_REGION: ${OSS_REGION:-oss-cn-shanghai}
+      OSS_BUCKET: ${OSS_BUCKET:-els-pub-04}
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
+      OSS_BASE_PATH: ${OSS_BASE_PATH:-static/After-sales management system}-localtest
+      USE_OSS_STORAGE: ${USE_OSS_STORAGE:-true}
+      # 独立 JWT 测试密钥（与生产 token 体系隔离）
+      JWT_SECRET: localtest_jwt_secret_do_not_use_in_prod
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      LOGIN_USERNAME: ${LOGIN_USERNAME:-elsvision}
+      LOGIN_PASSWORD: ${LOGIN_PASSWORD:-elsvisiongo666}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SYSTEM_BASE_URL: http://localhost:5020
+    volumes:
+      - ./uploads-localtest:/app/uploads
+    ports:
+      - "5020:5000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - localtest-network
+
+volumes:
+  mysql_data_localtest:
+    driver: local
+
+networks:
+  localtest-network:
+    driver: bridge
