@@ -5,6 +5,7 @@ import { customerApi, deviceApi, bundleApi, productLineApi, productApi, productM
 import { sortByModuleTypeOrder } from '../utils/moduleOrder';
 import { Button } from '../components/ui/button';
 import FeishuMultiUserPicker from './FeishuMultiUserPicker';
+import OrderImportPanel from './OrderImportPanel';
 import SearchableSelect from './SearchableSelect';
 import Select from './Select';
 
@@ -12,6 +13,7 @@ interface BundleFormProps {
   bundle?: DeviceBundle | null;
   onClose: () => void;
   onSubmit: () => void;
+  onImported?: (bundleId?: number) => void;
 }
 
 interface NewDeviceRow {
@@ -62,8 +64,10 @@ function emptyDeviceRow(): NewDeviceRow {
   };
 }
 
-export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProps) {
+export default function BundleForm({ bundle, onClose, onSubmit, onImported }: BundleFormProps) {
   const isEdit = !!bundle;
+  // 录入模式：手动创建 / 导入订单表（参考单台设备新增的切换样式，仅新建时可选）
+  const [mode, setMode] = useState<'manual' | 'import'>('manual');
 
   const [bundleCode, setBundleCode] = useState(bundle?.bundle_code || '');
   const [name, setName] = useState(bundle?.name || '');
@@ -341,7 +345,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
         notify_open_ids: feishuEnabled && r.notify_open_ids.length > 0 ? r.notify_open_ids : undefined,
       }));
 
-      await bundleApi.createBundle({
+      const res = await bundleApi.createBundle({
         bundle_code: bundleCode.trim() || undefined,
         name: name.trim() || undefined,
         customer_id: customerId as number,
@@ -366,16 +370,42 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4">
         <div className="fixed inset-0 bg-black/50 backdrop-blur-lg" onClick={onClose} />
-        <div className="relative bg-popover rounded-2xl border border-border shadow-soft-lg w-full max-w-4xl max-h-[92vh] overflow-y-auto">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-popover/90 backdrop-blur z-10">
+        <div className={`relative bg-popover rounded-2xl border border-border shadow-soft-lg w-full ${mode === 'import' && !isEdit ? 'max-w-5xl' : 'max-w-4xl'} max-h-[92vh] overflow-y-auto`}>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-popover/90 backdrop-blur z-10 gap-3">
             <h3 className="text-lg font-medium text-foreground">
               {isEdit ? '编辑多合一设备' : '新建多合一设备'}
             </h3>
+            {!isEdit && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setMode('manual')}
+                  className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${mode === 'manual' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  手动创建
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('import')}
+                  className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${mode === 'import' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  导入订单表
+                </button>
+              </div>
+            )}
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
 
+          {mode === 'import' && !isEdit ? (
+            <div className="px-6 py-4">
+              <OrderImportPanel
+                onClose={onClose}
+                onDone={(bundleId) => { onImported?.(bundleId); onClose(); }}
+              />
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="px-6 py-4 space-y-5">
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
@@ -642,6 +672,7 @@ export default function BundleForm({ bundle, onClose, onSubmit }: BundleFormProp
               </div>
             </div>
           </form>
+          )}
         </div>
       </div>
     </div>

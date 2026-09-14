@@ -13,7 +13,7 @@ export default function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="flex items-center bg-gray-100 rounded-lg p-1 no-print" title="主题切换">
+    <div className="flex items-center bg-gray-100 rounded-lg p-1 no-print w-[11.5rem]" title="主题切换">
       {options.map((opt) => (
         <button
           key={opt.value}
@@ -22,7 +22,7 @@ export default function ThemeToggle() {
           aria-label={opt.label}
           onClick={() => setTheme(opt.value)}
           className={cn(
-            'flex items-center justify-center p-1.5 rounded-md transition-colors',
+            'flex flex-1 items-center justify-center p-1.5 rounded-md transition-colors',
             theme === opt.value
               ? 'bg-white text-primary-600 shadow-sm'
               : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'

@@ -1107,7 +1107,8 @@ export default function Devices() {
 
   return (
     <Layout>
-      <div className="space-y-4 3xl:space-y-6">
+      {/* 固定视口高度的 flex 纵向布局：根高度 = 100vh - 15px(侧边栏底边距) - 1rem(main 顶距 py-4，随根字号缩放)，使列表底边与侧边栏底边精确对齐；用 gap 而非 space-y，避免打印专用隐藏块产生幻影间距 */}
+      <div className="flex flex-col gap-4 3xl:gap-6 h-[calc(100vh-15px-1rem)] 3xl:h-[calc(100vh-15px-1.5rem)] print:h-auto">
         {/* 仅打印可见的页眉 */}
         <div className="hidden print:block print-header">
           <div className="flex items-center justify-between" style={{marginBottom: '3pt'}}>
@@ -1125,7 +1126,7 @@ export default function Devices() {
         </div>
 
         {/* 页面标题和操作 */}
-        <div className="flex justify-between items-center no-print">
+        <div className="flex justify-between items-center no-print shrink-0">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">设备管理</h1>
             {/* Tab 切换（无全局搜索词时显示） */}
@@ -1188,7 +1189,7 @@ export default function Devices() {
         {globalSearch && (
         <>
           {/* 产品线 + 状态筛选器（全局搜索时也可用） */}
-          <div className="bg-card rounded-2xl border border-border shadow-soft p-4 no-print relative z-20">
+          <div className="bg-card rounded-2xl border border-border shadow-soft p-4 no-print relative z-20 shrink-0">
             <div className="flex flex-wrap items-end gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">产品线</label>
@@ -1217,7 +1218,7 @@ export default function Devices() {
           </div>
 
           {/* 全局搜索结果表 */}
-          <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
+          <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden shrink-0">
             <div className="overflow-x-auto no-scrollbar">
               <table className="min-w-full divide-y divide-border text-sm">
                 <thead className="bg-muted">
@@ -1291,7 +1292,7 @@ export default function Devices() {
         {!globalSearch && viewMode === 'devices' && (
         <>
         {/* 筛选器 */}
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-10">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-10 shrink-0">
           <button
             type="button"
             onClick={() => setShowFilters(f => !f)}
@@ -1373,7 +1374,7 @@ export default function Devices() {
         </div>
 
         {selectedDevices.length > 0 && (
-          <div className="mb-4 flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print">
+          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print shrink-0">
             <span className="text-sm text-blue-800">已选 {selectedDevices.length} 台</span>
             <Button size="sm" variant="outline" onClick={handleExport}>导出选中</Button>
             <Button size="sm" variant="outline" onClick={handlePrint}>打印选中</Button>
@@ -1381,7 +1382,7 @@ export default function Devices() {
           </div>
         )}
 
-        {/* 数据表格 */}
+        {/* 数据表格：fill 模式撑满剩余高度，底边与侧边栏对齐；计数提示移入卡片底部 */}
         <DataTable
           data={filteredDevices.slice(0, visibleCount)}
           columns={columns}
@@ -1391,16 +1392,14 @@ export default function Devices() {
           onLoadMore={visibleCount < filteredDevices.length ? () => setVisibleCount(prev => prev + 20) : undefined}
           scrollable
           fixedLayout
+          fill
+          footer={!loading && filteredDevices.length > 0
+            ? (visibleCount >= filteredDevices.length
+              ? `已显示全部 ${filteredDevices.length} 条记录`
+              : `已显示 ${Math.min(visibleCount, filteredDevices.length)} / ${filteredDevices.length} 条，向下滚动加载更多`)
+            : undefined}
           className="print:hidden"
         />
-        {!loading && filteredDevices.length > 0 && (
-          <div className="text-center text-sm text-gray-400 pb-4 print:hidden">
-            {visibleCount >= filteredDevices.length
-              ? `已显示全部 ${filteredDevices.length} 条记录`
-              : `已显示 ${Math.min(visibleCount, filteredDevices.length)} / ${filteredDevices.length} 条，向下滚动加载更多`
-            }
-          </div>
-        )}
 
         {/* 打印专用表格 - 显示全部筛选结果 */}
         <div className="hidden print:block">
@@ -1442,7 +1441,7 @@ export default function Devices() {
         {!globalSearch && viewMode === 'bundles' && (
         <>
         {/* 多合一设备筛选器 */}
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-10">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-10 shrink-0">
           <button
             type="button"
             onClick={() => setShowBundleFilters(f => !f)}
@@ -1497,7 +1496,7 @@ export default function Devices() {
         </div>
 
         {selectedBundles.length > 0 && (
-          <div className="mb-4 flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print">
+          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print shrink-0">
             <span className="text-sm text-blue-800">已选 {selectedBundles.length} 个多合一</span>
             <Button size="sm" variant="outline" onClick={handleBundleExport}>导出选中</Button>
             <Button size="sm" variant="outline" onClick={handlePrint}>打印选中</Button>
@@ -1505,7 +1504,7 @@ export default function Devices() {
           </div>
         )}
 
-        {/* 多合一设备数据表格 */}
+        {/* 多合一设备数据表格：fill 模式撑满剩余高度 */}
         <DataTable
           data={filteredBundles.slice(0, visibleBundleCount)}
           columns={bundleColumns}
@@ -1518,16 +1517,14 @@ export default function Devices() {
           onLoadMore={visibleBundleCount < filteredBundles.length ? () => setVisibleBundleCount(prev => prev + 20) : undefined}
           scrollable
           fixedLayout
+          fill
+          footer={!loading && filteredBundles.length > 0
+            ? (visibleBundleCount >= filteredBundles.length
+              ? `已显示全部 ${filteredBundles.length} 条记录`
+              : `已显示 ${Math.min(visibleBundleCount, filteredBundles.length)} / ${filteredBundles.length} 条，向下滚动加载更多`)
+            : undefined}
           className="print:hidden"
         />
-        {!loading && filteredBundles.length > 0 && (
-          <div className="text-center text-sm text-gray-400 pb-4 print:hidden">
-            {visibleBundleCount >= filteredBundles.length
-              ? `已显示全部 ${filteredBundles.length} 条记录`
-              : `已显示 ${Math.min(visibleBundleCount, filteredBundles.length)} / ${filteredBundles.length} 条，向下滚动加载更多`
-            }
-          </div>
-        )}
 
         {/* 多合一设备打印表格 */}
         <div className="hidden print:block">
@@ -1581,6 +1578,7 @@ export default function Devices() {
             bundle={editingBundle}
             onClose={() => { setShowBundleForm(false); setEditingBundle(null); }}
             onSubmit={handleBundleSubmit}
+            onImported={handleBundleImported}
           />
         )}
       </div>

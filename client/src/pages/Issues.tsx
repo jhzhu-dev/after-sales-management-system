@@ -788,8 +788,8 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
     ];
 
     return (
-      <div className="space-y-4">
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-20">
+      <div className="flex flex-col gap-4 h-full">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-20 shrink-0">
           <div className="flex items-center justify-between px-2 py-1.5">
             <button
               type="button"
@@ -837,7 +837,8 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
           </div>
           )}
         </div>
-        <div ref={upgradeScrollRef} className="bg-card rounded-2xl border border-border shadow-soft overflow-auto no-scrollbar" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+        <div className="flex-1 min-h-0 bg-card rounded-2xl border border-border shadow-soft overflow-hidden flex flex-col">
+          <div ref={upgradeScrollRef} className="flex-1 min-h-0 overflow-auto no-scrollbar">
           {upgradeLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -996,22 +997,23 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
           )}
           {/* upgrades 无限滚动哨兵 */}
           <div ref={upgradeSentinelRef} className="h-4" />
-        </div>
-        {!upgradeLoading && upgrades.length > 0 && (
-          <div className="text-center text-sm text-gray-400 pb-4">
-            {visibleUpgradeCount >= upgrades.length
-              ? `已显示全部 ${upgrades.length} 条记录`
-              : `已显示 ${Math.min(visibleUpgradeCount, upgrades.length)} / ${upgrades.length} 条，向下滚动加载更多`
-            }
           </div>
-        )}
+          {!upgradeLoading && upgrades.length > 0 && (
+            <div className="shrink-0 text-center text-sm text-gray-400 py-2.5 border-t border-border">
+              {visibleUpgradeCount >= upgrades.length
+                ? `已显示全部 ${upgrades.length} 条记录`
+                : `已显示 ${Math.min(visibleUpgradeCount, upgrades.length)} / ${upgrades.length} 条，向下滚动加载更多`
+              }
+            </div>
+          )}
+        </div>
       </div>
     );
   };
 
   return (
     <Layout>
-      <div className="space-y-4 3xl:space-y-6">
+      <div className="flex flex-col gap-4 3xl:gap-6 h-[calc(100vh-15px-1rem)] 3xl:h-[calc(100vh-15px-1.5rem)] print:h-auto">
         {/* 打印专用页眉 */}
         <div className="hidden print:block print-header">
           <div className="print-flex-row" style={{justifyContent:'space-between'}}>
@@ -1027,7 +1029,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         </div>
 
         {/* 顶部标题与Tab切换 */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden shrink-0">
           <div>
             <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">运维中心</h1>
           </div>
@@ -1078,21 +1080,21 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
 
         {/* 版本演进内容 */}
         {activeTab === 'upgrades' && selectedUpgrades.length > 0 && (
-          <div className="mb-4 flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print">
+          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print shrink-0">
             <span className="text-sm text-blue-800">已选 {selectedUpgrades.length} 条</span>
             <Button size="sm" variant="outline" onClick={handleExportUpgrades}>导出选中</Button>
             <Button size="sm" variant="outline" onClick={handlePrint}>打印选中</Button>
             <button onClick={() => setSelectedUpgrades([])} className="text-sm text-gray-500 hover:text-gray-700">取消选择</button>
           </div>
         )}
-        {activeTab === 'upgrades' && <div className="no-print">{renderUpgrades()}</div>}
+        {activeTab === 'upgrades' && <div className="no-print flex-1 min-h-0">{renderUpgrades()}</div>}
 
         {/* 故障管理内容 */}
         {activeTab === 'issues' && (<>
 
         {/* 批量操作 */}
         {selectedIssues.length > 0 && (
-          <div className="bg-blue-50 border border-primary-200 rounded-lg p-4 no-print">
+          <div className="bg-blue-50 border border-primary-200 rounded-lg p-4 no-print shrink-0">
             <div className="flex items-center justify-between">
               <span className="text-sm text-primary-700">
                 已选择 {selectedIssues.length} 个问题
@@ -1117,7 +1119,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         )}
 
         {/* 筛选器 */}
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-20">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 3xl:p-3 no-print relative z-20 shrink-0">
           <button
             type="button"
             onClick={() => setShowFilters(f => !f)}
@@ -1222,7 +1224,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
         </div>
 
         {selectedIssues.length > 0 && (
-          <div className="mb-4 flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print">
+          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print shrink-0">
             <span className="text-sm text-blue-800">已选 {selectedIssues.length} 条</span>
             <Button size="sm" variant="outline" onClick={() => handleExportIssues()}>导出选中</Button>
             <Button size="sm" variant="outline" onClick={() => handlePrint()}>打印选中</Button>
@@ -1230,26 +1232,23 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
           </div>
         )}
 
-        {/* 数据表格 */}
-        <div className="print:hidden">
-          <DataTable
-            data={issues.slice(0, visibleIssueCount)}
-            columns={columns}
-            loading={loading}
-            rowKey="id"
-            onRowClick={handleRowClick}
-            onLoadMore={visibleIssueCount < issues.length ? () => setVisibleIssueCount(prev => prev + 20) : undefined}
-            scrollable
-          />
-        </div>
-        {!loading && issues.length > 0 && (
-          <div className="text-center text-sm text-gray-400 pb-4 print:hidden">
-            {visibleIssueCount >= issues.length
+        {/* 数据表格：fill 模式撑满剩余高度，计数提示移入卡片底部 */}
+        <DataTable
+          data={issues.slice(0, visibleIssueCount)}
+          columns={columns}
+          loading={loading}
+          rowKey="id"
+          onRowClick={handleRowClick}
+          onLoadMore={visibleIssueCount < issues.length ? () => setVisibleIssueCount(prev => prev + 20) : undefined}
+          scrollable
+          fill
+          footer={!loading && issues.length > 0
+            ? (visibleIssueCount >= issues.length
               ? `已显示全部 ${issues.length} 条记录`
-              : `已显示 ${Math.min(visibleIssueCount, issues.length)} / ${issues.length} 条，向下滚动加载更多`
-            }
-          </div>
-        )}
+              : `已显示 ${Math.min(visibleIssueCount, issues.length)} / ${issues.length} 条，向下滚动加载更多`)
+            : undefined}
+          className="print:hidden"
+        />
 
         {/* 打印专用故障表格 */}
         <div className="hidden print:block">

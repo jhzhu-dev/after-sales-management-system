@@ -183,8 +183,9 @@ const TestTasks: React.FC = () => {
 
   return (
     <Layout>
-      <div className="space-y-4 3xl:space-y-6">
-        <div className="flex justify-between items-center h-10 no-print">
+      {/* 固定视口高度 flex 布局：列表底边与侧边栏底边对齐（同设备管理页模式） */}
+      <div className="flex flex-col gap-4 3xl:gap-6 h-[calc(100vh-15px-1rem)] 3xl:h-[calc(100vh-15px-1.5rem)] print:h-auto">
+        <div className="flex justify-between items-center h-10 no-print shrink-0">
           <div>
             <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">测试管理</h1>
           </div>
@@ -199,10 +200,10 @@ const TestTasks: React.FC = () => {
           </div>
         </div>
 
-        {successMsg && <div className="p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm no-print">{successMsg}</div>}
+        {successMsg && <div className="p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm no-print shrink-0">{successMsg}</div>}
 
         {selectedIds.length > 0 && (
-          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print">
+          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md no-print shrink-0">
             <span className="text-sm text-blue-800">已选 {selectedIds.length} 条</span>
             <Button size="sm" variant="outline" onClick={() => handleExport(selectedIds)} disabled={exporting}>导出选中</Button>
             <Button size="sm" variant="outline" onClick={() => handlePrint(selectedIds)}>打印选中</Button>
@@ -210,7 +211,7 @@ const TestTasks: React.FC = () => {
           </div>
         )}
 
-        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 relative z-20 no-print">
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-2 relative z-20 no-print shrink-0">
           <button
             type="button"
             onClick={() => setShowFilters(f => !f)}
@@ -261,6 +262,7 @@ const TestTasks: React.FC = () => {
           onRowClick={(r) => navigate(`/test-tasks/${r.id}`)}
           onLoadMore={visibleCount < data.length ? () => setVisibleCount(p => p + 20) : undefined}
           scrollable
+          fill
           selectable
           selectedKeys={selectedIds}
           onSelectionChange={setSelectedIds}

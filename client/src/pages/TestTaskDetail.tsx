@@ -193,20 +193,30 @@ const TestTaskDetail: React.FC = () => {
           </dl>
         </div>
 
-        {/* 业务详情 */}
-        {[
-          { label: '升级内容', value: data.upgrade_content },
-          { label: '版本特点', value: data.model_features },
-          { label: '测试要点', value: data.test_focus },
-          { label: '测试要求', value: data.test_requirements },
-          { label: '车型要求', value: data.vehicle_requirements },
-          { label: '测试场景', value: data.test_scenarios },
-        ].map(({ label, value }) => (
-          <div key={label} className="bg-card rounded-2xl border border-border shadow-soft p-6 mb-4">
-            <dt className="text-xs text-gray-500 mb-1">{label}</dt>
-            <dd className="text-sm text-gray-900 whitespace-pre-wrap">{value || '—'}</dd>
+        {/* 业务详情：合并为一张卡片，网格排布，短字段并排显示 */}
+        <div className="bg-card rounded-2xl border border-border shadow-soft p-6 mb-4">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">测试详情</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {[
+              { label: '升级内容', value: data.upgrade_content },
+              { label: '版本特点', value: data.model_features },
+              { label: '测试要点', value: data.test_focus },
+              { label: '测试要求', value: data.test_requirements },
+              { label: '车型要求', value: data.vehicle_requirements },
+              { label: '测试场景', value: data.test_scenarios },
+            ].map(({ label, value }) => {
+              const text = value || '';
+              // 长文本或多行内容独占整行，避免挤压
+              const wide = text.includes('\n') || text.length > 60;
+              return (
+                <div key={label} className={`bg-muted/50 border border-border rounded-xl p-4 ${wide ? 'md:col-span-2 xl:col-span-3' : ''}`}>
+                  <div className="text-xs text-muted-foreground mb-1">{label}</div>
+                  <div className="text-sm text-foreground whitespace-pre-wrap break-words">{value || <span className="text-muted-foreground">—</span>}</div>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        </div>
 
         {/* 测试总结（已填则展示） */}
         {data.test_summary && (

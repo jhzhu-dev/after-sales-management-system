@@ -27,6 +27,10 @@ interface DataTableProps<T> {
   compact?: boolean;
   onLoadMore?: () => void;
   scrollable?: boolean;
+  /** 填充模式：卡片高度随父级 flex 容器拉伸（列表底边与侧边栏底边对齐），滚动区改为 flex-1 内部滚动 */
+  fill?: boolean;
+  /** 卡片底部提示条（如「已显示 x / y 条」） */
+  footer?: React.ReactNode;
   fixedLayout?: boolean;
   selectable?: boolean;
   selectedKeys?: Array<string | number>;
@@ -44,6 +48,8 @@ export default function DataTable<T extends Record<string, any>>({
   compact = false,
   onLoadMore,
   scrollable = false,
+  fill = false,
+  footer,
   fixedLayout = false,
   selectable = false,
   selectedKeys = [],
@@ -127,7 +133,7 @@ export default function DataTable<T extends Record<string, any>>({
 
   if (loading) {
     return (
-      <div className="bg-card rounded-2xl border border-border shadow-soft">
+      <div className={cn('bg-card rounded-2xl border border-border shadow-soft', fill && 'flex-1 min-h-0 flex flex-col')}>
         <div className="p-4 3xl:p-6">
           <div className="animate-pulse">
             <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
@@ -143,8 +149,15 @@ export default function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div className={cn('bg-card rounded-2xl border border-border shadow-soft overflow-hidden', className)}>
-      <div ref={scrollRef} className={(scrollable || onLoadMore) ? 'overflow-auto no-scrollbar' : 'overflow-x-auto no-scrollbar'} style={(scrollable || onLoadMore) ? { maxHeight: 'calc(100vh - 240px)' } : undefined}>
+    <div className={cn('bg-card rounded-2xl border border-border shadow-soft overflow-hidden', fill && 'flex-1 min-h-0 flex flex-col', className)}>
+      <div
+        ref={scrollRef}
+        className={cn(
+          (scrollable || onLoadMore) ? 'overflow-auto no-scrollbar' : 'overflow-x-auto no-scrollbar',
+          fill && 'flex-1 min-h-0'
+        )}
+        style={(scrollable || onLoadMore) && !fill ? { maxHeight: 'calc(100vh - 240px)' } : undefined}
+      >
         <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted backdrop-blur border-b border-border sticky top-0 z-10">
             <tr>
@@ -243,6 +256,12 @@ export default function DataTable<T extends Record<string, any>>({
         </table>
         {hasLoadMore && <div ref={sentinelRef} className="h-2" />}
       </div>
+
+      {footer && (
+        <div className="shrink-0 text-center text-sm text-gray-400 py-2.5 border-t border-border">
+          {footer}
+        </div>
+      )}
 
       {pagination && (
         <div className="bg-transparent px-4 py-3 flex items-center justify-between border-t border-border sm:px-6">

@@ -642,29 +642,31 @@ export default function Settings() {
                   const isEditing = editingSopTypeId === mt.id;
                   return (
                     <div key={mt.id} className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
-                      {/* 模块类型行 */}
-                      <div className="flex items-center justify-between px-4 py-3 bg-muted">
-                        <div className="flex items-center gap-3">
-                          <span className="font-semibold text-gray-800">{mt.name}</span>
-                          <span className="text-xs text-gray-400 font-mono">{mt.code}</span>
+                      {/* 模块类型行（主 UI 风格：无重底色条，token 化配色） */}
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="font-semibold text-foreground">{mt.name}</span>
+                          <span className="text-xs text-muted-foreground font-mono">{mt.code}</span>
                           {tpl ? (
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                            <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-0.5 rounded-full shrink-0">
                               {tpl.items.length} 项
                             </span>
                           ) : (
-                            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
+                            <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full shrink-0">未配置</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           {tpl && !isEditing && (
                             <button
                               onClick={() => handleDeleteSopTemplate(mt.id)}
-                              className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
+                              className="text-xs text-red-500 hover:text-red-600 px-2 py-1 rounded-md hover:bg-red-500/10 transition-colors"
                             >
                               删除模板
                             </button>
                           )}
-                          <button
+                          <Button
+                            size="sm"
+                            variant={isEditing ? 'outline' : 'default'}
                             onClick={() => {
                               if (isEditing) {
                                 setEditingSopTypeId(null);
@@ -673,10 +675,9 @@ export default function Settings() {
                                 handleEditSop(mt);
                               }
                             }}
-                            className="text-xs bg-primary-500 text-white px-3 py-1.5 rounded hover:bg-primary-600"
                           >
                             {isEditing ? '收起' : (tpl ? '编辑检查项' : '配置检查项')}
-                          </button>
+                          </Button>
                         </div>
                       </div>
 
@@ -684,20 +685,20 @@ export default function Settings() {
                       {isEditing && (
                         <div className="p-4 border-t border-border bg-transparent">
                           {editingItems.length === 0 ? (
-                            <p className="text-sm text-gray-400 mb-3">暂无检查项，点击下方按钮添加</p>
+                            <p className="text-sm text-muted-foreground mb-3">暂无检查项，点击下方按钮添加</p>
                           ) : (
                             <div className="space-y-2 mb-3">
                               {editingItems.map((item, idx) => (
                                 <div key={item.id} className="flex items-center gap-2">
-                                  <span className="text-xs text-gray-400 w-5 shrink-0">{idx + 1}.</span>
+                                  <span className="text-xs text-muted-foreground w-5 shrink-0">{idx + 1}.</span>
                                   <input
                                     type="text"
                                     value={item.text}
                                     onChange={e => handleSopItemChange(item.id, 'text', e.target.value)}
                                     placeholder="检查项内容..."
-                                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary-500/40 outline-none"
+                                    className="flex-1 px-3 py-1.5 bg-transparent border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary-500/40 outline-none"
                                   />
-                                  <label className="flex items-center gap-1 text-xs text-gray-600 shrink-0 cursor-pointer">
+                                  <label className="flex items-center gap-1 text-xs text-muted-foreground shrink-0 cursor-pointer">
                                     <input
                                       type="checkbox"
                                       checked={item.required}
@@ -709,7 +710,7 @@ export default function Settings() {
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveSopItem(item.id)}
-                                    className="text-red-400 hover:text-red-600 shrink-0"
+                                    className="text-red-400 hover:text-red-600 shrink-0 transition-colors"
                                   >
                                     <TrashIcon className="h-4 w-4" />
                                   </button>
@@ -722,27 +723,18 @@ export default function Settings() {
                             <button
                               type="button"
                               onClick={handleAddSopItem}
-                              className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 border border-primary-200 rounded px-3 py-1.5 hover:bg-blue-50"
+                              className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 border border-primary-500/30 rounded-lg px-3 py-1.5 hover:bg-primary-500/10 transition-colors"
                             >
                               <PlusIcon className="h-4 w-4" />
                               添加检查项
                             </button>
                             <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => { setEditingSopTypeId(null); setEditingItems([]); }}
-                                className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-muted"
-                              >
+                              <Button variant="outline" size="sm" onClick={() => { setEditingSopTypeId(null); setEditingItems([]); }}>
                                 取消
-                              </button>
-                              <button
-                                type="button"
-                                disabled={sopSubmitting}
-                                onClick={() => handleSaveSop(mt.id)}
-                                className="px-4 py-1.5 text-sm bg-primary-500 text-white rounded hover:bg-primary-600 disabled:opacity-50"
-                              >
+                              </Button>
+                              <Button size="sm" disabled={sopSubmitting} onClick={() => handleSaveSop(mt.id)}>
                                 {sopSubmitting ? '保存中...' : '保存模板'}
-                              </button>
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -750,11 +742,13 @@ export default function Settings() {
 
                       {/* 只读预览（未在编辑态时） */}
                       {!isEditing && tpl && tpl.items.length > 0 && (
-                        <div className="px-4 py-2 border-t border-gray-100">
+                        <div className="px-4 py-3 border-t border-border">
                           <div className="flex flex-wrap gap-2">
                             {tpl.items.map((item, idx) => (
-                              <span key={item.id} className={`text-xs px-2 py-1 rounded ${
-                                item.required ? 'bg-blue-50 text-primary-700 border border-primary-200' : 'bg-gray-100 text-gray-600'
+                              <span key={item.id} className={`text-xs px-2 py-1 rounded-md ${
+                                item.required
+                                  ? 'bg-primary-500/10 text-primary-600 border border-primary-500/20'
+                                  : 'bg-muted text-muted-foreground border border-transparent'
                               }`}>
                                 {idx + 1}. {item.text}{item.required ? ' *' : ''}
                               </span>
