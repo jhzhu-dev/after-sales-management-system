@@ -707,6 +707,47 @@ router.put('/:id', [
       }
     }
 
+    // 产品型号变更时，按新产品的模块模板同步设备模块列表：
+    // 新增缺失的模块类型；移除新产品不再包含的模块（已有版本历史的模块保留，避免丢失记录）
+    const requestedProductId = filteredUpdates.product_id;
+    const oldProductId = existingDevice[0].product_id;
+    let moduleSync = { added: 0, removed: 0 };
+    if (requestedProductId !== undefined && requestedProductId !== null && Number(requestedProductId) !== Number(oldProductId)) {
+      try {
+        const pmRows = await query('SELECT module_type_id FROM product_modules WHERE product_id = ?', [requestedProductId]);
+        const newTypeIds = pmRows.map(r => Number(r.module_type_id));
+        const newTypeSet = new Set(newTypeIds);
+        const deviceModuleRows = await query('SELECT id, type_id FROM modules WHERE device_id = ?', [finalId]);
+        const keptTypeIds = new Set();
+        const removableIds = [];
+        for (const m of deviceModuleRows) {
+          if (newTypeSet.has(Number(m.type_id))) continue;
+          const [cntRow] = await query('SELECT COUNT(*) AS cnt FROM module_versions WHERE module_id = ?', [m.id]);
+          if (Number(cntRow?.cnt || 0) > 0) {
+            // 该模块已有版本历史，保留以免丢失记录
+            keptTypeIds.add(Number(m.type_id));
+          } else {
+            removableIds.push(m.id);
+          }
+        }
+        if (removableIds.length > 0) {
+          await query(`DELETE FROM modules WHERE id IN (${removableIds.map(() => '?').join(',')})`, removableIds);
+        }
+        const presentTypeIds = new Set([
+          ...deviceModuleRows.filter(m => newTypeSet.has(Number(m.type_id))).map(m => Number(m.type_id)),
+          ...keptTypeIds,
+        ]);
+        for (const typeId of newTypeIds) {
+          if (presentTypeIds.has(Number(typeId))) continue;
+          await query('INSERT INTO modules (device_id, type_id) VALUES (?, ?)', [finalId, typeId]);
+          moduleSync.added++;
+        }
+        moduleSync.removed = removableIds.length;
+      } catch (syncError) {
+        console.warn('同步设备模块列表失败:', syncError.message);
+      }
+    }
+
     // 出厂资料完善后，自动将设备（生产中状态）同步为已发货，与多合一设备逻辑一致
     let syncedShipCount = 0;
     const docsCompleteRequested = filteredUpdates.factory_docs_complete === true
@@ -725,10 +766,13 @@ router.put('/:id', [
       }
     }
 
+    const syncNote = (moduleSync.added > 0 || moduleSync.removed > 0)
+      ? `，已按新产品型号同步模块列表（新增 ${moduleSync.added}，移除 ${moduleSync.removed}）`
+      : '';
     res.json({
       success: true,
-      message: syncedShipCount > 0 ? '设备更新成功，已自动同步为已发货' : '设备更新成功',
-      data: { new_id: finalId, synced_ship_count: syncedShipCount }
+      message: syncedShipCount > 0 ? `设备更新成功，已自动同步为已发货${syncNote}` : `设备更新成功${syncNote}`,
+      data: { new_id: finalId, synced_ship_count: syncedShipCount, module_sync: moduleSync }
     });
   } catch (error) {
     console.error('更新设备失败:', error);

@@ -340,7 +340,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
     let processedData: DeviceFormData;
 
     if (device) {
-      // 编辑模式：提交所有可编辑字段（product_line_id 为只读，不随本次提交）
+      // 编辑模式：提交所有可编辑字段（产品线/产品型号现在允许修改，用于修正选错的型号）
       processedData = {
         name: formData.name?.trim() || null,
         device_code: formData.device_code?.trim() || null,
@@ -351,7 +351,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
         merchant_id: formData.merchant_id?.trim() || null,
         merchant_password: formData.merchant_password?.trim() || null,
         notes: formData.notes?.trim() || null,
-        product_line_id: device.product_line_id as number,
+        // 产品线：提交当前选择（确保是数字，避免空字符串写入 INT 列）；未选时保持原值
+        product_line_id: (formData.product_line_id ? Number(formData.product_line_id) : device.product_line_id) as number,
+        // 产品型号：仅在已选择时提交，服务端会在型号变更时自动同步设备模块列表
+        ...(formData.product_id ? { product_id: formData.product_id } : {}),
         // 传递 id 供父组件判断是否修改了生产序列号
         id: formData.id?.trim() || device.id,
       };
@@ -512,19 +515,31 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
                   {errors.customer_id && <p className="text-red-500 text-xs mt-1">{errors.customer_id}</p>}
                 </div>
 
-                {/* 产品线 / 产品型号 只读展示 */}
-                <div className="col-span-2 bg-gray-50 rounded-lg px-4 py-2 space-y-1 text-sm">
-                  {device.product_line_name && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">产品线</span>
-                      <span className="font-medium text-gray-900">{device.product_line_name}</span>
-                    </div>
-                  )}
-                  {device.product_name && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">产品型号</span>
-                      <span className="font-medium text-gray-900">{device.product_name}{device.product_model ? ` (${device.product_model})` : ''}</span>
-                    </div>
+                {/* 产品线 | 产品型号（编辑模式可选择，用于修正选错的型号） */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">产品线</label>
+                  <Select
+                    value={formData.product_line_id}
+                    onChange={(v) => handleChange('product_line_id', v ? parseInt(v) : '')}
+                    placeholder="请选择产品线"
+                    options={[{ value: '', label: '请选择产品线' }, ...productLines.map((pl) => ({ value: pl.id, label: pl.name }))]}
+                    className={`w-full px-3 py-1.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.product_line_id ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                  {errors.product_line_id && <p className="text-red-500 text-xs mt-1">{errors.product_line_id}</p>}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">产品型号</label>
+                  <Select
+                    value={formData.product_id || ''}
+                    onChange={(v) => handleChange('product_id', v ? parseInt(v) : undefined)}
+                    placeholder={products.length === 0 ? '请先选产品线' : '请选择产品型号'}
+                    options={[{ value: '', label: products.length === 0 ? '请先选产品线' : '请选择产品型号' }, ...products.map((p) => ({ value: p.id, label: `${p.name}${p.model ? ` (${p.model})` : ''}` }))]}
+                    className={`w-full px-3 py-1.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm ${errors.product_id ? 'border-red-500' : 'border-gray-300'}`}
+                    disabled={products.length === 0}
+                  />
+                  {errors.product_id && <p className="text-red-500 text-xs mt-1">{errors.product_id}</p>}
+                  {!!formData.product_id && !!device.product_id && formData.product_id !== device.product_id && (
+                    <p className="text-xs text-amber-600 mt-1">保存后将按新产品型号自动同步设备模块列表</p>
                   )}
                 </div>
 

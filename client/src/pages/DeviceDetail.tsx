@@ -852,8 +852,10 @@ const DeviceDetail: React.FC = () => {
         submitData.new_id = data.id;
       }
       delete submitData.id;
-      // product_line_id 在编辑模式是只读的，不需要发送（也不能发送空字符串到 INT NOT NULL 列）
-      delete submitData.product_line_id;
+      // 产品线在编辑模式现已可选择：仅剔除空值，避免空字符串写入 INT 列
+      if (submitData.product_line_id === undefined || submitData.product_line_id === '') {
+        delete submitData.product_line_id;
+      }
       const response: any = await deviceApi.updateDevice(id!, submitData);
       console.log('设备更新响应:', response);
       // 如果序列号变更了，跳转到新的URL
