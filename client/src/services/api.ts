@@ -502,7 +502,7 @@ export const productVersionApi = {
   uploadDocuments: (versionId: number, formData: FormData): Promise<ApiResponse<any>> =>
     api.post(`/product-versions/${versionId}/documents`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 60000,
+      timeout: 0, // 不限超时，支持大文件上传
     }).then(res => res.data),
 
   // 删除版本文档
@@ -537,7 +537,7 @@ export const kbArticleApi = {
   uploadAttachment: (files: File[]): Promise<any> => {
     const fd = new FormData();
     files.forEach(f => fd.append('files', f));
-    return api.post('/kb-articles/upload-attachment', fd).then(res => res.data);
+    return api.post('/kb-articles/upload-attachment', fd, { timeout: 0 }).then(res => res.data);
   },
 };
 
@@ -566,6 +566,7 @@ export const uploadChecklistImage = (
   if (options?.toVersion) form.append('to_version', options.toVersion);
   return api.post('/versions/upload-checklist-image', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 0, // 不限超时，支持大文件上传
   }).then(res => res.data.data);
 };
 
@@ -647,7 +648,7 @@ export const customerRequirementApi = {
   changeStatus: (id: number, data: { status: string; operator: string; reason: string; publish_version?: string; publish_time?: string; deprecated_reason?: string }): Promise<ApiResponse<any>> =>
     api.put(`/customer-requirements/${id}/status`, data).then(res => res.data),
   uploadAttachments: (id: number, formData: FormData): Promise<ApiResponse<any>> =>
-    api.post(`/customer-requirements/${id}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 }).then(res => res.data),
+    api.post(`/customer-requirements/${id}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 0 }).then(res => res.data),
   deleteAttachment: (attId: number): Promise<ApiResponse<void>> =>
     api.delete(`/customer-requirements/attachments/${attId}`).then(res => res.data),
   downloadAttachmentUrl: (attId: number): string =>
@@ -669,7 +670,7 @@ export const testTaskApi = {
   decision: (id: number, data: { status: string; upgrade_decision?: string; decision_note?: string }): Promise<ApiResponse<any>> =>
     api.put(`/test-tasks/${id}/decision`, data).then(res => res.data),
   uploadAttachments: (id: number, formData: FormData): Promise<ApiResponse<any>> =>
-    api.post(`/test-tasks/${id}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 }).then(res => res.data),
+    api.post(`/test-tasks/${id}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 0 }).then(res => res.data),
   deleteAttachment: (attId: number): Promise<ApiResponse<void>> =>
     api.delete(`/test-tasks/attachments/${attId}`).then(res => res.data),
   downloadAttachmentUrl: (attId: number): string =>

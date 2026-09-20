@@ -301,6 +301,8 @@ async function startServer() {
 
     httpServer.keepAliveTimeout = 65000;
     httpServer.headersTimeout = 66000;
+    // Node 18 默认 5 分钟会掐断未完成的请求，放宽到 2 小时以支持 500MB 大文件慢速上传
+    httpServer.requestTimeout = 7200000;
     httpServer.maxConnections = 500;
 
     // 如果SSL证书可用，启动HTTPS服务器
@@ -330,6 +332,7 @@ async function startServer() {
 
       httpsServer.keepAliveTimeout = 65000;
       httpsServer.headersTimeout = 66000;
+      httpsServer.requestTimeout = 7200000; // 与 HTTP 一致，支持大文件慢速上传
       httpsServer.maxConnections = 500;
     }
 

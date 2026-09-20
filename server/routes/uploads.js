@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage,
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+    limits: { fileSize: 500 * 1024 * 1024 } // 500MB（接口已废弃，仅保持一致）
 });
 
 // ⚠️ DEPRECATED: 生产留底资料接口已废弃

@@ -23,7 +23,7 @@ const issueUploadStorage = multer.diskStorage({
     cb(null, `${Date.now()}_${safeName}`);
   }
 });
-const issueUpload = multer({ storage: issueUploadStorage, limits: { fileSize: 50 * 1024 * 1024 } });
+const issueUpload = multer({ storage: issueUploadStorage, limits: { fileSize: 500 * 1024 * 1024 } }); // 500MB
 
 async function issueOssUploadWithRetry(ossPath, localPath, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {

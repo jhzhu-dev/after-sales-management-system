@@ -247,7 +247,7 @@ const ProductDetail: React.FC = () => {
             }
 
             const { data } = await api.post('/product-documents/upload', formData, {
-                timeout: 120000,
+                timeout: 0, // 不限超时，支持大文件上传
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 

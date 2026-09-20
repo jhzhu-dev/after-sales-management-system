@@ -661,7 +661,7 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
                     if (formData.device_id) fd.append('device_id', formData.device_id);
                     const selModule = modules.find(m => String(m.id) === String(formData.module_id));
                     if (selModule) fd.append('module_name', selModule.name);
-                    const { data: result } = await api.post('/issues/upload-attachment', fd);
+                    const { data: result } = await api.post('/issues/upload-attachment', fd, { timeout: 0 });
                     if (result.success) {
                       setAttachments(prev => [...prev, ...result.data]);
                     } else {

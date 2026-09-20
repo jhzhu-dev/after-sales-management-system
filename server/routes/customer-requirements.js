@@ -21,7 +21,7 @@ const cqUploadStorage = multer.diskStorage({
     cb(null, `${Date.now()}_${safeName}`);
   }
 });
-const cqUpload = multer({ storage: cqUploadStorage, limits: { fileSize: 50 * 1024 * 1024 } });
+const cqUpload = multer({ storage: cqUploadStorage, limits: { fileSize: 500 * 1024 * 1024 } }); // 500MB
 
 // 允许的状态集合（用于校验）
 const CQ_STATUSES = ['需求收集', '待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];

@@ -21,7 +21,7 @@ const kbUploadStorage = multer.diskStorage({
     cb(null, `${Date.now()}_${safeName}`);
   }
 });
-const kbUpload = multer({ storage: kbUploadStorage, limits: { fileSize: 50 * 1024 * 1024 } });
+const kbUpload = multer({ storage: kbUploadStorage, limits: { fileSize: 500 * 1024 * 1024 } }); // 500MB
 
 // ─── 启动时迁移：确保 attachments 列存在 ────────────────────────────────────
 (async () => {

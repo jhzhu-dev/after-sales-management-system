@@ -21,7 +21,7 @@ const issueLogUploadStorage = multer.diskStorage({
     cb(null, `${Date.now()}_${safeName}`);
   }
 });
-const issueLogUpload = multer({ storage: issueLogUploadStorage, limits: { fileSize: 50 * 1024 * 1024 } });
+const issueLogUpload = multer({ storage: issueLogUploadStorage, limits: { fileSize: 500 * 1024 * 1024 } }); // 500MB
 
 async function issueLogOssUploadWithRetry(ossPath, localPath, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {

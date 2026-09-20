@@ -26,7 +26,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage,
-    limits: { fileSize: 100 * 1024 * 1024 } // 100MB
+    limits: { fileSize: 500 * 1024 * 1024 } // 500MB
 });
 
 // 获取所有分类（去重）

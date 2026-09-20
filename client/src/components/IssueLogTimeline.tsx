@@ -67,7 +67,7 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
         const fd = new FormData();
         fd.append('issue_id', issueId);
         pendingFiles.forEach(f => fd.append('files', f));
-        const { data: uploadData } = await api.post('/issue-logs/upload-attachment', fd);
+        const { data: uploadData } = await api.post('/issue-logs/upload-attachment', fd, { timeout: 0 });
         if (!uploadData.success) throw new Error(uploadData.error || '附件上传失败');
         attachments = uploadData.data || [];
         setUploadingCount(0);
