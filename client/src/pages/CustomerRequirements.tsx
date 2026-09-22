@@ -15,12 +15,11 @@ import { exportToExcel } from '../utils/exportUtils';
 
 const REQ_TYPES = ['接口对接', '功能定制', '输出结果定制'];
 const URGENCIES = ['高', '中', '低'];
-const STATUSES = ['需求收集', '待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
+const STATUSES = ['需求收集', '待评估', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
 
 const STATUS_COLORS: Record<string, string> = {
   '需求收集': 'text-teal-600 bg-teal-100',
   '待评估': 'text-gray-600 bg-gray-100',
-  '评估中': 'text-blue-600 bg-blue-100',
   '已评估待开发': 'text-indigo-600 bg-indigo-100',
   '开发中': 'text-purple-600 bg-purple-100',
   '已开发待测试': 'text-cyan-600 bg-cyan-100',

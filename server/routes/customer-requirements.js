@@ -24,7 +24,7 @@ const cqUploadStorage = multer.diskStorage({
 const cqUpload = multer({ storage: cqUploadStorage, limits: { fileSize: 500 * 1024 * 1024 } }); // 500MB
 
 // 允许的状态集合（用于校验）
-const CQ_STATUSES = ['需求收集', '待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
+const CQ_STATUSES = ['需求收集', '待评估', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '废弃'];
 // 需求分类已支持自定义输入（VARCHAR），基础三分类仅作为前端建议项
 const URGENCIES = ['低', '中', '高'];
 

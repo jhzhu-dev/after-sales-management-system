@@ -69,7 +69,7 @@ const DEV_STATUSES = ['生产中', '已发货', '使用中(正常)', '使用中(
 const ISSUE_STATUS = ['open', 'open', 'in_progress', 'in_progress', 'closed', 'closed'];
 const SEVERITY = ['low', 'medium', 'medium', 'high'];
 const REQ_TYPES = ['接口对接', '功能定制', '输出结果定制'];
-const REQ_STATUSES = ['需求收集', '待评估', '评估中', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '已发布', '废弃'];
+const REQ_STATUSES = ['需求收集', '待评估', '已评估待开发', '开发中', '已开发待测试', '测试中', '已测试待发布', '已发布', '已发布', '废弃'];
 const TT_STATUSES = ['测试中', '测试中', '已测试', '通过', '通过', '不通过'];
 const ISSUE_DESC = [
   '设备开机后相机无图像输出，重启后恢复，已连续出现两次',

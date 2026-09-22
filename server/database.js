@@ -449,7 +449,7 @@ async function createTables() {
         requirement_type VARCHAR(50) NOT NULL COMMENT '需求分类（可自定义输入）',
         proposed_date DATE NOT NULL COMMENT '需求提出日期（区别于系统登记时间，必填）',
         urgency ENUM('低','中','高') DEFAULT '中' COMMENT '紧急程度',
-        status ENUM('需求收集','待评估','评估中','已评估待开发','开发中','已开发待测试','测试中','已测试待发布','已发布','废弃')
+        status ENUM('需求收集','待评估','已评估待开发','开发中','已开发待测试','测试中','已测试待发布','已发布','废弃')
                DEFAULT '需求收集' COMMENT '当前状态',
         description TEXT NOT NULL COMMENT '需求详情描述',
         publish_version VARCHAR(50) NULL COMMENT '发布版本号（状态=已发布时必填）',
@@ -596,10 +596,25 @@ async function createTables() {
       const [statusCols] = await pool.execute("SHOW COLUMNS FROM customer_requirements LIKE 'status'");
       const colType = statusCols[0] ? statusCols[0].Type : '';
       if (colType && colType.includes('待评估') && !colType.includes('需求收集')) {
-        await pool.execute("ALTER TABLE customer_requirements MODIFY COLUMN status ENUM('需求收集','待评估','评估中','已评估待开发','开发中','已开发待测试','测试中','已测试待发布','已发布','废弃') DEFAULT '需求收集' COMMENT '当前状态'");
+        // 先归拢旧枚举值，避免 MODIFY ENUM 时数据截断
+        await pool.execute("UPDATE customer_requirements SET status = '待评估' WHERE status = '评估中'");
+        await pool.execute("UPDATE customer_requirement_attachments SET status = '待评估' WHERE status = '评估中'");
+        await pool.execute("ALTER TABLE customer_requirements MODIFY COLUMN status ENUM('需求收集','待评估','已评估待开发','开发中','已开发待测试','测试中','已测试待发布','已发布','废弃') DEFAULT '需求收集' COMMENT '当前状态'");
         console.log('✅ customer_requirements.status 增加「需求收集」成功');
       }
     } catch (e) { console.warn('⚠️ customer_requirements.status ENUM 迁移警告:', e.message); }
+
+    // 迁移：需求状态移除「评估中」阶段（幂等）——存量「评估中」需求/阶段附件归入「待评估」
+    try {
+      const [statusCols2] = await pool.execute("SHOW COLUMNS FROM customer_requirements LIKE 'status'");
+      const statusType2 = statusCols2[0] ? String(statusCols2[0].Type) : '';
+      if (statusType2.includes('评估中')) {
+        await pool.execute("UPDATE customer_requirements SET status = '待评估' WHERE status = '评估中'");
+        await pool.execute("UPDATE customer_requirement_attachments SET status = '待评估' WHERE status = '评估中'");
+        await pool.execute("ALTER TABLE customer_requirements MODIFY COLUMN status ENUM('需求收集','待评估','已评估待开发','开发中','已开发待测试','测试中','已测试待发布','已发布','废弃') DEFAULT '需求收集' COMMENT '当前状态'");
+        console.log('✅ customer_requirements.status 已移除「评估中」，存量数据归入「待评估」');
+      }
+    } catch (e) { console.warn('⚠️ customer_requirements.status 移除「评估中」迁移警告:', e.message); }
 
     // 迁移：需求分类由固定 ENUM 改为 VARCHAR（支持自定义输入，幂等）
     try {
