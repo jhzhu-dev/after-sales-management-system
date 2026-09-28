@@ -732,7 +732,7 @@ export default function Devices() {
             {value}{record.id ? <span className="text-gray-400 font-normal"> · {record.id.slice(-4)}</span> : ''}
           </div>
           {record.nickname && (
-            <div className="text-xs text-primary-600 font-medium">{record.nickname}</div>
+            <div className="text-[11px] leading-tight text-primary-600 font-medium">{record.nickname}</div>
           )}
         </div>
       ),
@@ -772,7 +772,7 @@ export default function Devices() {
         <div>
           <div className="font-medium text-gray-900">{value || '-'}</div>
           {record.customer_short_name && (
-            <div className="text-xs text-gray-400">{record.customer_short_name}</div>
+            <div className="text-[11px] leading-tight text-muted-foreground">{record.customer_short_name}</div>
           )}
         </div>
       ),
@@ -982,7 +982,7 @@ export default function Devices() {
       render: (value: string, record: DeviceBundle) => (
         <div>
           <div className="font-medium text-gray-900">{value || '-'}</div>
-          {record.customer_short_name && <div className="text-xs text-gray-400">{record.customer_short_name}</div>}
+          {record.customer_short_name && <div className="text-[11px] leading-tight text-muted-foreground">{record.customer_short_name}</div>}
         </div>
       ),
       width: '150px'
@@ -1119,7 +1119,7 @@ export default function Devices() {
         {/* 页面标题和操作 */}
         <div className="flex justify-between items-center no-print shrink-0">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">设备管理</h1>
+            <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900 whitespace-nowrap">设备管理</h1>
             {/* Tab 切换（无全局搜索词时显示） */}
             {!globalSearch && (
             <div className="segmented relative">
@@ -1131,13 +1131,13 @@ export default function Devices() {
               />
               <button
                 onClick={() => { setViewMode('devices'); setSearchParams(p => { p.set('view', 'devices'); return p; }, { replace: true }); }}
-                className={`segmented-item relative z-10 ${viewMode === 'devices' ? 'segmented-item-active' : ''}`}
+                className={`segmented-item relative z-10 whitespace-nowrap ${viewMode === 'devices' ? 'segmented-item-active' : ''}`}
               >
                 单台设备列表
               </button>
               <button
                 onClick={() => { setViewMode('bundles'); setSearchParams(p => { p.set('view', 'bundles'); return p; }, { replace: true }); }}
-                className={`segmented-item relative z-10 ${viewMode === 'bundles' ? 'segmented-item-active' : ''}`}
+                className={`segmented-item relative z-10 whitespace-nowrap ${viewMode === 'bundles' ? 'segmented-item-active' : ''}`}
               >
                 多合一设备列表
               </button>
@@ -1243,12 +1243,12 @@ export default function Devices() {
                       <td className="px-4 py-3 font-mono text-gray-700 whitespace-nowrap">{d.device_code || '-'}</td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{d.name || '-'}</div>
-                        {(d as any).nickname && <div className="text-xs text-gray-400">{(d as any).nickname}</div>}
+                        {(d as any).nickname && <div className="text-[11px] leading-tight text-muted-foreground">{(d as any).nickname}</div>}
                       </td>
                       <td className="px-4 py-3 text-gray-700">{d.product_name || '-'}</td>
                       <td className="px-4 py-3">
                         <div>{d.customer_name || '-'}</div>
-                        {d.customer_short_name && <div className="text-xs text-gray-400">{d.customer_short_name}</div>}
+                        {d.customer_short_name && <div className="text-[11px] leading-tight text-muted-foreground">{d.customer_short_name}</div>}
                       </td>
                       <td className="px-4 py-3 font-mono text-gray-600 whitespace-nowrap">
                         {d.remote_code ? d.remote_code.replace(/(\d{3})(?=\d)/g, '$1 ') : '-'}
@@ -1390,6 +1390,7 @@ export default function Devices() {
           scrollable
           fixedLayout
           fill
+          compact
           footer={!loading && filteredDevices.length > 0
             ? (visibleCount >= filteredDevices.length
               ? `已显示全部 ${filteredDevices.length} 条记录`
@@ -1513,6 +1514,7 @@ export default function Devices() {
           scrollable
           fixedLayout
           fill
+          compact
           footer={!loading && filteredBundles.length > 0
             ? (visibleBundleCount >= filteredBundles.length
               ? `已显示全部 ${filteredBundles.length} 条记录`

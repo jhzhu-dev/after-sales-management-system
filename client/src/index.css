@@ -44,6 +44,13 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  /* ========== 排版基准（对齐 Ant Design / Material 3 规范） ==========
+     正文 14px（text-sm = 1rem）、辅助文字/徽章 12px（text-xs = 0.875rem），
+     随根字号自适应（1080P 根 14px，2K/4K 根 20px） */
+  --text-xs: 0.875rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 1rem;
+  --text-sm--line-height: 1.375rem;
 }
 
 /* ========== 全局主题：浅色 / 深色 ========== */
@@ -163,14 +170,21 @@ button {
 }
 
 table {
-  font-size: 0.875rem;
+  font-size: 1rem;
   line-height: 1.375rem;
   border-collapse: collapse;
+  /* 数字列等宽对齐（Ant Design 推荐的 tabular figures） */
+  font-variant-numeric: tabular-nums;
 }
 
 th,
 td {
   line-height: 1.375rem;
+}
+
+/* 表头与正文同级（Ant 规范：表头 14px + 加粗/大写区分层级），覆盖各表 text-xs 的表头类 */
+table thead th {
+  font-size: 1rem;
 }
 
 /* ========== Apple 风格组件层 ========== */
@@ -284,10 +298,10 @@ td {
     background-color: rgba(52, 152, 219, 0.08);
   }
 
+  /* 选中态：文字反白即可，背景由滑块（.segmented-thumb）统一承载，
+     避免滑动过程中出现"旧位置残影 + 新位置实心"双蓝块 */
   .segmented-item-active {
-    @apply text-white ring-1 ring-inset ring-white/25;
-    background-image: var(--accent-grad);
-    box-shadow: 0 4px 14px rgba(46, 134, 193, 0.28);
+    @apply text-white;
   }
 
   /* 滑块指示器：跟随选中项平滑移动（宽度=一半-容器内边距）；色调与主按钮一致 */
@@ -359,7 +373,7 @@ td {
 /* ========== 全局按钮悬停发光 ==========
    仅作用于圆角操作按钮（rounded-xl/lg/2xl 或分段项），
    不影响整行宽度的布局型按钮（分区折叠头、Tab 导航等）。 */
-button:hover:not(:disabled):not([disabled]):not([class*='cursor-wait']):not(.no-glow):where([class*='rounded-xl'], [class*='rounded-lg'], [class*='rounded-2xl'], .segmented-item) {
+button:hover:not(:disabled):not([disabled]):not([class*='cursor-wait']):not(.no-glow):where([class*='rounded-xl'], [class*='rounded-lg'], [class*='rounded-2xl']):not(.segmented-item) {
   box-shadow:
     var(--apple-shadow-lg),
     0 0 0 1px rgba(255, 255, 255, 0.12) inset,
@@ -367,7 +381,7 @@ button:hover:not(:disabled):not([disabled]):not([class*='cursor-wait']):not(.no-
     0 0 34px -6px rgba(59, 130, 246, 0.35);
 }
 
-html.dark button:hover:not(:disabled):not([disabled]):not([class*='cursor-wait']):not(.no-glow):where([class*='rounded-xl'], [class*='rounded-lg'], [class*='rounded-2xl'], .segmented-item) {
+html.dark button:hover:not(:disabled):not([disabled]):not([class*='cursor-wait']):not(.no-glow):where([class*='rounded-xl'], [class*='rounded-lg'], [class*='rounded-2xl']):not(.segmented-item) {
   box-shadow:
     var(--apple-shadow-lg),
     0 0 0 1px rgba(255, 255, 255, 0.10) inset,

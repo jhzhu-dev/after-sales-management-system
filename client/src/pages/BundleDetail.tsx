@@ -23,6 +23,7 @@ import { DeviceBundle, FeishuUser } from '../types';
 import { bundleApi, deviceApi, moduleApi, feishuApi, productModuleApi } from '../services/api';
 import api from '../services/api';
 import Layout from '../components/Layout';
+import DataTable, { Column } from '../components/DataTable';
 import SegmentedTabs from '../components/SegmentedTabs';
 import { Button } from '../components/ui/button';
 import BundleForm from '../components/BundleForm';
@@ -382,6 +383,79 @@ const BundleDetail: React.FC = () => {
       }
     }
   };
+
+  const deviceColumns: Column<any>[] = [
+    {
+      key: 'id',
+      title: '生产序列号',
+      render: (_, device) => (
+        <span className="text-primary-600 font-mono font-medium">{device.id}</span>
+      )
+    },
+    { key: 'device_code', title: '设备编码', render: (v) => v || '-' },
+    {
+      key: 'remote_code',
+      title: '远程码',
+      noShrink: true,
+      render: (_, device) => (
+        <input
+          value={device.remote_code || ''}
+          onChange={e => handleRemoteChange(device, e.target.value)}
+          onBlur={() => handleRemoteBlur(device)}
+          placeholder="远程码"
+          onClick={e => e.stopPropagation()}
+          className="w-28 px-2 py-1 border border-border rounded-lg text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+        />
+      )
+    },
+    {
+      key: 'is_primary',
+      title: '主设备',
+      noShrink: true,
+      render: (_, device) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleTogglePrimary(device); }}
+          className={`text-xs px-2.5 py-1 rounded-lg border whitespace-nowrap transition-colors ${Number(device.is_primary) === 1 ? 'bg-primary-500 text-white border-blue-600' : 'text-muted-foreground border-border hover:border-primary-400 hover:text-primary-600'}`}
+        >
+          {Number(device.is_primary) === 1 ? '★ 主设备' : '设为主设备'}
+        </button>
+      )
+    },
+    { key: 'nickname', title: '简称', render: (v) => v || '-' },
+    { key: 'product_name', title: '产品名称', render: (v) => v || '-' },
+    { key: 'merchant_id', title: '商户号', render: () => bundle?.merchant_id || '-' },
+    { key: 'merchant_password', title: '商户密码', render: () => bundle?.merchant_password || '-' },
+    {
+      key: 'status',
+      title: '状态',
+      render: (v) => <span className={`chip ${getStatusChip(v)}`}>{v}</span>
+    },
+    {
+      key: 'shipped_at',
+      title: '发货时间',
+      render: (v) => (v ? formatDate(v) : '-')
+    },
+    {
+      key: 'open_issues',
+      title: '待解决问题',
+      render: (v) => v ? (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{v}</span>
+      ) : <span className="text-muted-foreground">0</span>
+    },
+    {
+      key: 'actions',
+      title: '操作',
+      noShrink: true,
+      render: (_, device) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleRemoveDevice(device.id); }}
+          className="text-xs text-red-500 hover:text-red-700 border border-red-300 hover:border-red-500 rounded-lg px-2.5 py-1 transition-colors"
+        >
+          移出
+        </button>
+      )
+    }
+  ];
 
   // 维护成员设备远程码 / 主设备
   const updateLocalDevice = (deviceId: string, patch: any) => {
@@ -925,86 +999,14 @@ const BundleDetail: React.FC = () => {
                   <h3 className="text-base font-medium text-gray-900">成员设备列表</h3>
                   <ExportButton onExport={handleExportDevices} />
                 </div>
-                <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
-                  <div className="overflow-x-auto no-scrollbar">
-                    <table className="min-w-full divide-y divide-border text-sm">
-                      <thead className="bg-muted backdrop-blur border-b border-border">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">生产序列号</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">设备编码</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">远程码</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">主设备</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">简称</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">产品名称</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">商户号</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">商户密码</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">状态</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">发货时间</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">待解决问题</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider no-print">操作</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {bundle.devices && bundle.devices.length > 0 ? bundle.devices.map((device: any) => (
-                          <tr key={device.id} className="hover:bg-muted transition-colors cursor-pointer" onClick={() => navigate(`/devices/${device.id}?from=bundle&bundleId=${id}`)}>
-                            <td className="px-4 py-3">
-                              <span className="text-primary-600 font-mono font-medium">
-                                {device.id}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-foreground">{device.device_code || '-'}</td>
-                            <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                              <input
-                                value={device.remote_code || ''}
-                                onChange={e => handleRemoteChange(device, e.target.value)}
-                                onBlur={() => handleRemoteBlur(device)}
-                                placeholder="远程码"
-                                className="w-28 px-2 py-1 border border-border rounded-lg text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-                              />
-                            </td>
-                            <td className="px-4 py-3 no-print" onClick={e => e.stopPropagation()}>
-                              <button
-                                onClick={() => handleTogglePrimary(device)}
-                                className={`text-xs px-2.5 py-1 rounded-lg border whitespace-nowrap transition-colors ${Number(device.is_primary) === 1 ? 'bg-primary-500 text-white border-blue-600' : 'text-muted-foreground border-border hover:border-primary-400 hover:text-primary-600'}`}
-                              >
-                                {Number(device.is_primary) === 1 ? '★ 主设备' : '设为主设备'}
-                              </button>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-muted-foreground">{device.nickname || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-foreground">{device.product_name || '-'}</td>
-                            <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{bundle.merchant_id || '-'}</td>
-                            <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{bundle.merchant_password || '-'}</td>
-                            <td className="px-4 py-3">
-                              <span className={`chip ${getStatusChip(device.status)}`}>
-                                {device.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
-                              {device.shipped_at ? formatDate(device.shipped_at) : '-'}
-                            </td>
-                            <td className="px-4 py-3">
-                              {device.open_issues ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{device.open_issues}</span>
-                              ) : <span className="text-sm text-muted-foreground">0</span>}
-                            </td>
-                            <td className="px-4 py-3 no-print" onClick={e => e.stopPropagation()}>
-                              <button
-                                onClick={() => handleRemoveDevice(device.id)}
-                                className="text-xs text-red-500 hover:text-red-700 border border-red-300 hover:border-red-500 rounded-lg px-2.5 py-1 transition-colors"
-                              >
-                                移出
-                              </button>
-                            </td>
-                          </tr>
-                        )) : (
-                          <tr>
-                            <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">暂无成员设备</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                <DataTable
+                  data={bundle.devices || []}
+                  rowKey="id"
+                  onRowClick={(device) => navigate(`/devices/${device.id}?from=bundle&bundleId=${id}`)}
+                  columns={deviceColumns}
+                  fixedLayout
+                  compact
+                />
               </div>
             )}
 
@@ -1024,8 +1026,8 @@ const BundleDetail: React.FC = () => {
                       onClick={handleToggleFactoryDocsComplete}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-colors text-sm border ${
                         isFactoryDocsComplete(bundle?.factory_docs_complete)
-                          ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
-                          : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                          ? 'bg-green-500/10 text-green-500 border-green-500/30 hover:bg-green-500/20'
+                          : 'bg-primary-500/10 text-foreground border-primary-500/30 hover:bg-primary-500/20'
                       }`}
                     >
                       {isFactoryDocsComplete(bundle?.factory_docs_complete) ? (
@@ -1041,22 +1043,19 @@ const BundleDetail: React.FC = () => {
                       )}
                     </button>
                     {documents.length > 0 && (
-                      <button
+                      <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => { const entering = !docSelectMode; setDocSelectMode(entering); setSelectedDocIds(new Set()); if (entering) setExpandedCategories(new Set(docCategories)); }}
-                        className={`flex items-center gap-1 px-3 py-2 rounded-md transition-colors text-sm ${
-                          docSelectMode ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
+                        className={docSelectMode ? 'bg-primary-500/15 text-primary-500 border-primary-500/30' : ''}
                       >
                         {docSelectMode ? '取消选择' : '批量管理'}
-                      </button>
+                      </Button>
                     )}
-                    <button
-                      onClick={() => setShowDocUploadModal(true)}
-                      className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition-colors text-sm"
-                    >
+                    <Button variant="outline" onClick={() => setShowDocUploadModal(true)}>
                       <ArrowUpTrayIcon className="h-4 w-4" />
                       上传资料
-                    </button>
+                    </Button>
                   </div>
                 </div>
 

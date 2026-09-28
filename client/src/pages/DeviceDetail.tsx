@@ -1311,7 +1311,7 @@ const DeviceDetail: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">模块列表</h3>
-                  <Button onClick={() => setShowModuleForm(true)}><PlusIcon className="h-4 w-4" />添加模块</Button>
+                  <Button variant="outline" onClick={() => setShowModuleForm(true)}><PlusIcon className="h-4 w-4" />添加模块</Button>
                 </div>
                 <div className="flex flex-nowrap gap-4 overflow-x-auto pb-2 print:grid print:grid-cols-3 print:flex-wrap">
                   {/* 模块卡片：统一圆角毛玻璃 */}
@@ -1375,8 +1375,8 @@ const DeviceDetail: React.FC = () => {
                       onClick={handleToggleFactoryDocsComplete}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-colors text-sm border ${
                         isFactoryDocsComplete(device?.factory_docs_complete)
-                          ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
-                          : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                          ? 'bg-green-500/10 text-green-500 border-green-500/30 hover:bg-green-500/20'
+                          : 'bg-primary-500/10 text-foreground border-primary-500/30 hover:bg-primary-500/20'
                       }`}
                     >
                       {isFactoryDocsComplete(device?.factory_docs_complete) ? (
@@ -1392,22 +1392,19 @@ const DeviceDetail: React.FC = () => {
                       )}
                     </button>
                     {deviceDocuments.length > 0 && (
-                      <button
+                      <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => { const entering = !docSelectMode; setDocSelectMode(entering); setSelectedDocIds(new Set()); if (entering) setExpandedCategories(new Set(deviceDocCategories)); }}
-                        className={`flex items-center gap-1 px-3 py-2 rounded-md transition-colors text-sm ${
-                          docSelectMode ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
+                        className={docSelectMode ? 'bg-primary-500/15 text-primary-500 border-primary-500/30' : ''}
                       >
                         {docSelectMode ? '取消选择' : '批量管理'}
-                      </button>
+                      </Button>
                     )}
-                    <button
-                      onClick={() => setShowDocUploadModal(true)}
-                      className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition-colors"
-                    >
+                    <Button variant="outline" onClick={() => setShowDocUploadModal(true)}>
                       <ArrowUpTrayIcon className="h-4 w-4" />
                       上传资料
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 {docSelectMode && (

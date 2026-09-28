@@ -213,10 +213,9 @@ code {
     font-size: 14px;
   }
 
-  /* 表格单元格更紧凑 */
+  /* 表格单元格更紧凑（表头字号不再压制，跟随全局 14px 基准） */
   table thead th {
     padding: 0.5rem 0.75rem !important;
-    font-size: 0.7rem !important;
   }
 
   table tbody td {

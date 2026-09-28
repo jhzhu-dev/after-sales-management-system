@@ -74,7 +74,6 @@ const OrderLogisticsCard: React.FC<OrderLogisticsCardProps> = ({ orderNo, custom
         </h2>
         <Button
           variant="outline"
-          size="sm"
           onClick={() => setShowForm(true)}
           disabled={loading}
         >
@@ -84,7 +83,7 @@ const OrderLogisticsCard: React.FC<OrderLogisticsCardProps> = ({ orderNo, custom
       </div>
 
       {successMsg && (
-        <div className="mb-3 p-2.5 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">{successMsg}</div>
+        <div className="mb-3 p-2.5 bg-green-500/10 border border-green-500/30 rounded-md text-green-500 text-sm">{successMsg}</div>
       )}
 
       {loading ? (

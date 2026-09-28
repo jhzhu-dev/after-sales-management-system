@@ -45,7 +45,7 @@ export default function SegmentedTabs<T extends string | number>({
         <span
           aria-hidden
           className="segmented-thumb"
-          style={{ left: thumb.left, width: thumb.width, transition: 'left 0.45s cubic-bezier(0.25, 0.1, 0.25, 1), width 0.45s cubic-bezier(0.25, 0.1, 0.25, 1)' }}
+          style={{ left: thumb.left, width: thumb.width, transition: 'left 0.6s cubic-bezier(0.25, 0.1, 0.25, 1)' }}
         />
       )}
       {items.map(item => {

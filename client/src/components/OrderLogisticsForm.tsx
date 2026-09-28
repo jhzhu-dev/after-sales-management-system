@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   XMarkIcon,
   PlusIcon,
@@ -32,7 +33,7 @@ const BATTERY_DEVICE_TYPES = ['视觉器', '上位机', '服务器', '其他'];
 const BATTERY_KINDS = ['内置电池', '纽扣电池', '其他'];
 const BATTERY_HANDLINGS = ['随机发货', '单独邮寄', '客户自购'];
 
-const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm';
+const inputCls = 'w-full px-3 py-2 border border-border bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/40 text-sm text-foreground placeholder:text-muted-foreground/70';
 
 /** 可选择 + 可自由输入的组合框（预设选项作为建议，无合适项时直接输入自定义值） */
 const CreatableSelect: React.FC<{
@@ -243,10 +244,12 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
   const shippableCount = shipCheck?.shippable_count ?? 0;
   const hasDevices = checkDevices.length > 0;
 
-  return (
+  // Portal 到 body：避免被带 backdrop-filter 的祖先（如 .bg-card）限制模糊边界，
+  // 导致遮罩的 backdrop-blur 无法模糊整页背景
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-lg" onClick={onClose} />
-      <div className="relative z-10 bg-popover rounded-2xl border border-border shadow-soft-lg w-full max-w-4xl mx-4 max-h-[92vh] flex flex-col">
+      <div className="relative z-10 bg-popover/95 backdrop-blur-2xl rounded-2xl border border-border shadow-soft-lg w-full max-w-4xl mx-4 max-h-[92vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
             <h3 className="text-lg font-semibold text-foreground">{existing ? '编辑物流信息' : '登记物流信息'}</h3>
@@ -532,9 +535,9 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
 
           {/* 发货联动 + 核对 */}
           {hasDevices && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+            <div className="bg-primary-500/10 border border-primary-500/30 rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-blue-900">
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <input
                     type="checkbox"
                     checked={shipDevices && shippableCount > 0}
@@ -543,7 +546,7 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
                     className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
                   />
                   保存后将订单下设备标记为已发货
-                  {shippableCount > 0 && <span className="text-xs text-blue-600">（{shippableCount} 台可发货）</span>}
+                  {shippableCount > 0 && <span className="text-xs text-primary-500">（{shippableCount} 台可发货）</span>}
                 </label>
                 <Button type="button" variant="outline" size="sm" onClick={runShipCheck} disabled={checking}>
                   <ArrowPathIcon className={`h-4 w-4 ${checking ? 'animate-spin' : ''}`} /> 核对
@@ -557,10 +560,10 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
                     ) : (
                       <XCircleIcon className="h-4 w-4 text-gray-400 shrink-0" />
                     )}
-                    <span className="text-gray-700">{d.name || d.id}</span>
-                    {d.bundle_code && <span className="text-gray-400">（多合一 {d.bundle_code}）</span>}
-                    <span className="text-gray-400">当前：{d.status}</span>
-                    {!d.can_ship && <span className="text-gray-400">— {d.reason || '不可发货'}</span>}
+                    <span className="text-foreground/90">{d.name || d.id}</span>
+                    {d.bundle_code && <span className="text-muted-foreground">（多合一 {d.bundle_code}）</span>}
+                    <span className="text-muted-foreground">当前：{d.status}</span>
+                    {!d.can_ship && <span className="text-muted-foreground">— {d.reason || '不可发货'}</span>}
                   </div>
                 ))}
               </div>
@@ -575,7 +578,8 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

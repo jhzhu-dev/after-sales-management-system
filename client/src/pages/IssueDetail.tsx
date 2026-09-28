@@ -279,7 +279,16 @@ export default function IssueDetail() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-5 print:grid-cols-4 print:gap-y-3">
               <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 print:text-xs">设备名称</p>
-                <p className="text-base font-semibold text-gray-900 print:text-sm">{getIssueDeviceLabel(issue)}</p>
+                {issue.device_id ? (
+                  <Link
+                    to={`/devices/${issue.device_id}`}
+                    className="text-base font-semibold text-primary-600 hover:text-primary-700 hover:underline print:text-sm print:text-gray-900 print:no-underline"
+                  >
+                    {getIssueDeviceLabel(issue)}
+                  </Link>
+                ) : (
+                  <p className="text-base font-semibold text-gray-900 print:text-sm">{getIssueDeviceLabel(issue)}</p>
+                )}
                 {issue.device_nickname && issue.device_name && (
                   <p className="text-xs text-gray-500 mt-0.5 print:text-xs">{issue.device_name}</p>
                 )}
