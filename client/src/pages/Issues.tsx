@@ -5,6 +5,7 @@ import { PlusIcon, TrashIcon, EyeIcon, CheckIcon, ChevronUpIcon, ChevronDownIcon
 import { issueApi, customerApi, moduleTypeApi, productLineApi, moduleVersionApi, issueClassificationApi } from '../services/api';
 import { Issue, FilterOptions, IssueFormData, IssueClassification } from '../types';
 import Layout from '../components/Layout';
+import SegmentedTabs from '../components/SegmentedTabs';
 import { Button } from '../components/ui/button';
 import DataTable from '../components/DataTable';
 import SearchableSelect from '../components/SearchableSelect';
@@ -1056,25 +1057,14 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                 </Button>
               </div>
             )}
-            <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
-              {[
-                { id: 'issues' as const, label: '问题记录', icon: ChatBubbleLeftRightIcon },
-                { id: 'upgrades' as const, label: '版本演进', icon: ArrowPathIcon }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => { setActiveTab(tab.id); navigate('?tab=' + tab.id, { replace: true }); }}
-                  className={`flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-white text-primary-600 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <tab.icon className={`w-4 h-4 mr-2 ${activeTab === tab.id ? 'text-primary-600' : 'text-gray-400'}`} />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            <SegmentedTabs
+              items={[
+                { key: 'issues', label: <><ChatBubbleLeftRightIcon className="w-4 h-4" />问题记录</> },
+                { key: 'upgrades', label: <><ArrowPathIcon className="w-4 h-4" />版本演进</> }
+              ]}
+              value={activeTab}
+              onChange={(id) => { setActiveTab(id as 'issues' | 'upgrades'); navigate('?tab=' + id, { replace: true }); }}
+            />
           </div>
         </div>
 
