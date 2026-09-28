@@ -143,7 +143,24 @@ const CustomerRequirements: React.FC = () => {
   const columns: Column<CustomerRequirement>[] = [
     { key: 'req_code', title: '需求编号', width: '140px' },
     { key: 'customer_name', title: '客户' },
-    { key: 'device_names', title: '涉及设备', render: (v: any) => v || '-' },
+    {
+      key: 'device_names',
+      title: '涉及设备',
+      // 设备多时截断显示，防止把表格挤出边界；完整列表见悬停提示
+      render: (v: any) => {
+        if (!v) return '-';
+        const list = String(v).split(/[、,，]\s*/).filter(Boolean);
+        const shown = list.slice(0, 3).join('、');
+        return (
+          <div className="max-w-[280px]">
+            <div className="truncate" title={list.join('、')}>
+              {shown}
+              {list.length > 3 && <span className="text-muted-foreground"> 等 {list.length} 台设备</span>}
+            </div>
+          </div>
+        );
+      }
+    },
     { key: 'requirement_type', title: '分类', render: (v: any) => renderTypeBadge(v) },
     { key: 'urgency', title: '紧急程度', render: (v: any) => renderUrgencyBadge(v) },
     { key: 'status', title: '状态', render: (v: any) => renderStatusBadge(v) },
