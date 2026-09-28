@@ -428,11 +428,13 @@ const BundleDetail: React.FC = () => {
     {
       key: 'status',
       title: '状态',
+      noShrink: true,
       render: (v) => <span className={`chip ${getStatusChip(v)}`}>{v}</span>
     },
     {
       key: 'shipped_at',
       title: '发货时间',
+      noShrink: true,
       render: (v) => (v ? formatDate(v) : '-')
     },
     {
