@@ -1290,3 +1290,103 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 .recharts-legend-item-text {
   color: var(--muted-foreground) !important;
 }
+
+/* ========== 全局打印格式统一优化 ==========
+   横向 A4 + 自动列宽，修复长内容/多列时"内容显示不全"的问题 */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  html, body {
+    width: auto !important;
+    overflow: visible !important;
+  }
+
+  #root,
+  main,
+  main > div {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* 玻璃/卡片效果在打印下平铺为白底 */
+  .glass,
+  .glass-strong,
+  .bg-card,
+  .bg-popover {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    border-color: #d1d5db !important;
+  }
+
+  /* 表格：自动列宽 + 允许换行，杜绝内容被裁切 */
+  table {
+    width: 100% !important;
+    table-layout: auto !important;
+    font-size: 8.5pt !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tr,
+  td,
+  th {
+    page-break-inside: avoid !important;
+  }
+
+  td,
+  th {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: none !important;
+    padding: 2pt 4pt !important;
+    word-break: break-all;
+  }
+
+  /* 截断类工具类在打印时放开 */
+  .truncate,
+  .line-clamp-1,
+  .line-clamp-2,
+  .line-clamp-3 {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    -webkit-line-clamp: unset !important;
+    display: block !important;
+  }
+
+  /* 长序列号/编码允许在任意字符处换行 */
+  .font-mono {
+    word-break: break-all !important;
+  }
+
+  /* 列表配置的固定列宽在打印时放开 */
+  table colgroup col[style],
+  th[style*='width'],
+  td[style*='width'] {
+    width: auto !important;
+  }
+
+  /* 徽章保持边框可见（打印默认不打印背景色） */
+  .chip,
+  [class*='rounded-full'],
+  [class*='rounded'] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
