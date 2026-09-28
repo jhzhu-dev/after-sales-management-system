@@ -298,13 +298,13 @@ table thead th {
     background-color: rgba(52, 152, 219, 0.08);
   }
 
-  /* 选中态：文字反白即可，背景由滑块（.segmented-thumb）统一承载，
+  /* 选中态：文字/图标用主色，背景由滑块（.segmented-thumb）统一承载，
      避免滑动过程中出现"旧位置残影 + 新位置实心"双蓝块 */
   .segmented-item-active {
-    @apply text-white;
+    @apply text-primary-500;
   }
 
-  /* 滑块指示器：跟随选中项平滑移动（宽度=一半-容器内边距）；色调与主按钮一致 */
+  /* 滑块指示器：浅色胶囊（选中项底色变浅，文字变主色），跟随选中项平滑移动 */
   .segmented-thumb {
     position: absolute;
     top: 4px;
@@ -312,10 +312,15 @@ table thead th {
     left: 4px;
     width: calc(50% - 8px);
     border-radius: 0.5rem;
-    background-image: var(--accent-grad);
-    box-shadow: 0 4px 14px rgba(46, 134, 193, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    background-color: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 1px 3px rgba(28, 40, 51, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.6);
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
+  }
+
+  html.dark .segmented-thumb {
+    background-color: rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 1px 3px rgba(0, 0, 0, 0.30);
   }
 }
 

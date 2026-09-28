@@ -6,6 +6,7 @@ import { deviceApi, moduleApi, productLineApi, bundleApi, customerApi } from '..
 import { Device, DeviceBundle, FilterOptions, DeviceFormData, Customer } from '../types';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
+import SegmentedTabs from '../components/SegmentedTabs';
 import DeviceForm from '../components/DeviceForm';
 import BundleForm from '../components/BundleForm';
 import ExportButton from '../components/ExportButton';
@@ -1122,26 +1123,14 @@ export default function Devices() {
             <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900 whitespace-nowrap">设备管理</h1>
             {/* Tab 切换（无全局搜索词时显示） */}
             {!globalSearch && (
-            <div className="segmented relative">
-              {/* 滑块指示器：跟随选中项移动 */}
-              <span
-                aria-hidden
-                className="segmented-thumb"
-                style={{ transform: viewMode === 'devices' ? 'translateX(0)' : 'translateX(calc(100% + 8px))' }}
-              />
-              <button
-                onClick={() => { setViewMode('devices'); setSearchParams(p => { p.set('view', 'devices'); return p; }, { replace: true }); }}
-                className={`segmented-item relative z-10 whitespace-nowrap ${viewMode === 'devices' ? 'segmented-item-active' : ''}`}
-              >
-                单台设备列表
-              </button>
-              <button
-                onClick={() => { setViewMode('bundles'); setSearchParams(p => { p.set('view', 'bundles'); return p; }, { replace: true }); }}
-                className={`segmented-item relative z-10 whitespace-nowrap ${viewMode === 'bundles' ? 'segmented-item-active' : ''}`}
-              >
-                多合一设备列表
-              </button>
-            </div>
+            <SegmentedTabs
+              items={[
+                { key: 'devices', label: '单台设备列表' },
+                { key: 'bundles', label: '多合一设备列表' }
+              ]}
+              value={viewMode}
+              onChange={(mode: string) => { setViewMode(mode as 'devices' | 'bundles'); setSearchParams(p => { p.set('view', mode); return p; }, { replace: true }); }}
+            />
             )}
             {!globalSearch && (viewMode === 'devices' ? (
               <Button onClick={() => handleAddDevice()}>
