@@ -164,7 +164,7 @@ const CustomerRequirements: React.FC = () => {
     { key: 'requirement_type', title: '分类', render: (v: any) => renderTypeBadge(v) },
     { key: 'urgency', title: '紧急程度', render: (v: any) => renderUrgencyBadge(v) },
     { key: 'status', title: '状态', render: (v: any) => renderStatusBadge(v) },
-    { key: 'proposed_date', title: '提出日期' },
+    { key: 'proposed_date', title: '提出日期', render: (v: any) => (v ? formatDate(v, 'yyyy-MM-dd') : '-') },
     { key: 'publish_version', title: '发布版本', render: (v: any) => v || '-' },
     { key: 'updated_at', title: '更新时间', render: (v: any) => formatDate(v, 'yyyy-MM-dd HH:mm') },
   ];
