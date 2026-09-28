@@ -238,6 +238,24 @@ router.post('/:id/ship', async (req, res) => {
       [id]
     );
     const updatedResult = await query('SELECT * FROM devices WHERE id = ?', [id]);
+
+    // ── 飞书催填版本号通知（异步，不阻塞响应）──
+    const { notify_open_ids } = req.body;
+    const recipientIds = Array.isArray(notify_open_ids) ? notify_open_ids.filter(Boolean) : [];
+    if (recipientIds.length > 0) {
+      const feishuService = require('../services/feishu-service');
+      query(`SELECT d.*, pl.name as product_line_name, p.model as product_model, c.name as customer_name
+             FROM devices d
+             LEFT JOIN product_lines pl ON d.product_line_id = pl.id
+             LEFT JOIN products p ON d.product_id = p.id
+             LEFT JOIN customers c ON d.customer_id = c.id
+             WHERE d.id = ?`, [id])
+        .then(rows => {
+          if (rows[0]) feishuService.sendShipNotification(rows[0], recipientIds);
+        })
+        .catch(() => {});
+    }
+
     res.json({ success: true, data: updatedResult[0], message: '设备已标记为已发货' });
   } catch (error) {
     console.error('设备发货失败:', error);
@@ -748,31 +766,15 @@ router.put('/:id', [
       }
     }
 
-    // 出厂资料完善后，自动将设备（生产中状态）同步为已发货，与多合一设备逻辑一致
-    let syncedShipCount = 0;
-    const docsCompleteRequested = filteredUpdates.factory_docs_complete === true
-      || filteredUpdates.factory_docs_complete === 1
-      || filteredUpdates.factory_docs_complete === '1';
-    if (docsCompleteRequested) {
-      const effectiveStatus = filteredUpdates.status !== undefined
-        ? String(filteredUpdates.status)
-        : existingDevice[0].status;
-      if (effectiveStatus === '生产中') {
-        const syncResult = await query(
-          `UPDATE devices SET status = '已发货', shipped_at = NOW(), updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-          [finalId]
-        );
-        syncedShipCount = syncResult.affectedRows || 0;
-      }
-    }
-
+    // 出厂资料完善不再自动置为已发货：发货统一走「发货」按钮（POST /:id/ship），
+    // 以便在发货确认弹窗中选择飞书催填版本号通知人
     const syncNote = (moduleSync.added > 0 || moduleSync.removed > 0)
       ? `，已按新产品型号同步模块列表（新增 ${moduleSync.added}，移除 ${moduleSync.removed}）`
       : '';
     res.json({
       success: true,
-      message: syncedShipCount > 0 ? `设备更新成功，已自动同步为已发货${syncNote}` : `设备更新成功${syncNote}`,
-      data: { new_id: finalId, synced_ship_count: syncedShipCount, module_sync: moduleSync }
+      message: `设备更新成功${syncNote}`,
+      data: { new_id: finalId, module_sync: moduleSync }
     });
   } catch (error) {
     console.error('更新设备失败:', error);

@@ -21,6 +21,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
+import SegmentedTabs from '../components/SegmentedTabs';
 import VersionReleaseForm from '../components/VersionReleaseForm';
 import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
 import api, { versionReleaseApi, moduleTypeApi, productLineApi } from '../services/api';
@@ -317,24 +318,14 @@ const ReleaseLibrary: React.FC = () => {
                     </div>
                 )}
 
-                {/* 模块类型 Tabs */}
+                {/* 模块类型 Tabs（滑块式） */}
                 <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
-                    <div className="border-b border-gray-200 no-print">
-                        <nav className="flex -mb-px">
-                            {moduleTypes.map((type) => (
-                                <button
-                                    key={type.id}
-                                    onClick={() => { setActiveTypeId(type.id); setSearchParams({ typeId: String(type.id) }, { replace: true }); }}
-                                    className={`flex items-center gap-2 py-4 px-6 border-b-2 font-medium text-sm transition-colors ${activeTypeId === type.id
-                                            ? 'border-primary-500 text-primary-600 bg-blue-50/30'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                        }`}
-                                >
-                                    {getTypeIcon(type.name)}
-                                    {type.name}
-                                </button>
-                            ))}
-                        </nav>
+                    <div className="p-3 border-b border-gray-200 no-print">
+                        <SegmentedTabs
+                            items={moduleTypes.map(type => ({ key: type.id, label: <>{getTypeIcon(type.name)}{type.name}</> }))}
+                            value={activeTypeId}
+                            onChange={(id) => { setActiveTypeId(id); setSearchParams({ typeId: String(id) }, { replace: true }); }}
+                        />
                     </div>
 
                     <div className="p-4 3xl:p-6">

@@ -11,10 +11,12 @@ import {
   TagIcon,
 } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
+import SegmentedTabs from '../components/SegmentedTabs';
 import { Button } from '../components/ui/button';
 import Select from '../components/Select';
 import { formatDate } from '../utils';
-import { moduleTypeApi, customerApi, sopTemplateApi, feishuApi, issueClassificationApi } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { moduleTypeApi, customerApi, sopTemplateApi, feishuApi, issueClassificationApi, settingsApi } from '../services/api';
 import { ModuleType, Customer, SOPTemplate, SOPTemplateItem, FeishuUser, IssueClassification } from '../types';
 
 // 表单数据接口
@@ -27,6 +29,8 @@ interface ModuleTypeFormData {
 }
 
 export default function Settings() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'module-types' | 'customers' | 'sop-templates' | 'issue-classifications'>(() => {
     const t = searchParams.get('tab');
@@ -55,6 +59,10 @@ export default function Settings() {
   const [sopSubmitting, setSopSubmitting] = useState(false);
 
   const [customersList, setCustomersList] = useState<Customer[]>([]);
+
+  // 仪表盘开关（默认关闭，仅管理员可改）
+  const [dashboardEnabled, setDashboardEnabled] = useState(false);
+  const [dashboardSwitching, setDashboardSwitching] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [customerForm, setCustomerForm] = useState({ name: '', short_name: '' });
@@ -65,6 +73,14 @@ export default function Settings() {
   const [showClassificationModal, setShowClassificationModal] = useState(false);
   const [editingClassification, setEditingClassification] = useState<IssueClassification | null>(null);
   const [classificationForm, setClassificationForm] = useState({ name: '', sort_order: 0 });
+
+  useEffect(() => {
+    if (isAdmin) {
+      settingsApi.getDashboardEnabled()
+        .then(res => setDashboardEnabled(!!res.data?.enabled))
+        .catch(() => setDashboardEnabled(false));
+    }
+  }, [isAdmin]);
 
   useEffect(() => {
     if (activeTab === 'module-types') {
@@ -406,13 +422,54 @@ export default function Settings() {
           <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">基础设置</h1>
         </div>
 
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
-            <button onClick={() => { setActiveTab('module-types'); setSearchParams({ tab: 'module-types' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'module-types' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>模块类型管理</button>
-            <button onClick={() => { setActiveTab('customers'); setSearchParams({ tab: 'customers' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'customers' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>客户管理</button>
-            <button onClick={() => { setActiveTab('sop-templates'); setSearchParams({ tab: 'sop-templates' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'sop-templates' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>版本更新检查项模板</button>
-            <button onClick={() => { setActiveTab('issue-classifications'); setSearchParams({ tab: 'issue-classifications' }, { replace: true }); }} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'issue-classifications' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>问题分类管理</button>
-          </nav>
+        {/* 系统选项（仅管理员）：仪表盘开关，默认关闭 */}
+        {isAdmin && (
+          <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">系统选项</h2>
+            <div className="flex items-center justify-between mt-3">
+              <div>
+                <div className="text-sm font-medium text-foreground">仪表盘</div>
+                <div className="text-xs text-muted-foreground mt-0.5">开启后在侧边栏显示仪表盘入口；默认关闭。</div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={dashboardEnabled}
+                disabled={dashboardSwitching}
+                onClick={async () => {
+                  setDashboardSwitching(true);
+                  try {
+                    const next = !dashboardEnabled;
+                    const res = await settingsApi.setDashboardEnabled(next);
+                    const enabled = !!res.data?.enabled;
+                    setDashboardEnabled(enabled);
+                    // 广播给侧边栏等监听者，实时刷新仪表盘入口
+                    window.dispatchEvent(new CustomEvent('dashboard-enabled-changed', { detail: enabled }));
+                  } catch (e: any) {
+                    alert(e.response?.data?.error || '保存失败');
+                  } finally {
+                    setDashboardSwitching(false);
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${dashboardEnabled ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'} disabled:opacity-50`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${dashboardEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="border-b border-gray-200 pb-3">
+          <SegmentedTabs
+            items={[
+              { key: 'module-types', label: '模块类型管理' },
+              { key: 'customers', label: '客户管理' },
+              { key: 'sop-templates', label: '版本更新检查项模板' },
+              { key: 'issue-classifications', label: '问题分类管理' },
+            ]}
+            value={activeTab}
+            onChange={(v) => { setActiveTab(v as any); setSearchParams({ tab: String(v) }, { replace: true }); }}
+          />
         </div>
 
         {activeTab === 'module-types' && (

@@ -25,15 +25,19 @@ import {
   ChevronLeftIcon
 } from '@heroicons/react/24/outline';
 import { Device, Module, Issue, ModuleFormData, DeviceFormData, VersionRelease, DeviceUpgrade, SOPTemplate, ChecklistItem, SOPTemplateItem } from '../types';
-import { deviceApi, moduleApi, issueApi, versionReleaseApi, moduleVersionApi, deviceUpgradeApi, sopTemplateApi, uploadChecklistImage, bundleApi } from '../services/api';
+import { deviceApi, moduleApi, issueApi, versionReleaseApi, moduleVersionApi, deviceUpgradeApi, sopTemplateApi, uploadChecklistImage, bundleApi, feishuApi, productModuleApi } from '../services/api';
 import api from '../services/api';
-import { formatDate } from '../utils';
+import { formatDate, getStatusChip } from '../utils';
 import Layout from '../components/Layout';
+import SegmentedTabs from '../components/SegmentedTabs';
 import { Button } from '../components/ui/button';
 import ModuleForm from '../components/ModuleForm';
 import DeviceForm from '../components/DeviceForm';
 import UpgradeForm from '../components/UpgradeForm';
 import SOPChecklistSection from '../components/SOPChecklistSection';
+import OrderLogisticsCard from '../components/OrderLogisticsCard';
+import ShipNotifyModal, { ShipNotifyItem } from '../components/ShipNotifyModal';
+import { FeishuUser } from '../types';
 import Select from '../components/Select';
 
 // ─── 出厂资料文件树 ───────────────────────────────────────────────────────────
@@ -83,7 +87,7 @@ const DeviceDetail: React.FC = () => {
   const [modules, setModules] = useState<Module[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'modules' | 'versions' | 'issues' | 'after-sales' | 'documents'>('modules');
+  const [activeTab, setActiveTab] = useState<'modules' | 'versions' | 'issues' | 'after-sales' | 'documents' | 'logistics'>('modules');
   const [showModuleForm, setShowModuleForm] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
   const [showDeviceForm, setShowDeviceForm] = useState(false);
@@ -105,6 +109,10 @@ const DeviceDetail: React.FC = () => {
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [versionSubmitting, setVersionSubmitting] = useState(false);
   const [shipping, setShipping] = useState(false);
+  // 发货确认弹窗（含版本完整度 + 飞书催填通知）
+  const [showShipModal, setShowShipModal] = useState(false);
+  const [shipFeishuUsers, setShipFeishuUsers] = useState<FeishuUser[]>([]);
+  const [shipPinnedOpenIds, setShipPinnedOpenIds] = useState<string[]>([]);
 
   // 设备出厂资料相关状态
   const [deviceDocuments, setDeviceDocuments] = useState<any[]>([]);
@@ -260,12 +268,7 @@ const DeviceDetail: React.FC = () => {
       const response = await deviceApi.updateDevice(id, { factory_docs_complete: next } as any);
       if (response.success) {
         await fetchDevice();
-        if (next) {
-          const synced = Number((response as any).data?.synced_ship_count || 0);
-          alert(synced > 0
-            ? '出厂资料已标记完善，设备已自动同步为已发货'
-            : '出厂资料已标记完善');
-        }
+        if (next) alert('出厂资料已标记完善，可在设备「生产中」时点击右上角「发货」完成发货并催填版本号');
       }
     } catch (error) {
       console.error('更新出厂资料完善状态失败:', error);
@@ -822,16 +825,45 @@ const DeviceDetail: React.FC = () => {
     setShowDeviceForm(true);
   };
 
-  // 设备发货：生产中 + 出厂资料完善
+  // 设备发货：打开确认弹窗（展示版本完整度 + 飞书催办选择）
   const handleShipDevice = async () => {
     if (!device || shipping) return;
-    if (!await confirmDialog(`确认将设备「${device.name || device.id}」标记为已发货吗？`)) return;
+    setShowShipModal(true);
+    // 并行加载飞书用户 + 模块关联负责人（未填版本号的模块负责人置顶）
+    feishuApi.getUsers().then(res => {
+      if (res.success && res.data) setShipFeishuUsers(res.data as FeishuUser[]);
+    }).catch(() => {});
+    try {
+      const missingTypeIds = modules.filter(m => !m.current_version).map(m => m.type_id);
+      if (device.product_id && missingTypeIds.length > 0) {
+        const res = await productModuleApi.getProductModules(device.product_id);
+        if (res.success) {
+          const pinned = res.data
+            .filter((pm: any) => missingTypeIds.includes(pm.module_type_id) && pm.feishu_user_open_id)
+            .map((pm: any) => pm.feishu_user_open_id as string)
+            .filter((v: string, i: number, arr: string[]) => arr.indexOf(v) === i);
+          setShipPinnedOpenIds(pinned);
+        }
+      } else {
+        setShipPinnedOpenIds([]);
+      }
+    } catch {
+      setShipPinnedOpenIds([]);
+    }
+  };
+
+  // 发货确认：执行发货 + 飞书催填版本号
+  const handleShipConfirm = async (notifyOpenIds: string[]) => {
+    if (!device || shipping) return;
     setShipping(true);
     try {
-      const response = await deviceApi.shipDevice(device.id);
+      const response = await deviceApi.shipDevice(device.id, { notify_open_ids: notifyOpenIds });
       if (response.success) {
+        setShowShipModal(false);
         await fetchDevice();
-        alert('设备已标记为已发货');
+        alert(notifyOpenIds.length > 0
+          ? `设备已标记为已发货，已通过飞书通知 ${notifyOpenIds.length} 位同事填写版本号`
+          : '设备已标记为已发货');
       } else {
         alert(response.error || '发货失败');
       }
@@ -842,6 +874,13 @@ const DeviceDetail: React.FC = () => {
       setShipping(false);
     }
   };
+
+  // 发货弹窗数据：各模块版本号填写情况
+  const shipItems: ShipNotifyItem[] = device ? [{
+    id: device.id,
+    label: device.name || undefined,
+    modules: modules.map(m => ({ name: m.module_type || `模块#${m.type_id}`, versioned: !!m.current_version })),
+  }] : [];
 
   const handleDeviceSubmit = async (data: DeviceFormData) => {
     try {
@@ -903,20 +942,21 @@ const DeviceDetail: React.FC = () => {
     }
   };
 
-  // 获取状态颜色
+  // 获取状态颜色（统一 chip 变体）
   const getStatusColor = (status: string) => {
     switch (status) {
-      case '生产中': return 'bg-blue-100 text-blue-800';
-      case '已发货': return 'bg-orange-100 text-orange-800';
-      case '使用中(正常)': return 'bg-green-100 text-green-800';
-      case '使用中(异常)': return 'bg-red-100 text-red-800';
-      case '已停用': return 'bg-gray-100 text-gray-500';
-      case 'open': return 'bg-red-100 text-red-800';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-      case 'closed': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case '生产中': return 'chip-blue';
+      case '已发货': return 'chip-amber';
+      case '使用中(正常)': return 'chip-green';
+      case '使用中(异常)': return 'chip-red';
+      case '已停用': return 'chip-gray';
+      case 'open': return 'chip-red';
+      case 'in_progress': return 'chip-amber';
+      case 'closed': return 'chip-green';
+      default: return 'chip-gray';
     }
   };
+  const getStatusChip = getStatusColor;
 
   // 获取状态图标
   const getStatusIcon = (status: string) => {
@@ -1095,11 +1135,11 @@ const DeviceDetail: React.FC = () => {
                 onClick={handleShipDevice}
                 disabled={shipping || !isFactoryDocsComplete(device.factory_docs_complete)}
                 title={!isFactoryDocsComplete(device.factory_docs_complete) ? '出厂资料未完善，无法发货' : '将设备标记为已发货'}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
                   shipping
                     ? 'bg-gray-400 text-white cursor-wait'
                     : isFactoryDocsComplete(device.factory_docs_complete)
-                      ? 'bg-orange-500 text-white hover:bg-orange-600'
+                      ? 'bg-gradient-to-b from-amber-500 to-orange-600 text-white hover:from-amber-400 hover:to-orange-500 shadow-soft'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
@@ -1107,13 +1147,10 @@ const DeviceDetail: React.FC = () => {
                 {shipping ? '发货中...' : '发货'}
               </button>
             )}
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
-            >
+            <Button variant="secondary" onClick={handlePrint}>
               <PrinterIcon className="h-4 w-4" />
               打印
-            </button>
+            </Button>
             <Button onClick={handleEditDevice}><PencilIcon className="h-4 w-4" />编辑设备</Button>
           </div>
         </div>
@@ -1156,7 +1193,7 @@ const DeviceDetail: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
               <div className="flex items-center space-x-2">
                 {getStatusIcon(device.status)}
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(device.status)}`}>
+                <span className={`chip ${getStatusChip(device.status)}`}>
                   {device.status}
                 </span>
               </div>
@@ -1225,6 +1262,8 @@ const DeviceDetail: React.FC = () => {
           </div>
         </div>
 
+        {/* 订单物流信息已移入「物流信息」标签页 */}
+
         {/* 所属多合一 · 成员设备（单行简版：设备编码 + 产品名称） */}
         {device.bundle_id && bundleDevices.length > 0 && (
           <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 mb-4">
@@ -1251,87 +1290,19 @@ const DeviceDetail: React.FC = () => {
           </div>
         )}
 
-        {/* 统计信息 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 3xl:gap-6">
-          <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
-                  <span className="text-primary-600 font-semibold">M</span>
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">模块数量</p>
-                <p className="text-xl 3xl:text-2xl font-semibold text-gray-900">{modules.length}</p>
-              </div>
-            </div>
-          </div>
-
-
-          <div className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-red-100 rounded-md flex items-center justify-center">
-                  <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">问题数量</p>
-                <p className="text-xl 3xl:text-2xl font-semibold text-gray-900">{issues.length}</p>
-                <div className="flex items-center gap-3 mt-1 text-xs">
-                  <span className="text-red-600">待处理 {issues.filter(i => i.status === 'open').length}</span>
-                  <span className="text-yellow-600">处理中 {issues.filter(i => i.status === 'in_progress').length}</span>
-                  <span className="text-green-600">已解决 {issues.filter(i => i.status === 'closed').length}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="bg-card rounded-2xl border border-border shadow-soft p-4 3xl:p-6 cursor-pointer hover:shadow-md transition-shadow border-2 border-transparent hover:border-green-300"
-            onClick={() => setActiveTab('documents' as any)}
-          >
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
-                  <FolderIcon className="h-5 w-5 text-green-600" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">出厂资料</p>
-                <p className="text-xl 3xl:text-2xl font-semibold text-gray-900">{deviceDocuments.length}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 标签页导航 */}
+        {/* 标签页导航（滑块式） */}
         <div className="bg-card rounded-2xl border border-border shadow-soft">
-          <div className="border-b border-gray-200 no-print">
-            <nav className="-mb-px flex space-x-8 px-4 3xl:px-6">
-              {[
-                { key: 'modules', label: '模块信息', count: modules.length },
-                { key: 'after-sales', label: '售后服务', count: issues.length + deviceUpgrades.length },
-                { key: 'documents', label: '出厂资料', count: deviceDocuments.length }
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key as any)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.key
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                >
-                  {tab.label}
-                  <span className={`ml-2 py-0.5 px-2 rounded-full text-xs ${activeTab === tab.key
-                    ? 'bg-blue-100 text-blue-600'
-                    : 'bg-gray-100 text-gray-600'
-                    }`}>
-                    {tab.count}
-                  </span>
-                </button>
-              ))}
-            </nav>
+          <div className="p-3 border-b border-gray-200 no-print">
+            <SegmentedTabs
+              items={[
+                { key: 'modules', label: <>模块信息{modules.length > 0 && <span className="ml-1 text-xs opacity-80">{modules.length}</span>}</> },
+                { key: 'after-sales', label: <>售后服务{issues.length + deviceUpgrades.length > 0 && <span className="ml-1 text-xs opacity-80">{issues.length + deviceUpgrades.length}</span>}</> },
+                { key: 'documents', label: <>出厂资料{deviceDocuments.length > 0 && <span className="ml-1 text-xs opacity-80">{deviceDocuments.length}</span>}</> },
+                { key: 'logistics', label: '物流信息' },
+              ]}
+              value={activeTab as any}
+              onChange={(v) => setActiveTab(v as any)}
+            />
           </div>
 
           <div className="p-4 3xl:p-6">
@@ -1343,13 +1314,14 @@ const DeviceDetail: React.FC = () => {
                   <Button onClick={() => setShowModuleForm(true)}><PlusIcon className="h-4 w-4" />添加模块</Button>
                 </div>
                 <div className="flex flex-nowrap gap-4 overflow-x-auto pb-2 print:grid print:grid-cols-3 print:flex-wrap">
+                  {/* 模块卡片：统一圆角毛玻璃 */}
                   {modules.map((module) => (
-                    <div key={module.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all flex flex-col flex-shrink-0 min-w-[180px] print:break-inside-avoid">
-                      {/* 模块名称和版本号 */}
+                  <div key={module.id} className="glass-strong rounded-2xl p-4 hover:shadow-soft-lg hover:-translate-y-0.5 transition-all flex flex-col flex-shrink-0 min-w-[180px] print:break-inside-avoid">
+                    {/* 模块名称和版本号 */}
                       <div className="flex items-center justify-center gap-3 mb-3 print:gap-1 print:mb-2">
                         <h4 className="font-semibold text-lg text-gray-900 print:text-sm">{module.module_type}</h4>
                         {(module as any).current_version && (
-                          <span className="px-3 py-1 bg-primary-500 text-white text-sm font-mono font-bold rounded-md shadow-sm print:px-2 print:py-0.5 print:text-xs">
+                          <span className="px-3 py-1 bg-primary-500 text-white text-sm font-mono font-bold rounded-lg shadow-sm print:px-2 print:py-0.5 print:text-xs">
                             {(module as any).current_version}
                           </span>
                         )}
@@ -1359,7 +1331,7 @@ const DeviceDetail: React.FC = () => {
                       <div className="flex gap-2 mb-3 justify-center no-print">
                         <button
                           onClick={() => handleShowModuleVersionHistory(module)}
-                          className="flex items-center justify-center gap-1 px-3 py-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-green-200 hover:border-green-400"
+                          className="glass flex items-center justify-center gap-1 px-3 py-2 text-emerald-600 hover:text-emerald-700 rounded-lg transition-all border border-emerald-500/30 hover:border-emerald-500/60 shadow-soft hover:shadow-soft-lg hover:-translate-y-px"
                           title="版本历史"
                         >
                           <ClockIcon className="h-4 w-4" />
@@ -1367,10 +1339,10 @@ const DeviceDetail: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleUpdateModuleVersion(module)}
-                          className={`flex items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors border ${
+                          className={`glass flex items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all border shadow-soft hover:shadow-soft-lg hover:-translate-y-px ${
                             (module as any).current_version
-                              ? 'text-purple-600 hover:bg-purple-50 border-purple-200 hover:border-purple-400'
-                              : 'text-primary-600 hover:bg-blue-50 border-primary-200 hover:border-primary-400'
+                              ? 'text-violet-600 hover:text-violet-700 border-violet-500/30 hover:border-violet-500/60'
+                              : 'text-primary-600 hover:text-primary-700 border-primary-500/30 hover:border-primary-500/60'
                           }`}
                           title={(module as any).current_version ? '更新版本' : '设置出厂版本'}
                         >
@@ -1385,6 +1357,11 @@ const DeviceDetail: React.FC = () => {
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* 物流信息标签页 */}
+            {activeTab === 'logistics' && device.name && (
+              <OrderLogisticsCard embedded orderNo={device.name} customerName={device.customer_name || undefined} />
             )}
 
             {/* 出厂资料标签页 */}
@@ -1556,8 +1533,8 @@ const DeviceDetail: React.FC = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 3xl:gap-6">
                   {/* 历史故障问题 */}
-                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                    <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                  <div className="bg-card rounded-xl p-4 border border-border">
+                    <h4 className="font-semibold text-foreground mb-4 flex items-center">
                       <ExclamationTriangleIcon className="h-5 w-5 mr-2 text-red-500" />
                       历史故障问题 ({issues.length})
                     </h4>
@@ -1568,7 +1545,7 @@ const DeviceDetail: React.FC = () => {
                       }).map(issue => (
                         <div
                           key={issue.id}
-                          className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 hover:border-primary-200 cursor-pointer transition-colors"
+                          className="bg-muted/40 p-3 rounded-lg border border-border hover:border-primary-300 cursor-pointer transition-colors"
                           onClick={() => navigate(`/issues/${issue.id}`)}
                         >
                           <div className="flex justify-between items-start">
@@ -1593,48 +1570,48 @@ const DeviceDetail: React.FC = () => {
                                 {issue.status === 'open' ? '待处理' : issue.status === 'in_progress' ? '处理中' : '已关闭'}
                               </span>
                             </div>
-                            <span className="text-xs text-gray-400">{new Date(issue.created_at).toLocaleDateString()}</span>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{new Date(issue.created_at).toLocaleDateString()}</span>
                           </div>
-                          <p className="mt-2 text-sm text-gray-800 line-clamp-2">{issue.description}</p>
+                          <p className="mt-2 text-sm text-foreground line-clamp-2">{issue.description}</p>
                           <div className="mt-2 flex justify-end">
-                            <span className="text-xs text-primary-600 hover:underline">查看详情 →</span>
+                            <span className="text-xs text-primary-500 hover:underline">查看详情 →</span>
                           </div>
                         </div>
                       ))}
                       {issues.length === 0 && (
-                        <p className="text-center py-8 text-sm text-gray-400">暂无故障记录</p>
+                        <p className="text-center py-8 text-sm text-muted-foreground">暂无故障记录</p>
                       )}
                     </div>
                   </div>
 
                   {/* 最近升级记录 */}
-                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                    <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                  <div className="bg-card rounded-xl p-4 border border-border">
+                    <h4 className="font-semibold text-foreground mb-4 flex items-center">
                       <ClockIcon className="h-5 w-5 mr-2 text-primary-500" />
                       最近升级历史
                     </h4>
                     <div className="space-y-3">
                       {deviceUpgrades.slice(0, 5).map(upgrade => (
-                        <div key={upgrade.id} className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                        <div key={upgrade.id} className="bg-muted/40 p-3 rounded-lg border border-border">
                           <div className="flex justify-between">
-                            <span className="text-xs font-bold text-purple-600">{upgrade.module_type || '模块'}</span>
-                            <span className="text-xs text-gray-400">{upgrade.release_date ? new Date(upgrade.release_date).toLocaleDateString() : '-'}</span>
+                            <span className="text-xs font-bold text-purple-500">{upgrade.module_type || '模块'}</span>
+                            <span className="text-xs text-muted-foreground">{upgrade.release_date ? new Date(upgrade.release_date).toLocaleDateString() : '-'}</span>
                           </div>
                           <div className="mt-1 flex items-center space-x-2 text-xs">
                             {upgrade.old_version && (
                               <>
-                                <span className="font-mono text-gray-400">{upgrade.old_version}</span>
-                                <span className="text-gray-400">→</span>
+                                <span className="font-mono text-muted-foreground">{upgrade.old_version}</span>
+                                <span className="text-muted-foreground">→</span>
                               </>
                             )}
-                            <span className="font-mono font-bold text-primary-600">{upgrade.version_number}</span>
+                            <span className="font-mono font-bold text-primary-500">{upgrade.version_number}</span>
                           </div>
-                          <p className="mt-2 text-xs text-gray-600">{upgrade.description || '-'}</p>
-                          {upgrade.updated_by && <p className="mt-1 text-xs text-gray-400">操作人: {upgrade.updated_by}</p>}
+                          <p className="mt-2 text-xs text-muted-foreground">{upgrade.description || '-'}</p>
+                          {upgrade.updated_by && <p className="mt-1 text-xs text-muted-foreground">操作人: {upgrade.updated_by}</p>}
                         </div>
                       ))}
                       {deviceUpgrades.length === 0 && (
-                        <p className="text-center py-8 text-sm text-gray-400">暂无任何升级记录</p>
+                        <p className="text-center py-8 text-sm text-muted-foreground">暂无任何升级记录</p>
                       )}
                     </div>
                   </div>
@@ -2429,6 +2406,19 @@ const DeviceDetail: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* 发货确认弹窗：版本完整度 + 飞书催填版本号 */}
+      {showShipModal && (
+        <ShipNotifyModal
+          title="确认发货"
+          items={shipItems}
+          feishuUsers={shipFeishuUsers}
+          pinnedOpenIds={shipPinnedOpenIds}
+          loading={shipping}
+          onConfirm={handleShipConfirm}
+          onClose={() => setShowShipModal(false)}
+        />
       )}
     </Layout>
   );

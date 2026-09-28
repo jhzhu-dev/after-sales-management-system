@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon, ArrowUpTrayIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
-import { orderImportApi, bundleApi, customerApi } from '../services/api';
+import { orderImportApi, bundleApi, customerApi, orderLogisticsApi } from '../services/api';
 
 interface PreviewDevice {
   fullName: string;
@@ -91,6 +91,33 @@ const OrderImport: React.FC = () => {
   const nameColor = (s: string) =>
     s === 'resolved' ? 'text-green-600' : s === 'ambiguous' ? 'text-orange-600' : 'text-red-600';
 
+  // 解析计划发货时间为 YYYY-MM-DD（模板中可能是 2026-9-25 / 2026年9月25日 等写法）
+  const parsePlanDate = (s?: string): string | null => {
+    if (!s) return null;
+    const m = String(s).match(/(\d{4})[-/年.(]\s*(\d{1,2})[-/月.(]\s*(\d{1,2})/);
+    if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+    const d = new Date(String(s));
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    return null;
+  };
+
+  // 导入成功后自动把计划发货时间写入物流档案草稿（upsert，不覆盖已有物流信息）
+  const savePlanShipDateDraft = async (orderNo: string, customerId?: number) => {
+    const planDate = parsePlanDate(preview?.planShip);
+    if (!planDate) return;
+    try {
+      await orderLogisticsApi.create({
+        order_no: orderNo,
+        plan_ship_date: planDate,
+        customer_id: customerId || undefined,
+      });
+    } catch (e) {
+      console.warn('计划发货时间登记失败（不影响导入）:', e);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!preview || !customer) return;
     setError('');
@@ -131,6 +158,7 @@ const OrderImport: React.FC = () => {
         new_devices: newDevices,
       });
       if (res.success) {
+        await savePlanShipDateDraft(preview.orderNo, customerId || undefined);
         setSuccessMsg(`已成功创建多合一「${preview.orderNo}」，包含 ${newDevices.length} 台设备`);
         const bundleId = res.data?.id;
         setTimeout(() => navigate(bundleId ? `/bundles/${bundleId}` : '/devices'), 1500);

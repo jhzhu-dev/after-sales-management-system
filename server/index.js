@@ -23,6 +23,7 @@ const versionRoutes = require('./routes/versions');
 const issueRoutes = require('./routes/issues');
 const issueLogRoutes = require('./routes/issue-logs');
 const dashboardRoutes = require('./routes/dashboard');
+const settingsRoutes = require('./routes/settings');
 const moduleTypeRoutes = require('./routes/module-types');
 const versionReleaseRoutes = require('./routes/version-releases');
 
@@ -61,6 +62,9 @@ const testTaskRoutes = require('./routes/test-tasks');
 
 // 订单信息表导入路由
 const orderImportRoutes = require('./routes/order-import');
+
+// 订单物流信息登记路由
+const orderLogisticsRoutes = require('./routes/order-logistics');
 
 const app = express();
 const HTTP_PORT = Number(process.env.PORT || 5000);
@@ -176,6 +180,7 @@ app.use('/api/versions', versionRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/issue-logs', issueLogRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/settings', settingsRoutes);
 app.use('/api/module-types', moduleTypeRoutes);
 app.use('/api/version-releases', versionReleaseRoutes);
 
@@ -213,6 +218,7 @@ app.use('/api/issue-classifications', issueClassificationRoutes);
 
 // 订单信息表导入路由
 app.use('/api/orders-import', orderImportRoutes);
+app.use('/api/order-logistics', orderLogisticsRoutes);
 // 客户需求登记 / 测试管理路由
 app.use('/api/customer-requirements', customerRequirementRoutes);
 app.use('/api/test-tasks', testTaskRoutes);

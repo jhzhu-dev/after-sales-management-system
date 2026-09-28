@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import PrivateRoute from './components/PrivateRoute';
 import DialogHost from './components/DialogHost';
+import { settingsApi } from './services/api';
 
 const Login = React.lazy(() => import('./pages/Login'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
@@ -26,6 +27,22 @@ const TestTaskDetail = React.lazy(() => import('./pages/TestTaskDetail'));
 const OrderImport = React.lazy(() => import('./pages/OrderImport'));
 const KnowledgeBasePage = React.lazy(() => import('./pages/KnowledgeBasePage'));
 
+/* 仪表盘开关守卫：关闭时访问 / 重定向到设备管理 */
+function DashboardGate() {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  useEffect(() => {
+    settingsApi.getDashboardEnabled()
+      .then(res => setEnabled(!!res.data?.enabled))
+      .catch(() => setEnabled(false));
+  }, []);
+  if (enabled === null) {
+    return <div className="flex items-center justify-center min-h-screen">加载中...</div>;
+  }
+  return enabled
+    ? <Dashboard />
+    : <Navigate to="/devices" replace />;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -39,7 +56,7 @@ function App() {
               <Route path="/login" element={<Login />} />
 
               {/* 受保护路由 */}
-              <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/" element={<PrivateRoute><DashboardGate /></PrivateRoute>} />
               <Route path="/devices" element={<PrivateRoute><Devices /></PrivateRoute>} />
               <Route path="/devices/new" element={<PrivateRoute><Devices /></PrivateRoute>} />
               <Route path="/devices/:id" element={<PrivateRoute><DeviceDetail /></PrivateRoute>} />

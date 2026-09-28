@@ -27,7 +27,10 @@ import {
   CustomerRequirement,
   CustomerRequirementFormData,
   TestTask,
-  TestTaskFormData
+  TestTaskFormData,
+  OrderLogistics,
+  OrderLogisticsSaveData,
+  OrderLogisticsShipCheckResult
 } from '../types';
 
 // 创建axios实例
@@ -99,9 +102,9 @@ export const deviceApi = {
   updateDevice: (id: string, data: Partial<DeviceFormData>): Promise<ApiResponse<Device>> =>
     api.put(`/devices/${id}`, data).then(res => res.data),
 
-  // 设备发货（生产中 + 出厂资料完善）
-  shipDevice: (id: string): Promise<ApiResponse<Device>> =>
-    api.post(`/devices/${id}/ship`).then(res => res.data),
+  // 设备发货（生产中 + 出厂资料完善），可附带飞书催填版本号通知人
+  shipDevice: (id: string, data?: { notify_open_ids?: string[] }): Promise<ApiResponse<Device>> =>
+    api.post(`/devices/${id}/ship`, data).then(res => res.data),
 
   // 删除设备
   deleteDevice: (id: string): Promise<ApiResponse<void>> =>
@@ -197,6 +200,17 @@ export const deviceUpgradeApi = {
   // 删除升级记录
   deleteUpgrade: (id: number): Promise<ApiResponse<void>> =>
     api.delete(`/device-upgrades/${id}`).then(res => res.data),
+};
+
+// 系统设置相关API
+export const settingsApi = {
+  // 获取仪表盘开关（默认关闭）
+  getDashboardEnabled: (): Promise<ApiResponse<{ enabled: boolean }>> =>
+    api.get('/settings/dashboard-enabled').then(res => res.data),
+
+  // 设置仪表盘开关（仅管理员）
+  setDashboardEnabled: (enabled: boolean): Promise<ApiResponse<{ enabled: boolean }>> =>
+    api.put('/settings/dashboard-enabled', { enabled }).then(res => res.data),
 };
 
 // 仪表盘相关API
@@ -584,9 +598,9 @@ export const bundleApi = {
   updateBundle: (id: number, data: Partial<DeviceBundleFormData>): Promise<ApiResponse<any>> =>
     api.put(`/device-bundles/${id}`, data).then(res => res.data),
 
-  // 多合一设备发货（全部成员设备置为已发货）
-  shipBundle: (id: number): Promise<ApiResponse<any>> =>
-    api.post(`/device-bundles/${id}/ship`).then(res => res.data),
+  // 多合一设备发货（全部成员设备置为已发货），可附带飞书催填版本号通知人
+  shipBundle: (id: number, data?: { notify_open_ids?: string[] }): Promise<ApiResponse<any>> =>
+    api.post(`/device-bundles/${id}/ship`, data).then(res => res.data),
 
   deleteBundle: (id: number): Promise<ApiResponse<void>> =>
     api.delete(`/device-bundles/${id}`).then(res => res.data),
@@ -684,6 +698,32 @@ export const orderImportApi = {
     fd.append('file', file);
     return api.post('/orders-import/preview', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 }).then(res => res.data);
   },
+};
+
+// 订单物流信息登记 API
+export const orderLogisticsApi = {
+  getList: (params?: any): Promise<any> =>
+    api.get('/order-logistics', { params }).then(res => res.data),
+
+  getByOrder: (orderNo: string): Promise<ApiResponse<OrderLogistics>> =>
+    api.get(`/order-logistics/by-order/${encodeURIComponent(orderNo)}`).then(res => res.data),
+
+  getPackingMethods: (): Promise<ApiResponse<Array<{ name: string; count: number }>>> =>
+    api.get('/order-logistics/packing-methods').then(res => res.data),
+
+  // 发货核对：订单下设备与可发货状态
+  shipCheck: (orderNo: string): Promise<ApiResponse<OrderLogisticsShipCheckResult>> =>
+    api.get(`/order-logistics/ship-check/${encodeURIComponent(orderNo)}`).then(res => res.data),
+
+  // 登记（按订单号 upsert），ship_devices=true 时顺带将可发货设备置为已发货
+  create: (data: OrderLogisticsSaveData): Promise<ApiResponse<OrderLogistics>> =>
+    api.post('/order-logistics', data).then(res => res.data),
+
+  update: (id: number, data: Partial<OrderLogisticsSaveData>): Promise<ApiResponse<OrderLogistics>> =>
+    api.put(`/order-logistics/${id}`, data).then(res => res.data),
+
+  remove: (id: number): Promise<ApiResponse<void>> =>
+    api.delete(`/order-logistics/${id}`).then(res => res.data),
 };
 
 export default api;

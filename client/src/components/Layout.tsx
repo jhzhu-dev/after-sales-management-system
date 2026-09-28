@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   HomeIcon,
@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { cn } from '../utils';
 import { useAuth } from '../context/AuthContext';
+import { settingsApi } from '../services/api';
 import ThemeToggle from './ThemeToggle';
 
 interface LayoutProps {
@@ -37,6 +38,18 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  // 仪表盘开关（默认关闭，管理员在系统设置中开启）
+  const [dashboardEnabled, setDashboardEnabled] = useState(false);
+
+  useEffect(() => {
+    settingsApi.getDashboardEnabled()
+      .then(res => setDashboardEnabled(!!res.data?.enabled))
+      .catch(() => setDashboardEnabled(false));
+    // 系统设置中切换开关时实时更新侧边栏
+    const onChange = (e: Event) => setDashboardEnabled(!!(e as CustomEvent).detail);
+    window.addEventListener('dashboard-enabled-changed', onChange);
+    return () => window.removeEventListener('dashboard-enabled-changed', onChange);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -53,7 +66,9 @@ export default function Layout({ children }: LayoutProps) {
 
         <nav className="mt-4 3xl:mt-6 flex-1 overflow-y-auto px-3">
           <ul className="space-y-1">
-            {navigation.filter(item => item.adminOnly ? user?.role === 'admin' : true).map((item) => {
+            {navigation
+              .filter(item => item.adminOnly ? user?.role === 'admin' : true)
+              .filter(item => item.name !== '仪表盘' || dashboardEnabled).map((item) => {
               const isActive = item.href === '/'
                 ? location.pathname === '/'
                 : location.pathname === item.href || location.pathname.startsWith(item.href + '/');

@@ -1,15 +1,15 @@
 ## ADDED Requirements
 
 ### Requirement: Device Shipped Status
-The system SHALL support a "已发货" (shipped) status for devices. When a device's factory documentation is marked complete (factory_docs_complete set to true) and the device is in "生产中" status, the device SHALL be automatically set to "已发货" with shipped_at recorded. A dedicated ship action SHALL also remain available as a fallback for devices that are already docs-complete but still in "生产中" status. A shipped device SHALL be changeable to "使用中(正常)" / "使用中(异常)" / "已停用" via the standard edit form, and SHALL be revertible to "生产中" (cancel shipment).
+The system SHALL support a "已发货" (shipped) status for devices. Shipping SHALL be an explicit user action only (the ship button / `POST /api/devices/:id/ship`), which requires "生产中" status and complete factory documentation (factory_docs_complete = true). Marking factory documentation complete SHALL NOT change the device status. The ship action opens a confirmation dialog showing module version completeness and optional Feishu recipients to remind them to register version numbers. A shipped device SHALL be changeable to "使用中(正常)" / "使用中(异常)" / "已停用" via the standard edit form, and SHALL be revertible to "生产中" (cancel shipment).
 
-#### Scenario: Auto-shipping a device when factory docs are marked complete
+#### Scenario: Marking factory docs complete does not ship
 - **WHEN** a device is in "生产中" status and factory_docs_complete is set to true
-- **THEN** the device status becomes "已发货" and shipped_at is set to the current time
+- **THEN** the device remains in "生产中" status and a prompt indicates the ship button is now available
 
-#### Scenario: Manual ship action for already docs-complete production devices
-- **WHEN** a device is in "生产中" status, factory_docs_complete is true, and the user clicks the ship button
-- **THEN** the device status becomes "已发货" and shipped_at is set to the current time
+#### Scenario: Manual ship action for docs-complete production devices
+- **WHEN** a device is in "生产中" status, factory_docs_complete is true, and the user confirms shipping in the ship dialog (optionally with Feishu recipients)
+- **THEN** the device status becomes "已发货", shipped_at is set to the current time, and (if recipients were selected) a Feishu version-number reminder is sent asynchronously
 
 #### Scenario: Shipping is rejected when factory docs are incomplete
 - **WHEN** a device is in "生产中" status but factory_docs_complete is false and the user attempts to ship

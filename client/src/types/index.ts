@@ -206,6 +206,7 @@ export interface DashboardStats {
   deviceStatusDistribution: Array<{ status: string; count: number }>;
   deviceCustomerDistribution: Array<{ customer: string; count: number }>;
   deviceProductLineDistribution: Array<{ line: string; count: number }>;
+  deviceModelDistribution: Array<{ model: string; count: number }>;
   abnormalDevices: Array<{ id: string; name: string; customer: string }>;
   releaseCategoryDistribution: Array<{ category: string; count: number }>;
   latestReleases: Array<{
@@ -777,4 +778,103 @@ export interface TestTaskFormData {
   shenzhen_requester?: string;
   shenzhen_requester_name: string;
   shanghai_tester?: string;
+}
+
+// ==================== 订单物流信息登记 ====================
+
+export type TransportMode = '海运' | '空运' | '陆运';
+export type LogisticsType = '客户货代自提' | '货拉拉' | '快递物流' | '其他';
+export type BatteryDeviceType = '视觉器' | '上位机' | '服务器' | '其他';
+export type BatteryKind = '内置电池' | '纽扣电池' | '其他';
+export type BatteryHandling = '随机发货' | '单独邮寄' | '客户自购';
+
+export interface OrderLogisticsBattery {
+  id?: number;
+  /** 设备类型：预设 视觉器/上位机/服务器，支持自定义输入 */
+  device_type: string;
+  quantity: number;
+  /** 电池类别：预设 内置电池/纽扣电池，支持自定义输入 */
+  battery_kind?: string | null;
+  /** 处理方式：预设 随机发货/单独邮寄/客户自购，支持自定义输入 */
+  handling?: string | null;
+  remark?: string | null;
+}
+
+export interface OrderLogisticsPackage {
+  id?: number;
+  box_label: string;
+  length_cm?: number | string | null;
+  width_cm?: number | string | null;
+  height_cm?: number | string | null;
+  weight_kg?: number | string | null;
+  remark?: string | null;
+  /** 装入该箱的设备（生产序列号列表）；为空表示未指定 */
+  device_ids?: string[] | null;
+}
+
+export interface OrderLogisticsDeviceShipStatus {
+  id: string;
+  name: string | null;
+  notes?: string | null;
+  status: string;
+  bundle_code?: string | null;
+  bundle_id_val?: number | null;
+  shipped_at?: string | null;
+  factory_docs_complete?: boolean | number;
+  can_ship: boolean;
+  ship_block_reason?: string;
+  reason?: string;
+}
+
+export interface OrderLogistics {
+  id: number;
+  order_no: string;
+  customer_id?: number | null;
+  bundle_id?: number | null;
+  customer_name?: string | null;
+  customer_short_name?: string | null;
+  plan_ship_date?: string | null;
+  actual_ship_date?: string | null;
+  transport_mode?: TransportMode | string | null;
+  packing_method?: string | null;
+  battery_removed?: boolean | number;
+  logistics_type?: LogisticsType | string | null;
+  logistics_company?: string | null;
+  logistics_no?: string | null;
+  remark?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  batteries?: OrderLogisticsBattery[];
+  packages?: OrderLogisticsPackage[];
+  devices?: OrderLogisticsDeviceShipStatus[];
+  device_count?: number;
+  package_count?: number;
+  total_weight?: number | string | null;
+}
+
+export interface OrderLogisticsSaveData {
+  order_no: string;
+  customer_id?: number | null;
+  bundle_id?: number | null;
+  plan_ship_date?: string | null;
+  actual_ship_date?: string | null;
+  transport_mode?: string | null;
+  packing_method?: string | null;
+  battery_removed?: boolean;
+  logistics_type?: string | null;
+  logistics_company?: string | null;
+  logistics_no?: string | null;
+  remark?: string | null;
+  batteries?: OrderLogisticsBattery[];
+  packages?: OrderLogisticsPackage[];
+  ship_devices?: boolean;
+  updated_by?: string | null;
+}
+
+export interface OrderLogisticsShipCheckResult {
+  order_no: string;
+  devices: OrderLogisticsDeviceShipStatus[];
+  shippable_count: number;
 }

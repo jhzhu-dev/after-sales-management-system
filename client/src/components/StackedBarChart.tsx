@@ -39,7 +39,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
         <Tooltip />
         <Legend />
         {series.map((s) => (
-          <Bar key={s.key} dataKey={s.key} name={s.name} stackId="a" fill={s.color} />
+          <Bar key={s.key} dataKey={s.key} name={s.name} stackId="a" fill={s.color} radius={[4, 4, 0, 0]} />
         ))}
       </BarChart>
     </ResponsiveContainer>

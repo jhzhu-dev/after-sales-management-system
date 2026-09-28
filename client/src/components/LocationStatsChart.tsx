@@ -73,7 +73,7 @@ const LocationStatsChart: React.FC<LocationStatsChartProps> = React.memo(({ data
           <YAxis />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
-          <Bar dataKey="normal" name="使用中(正常)" fill="#10B981" stackId="a" />
+          <Bar dataKey="normal" name="使用中(正常)" fill="#10B981" stackId="a" radius={[4, 4, 0, 0]} />
           <Bar dataKey="abnormal" name="使用中(异常)" fill="#EF4444" stackId="a" />
           <Bar dataKey="maintenance" name="生产中/已停用" fill="#9CA3AF" stackId="a" />
         </BarChart>

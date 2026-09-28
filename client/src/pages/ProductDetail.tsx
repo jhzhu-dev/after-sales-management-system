@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { confirmDialog } from '../components/DialogHost';
 import Layout from '../components/Layout';
+import SegmentedTabs from '../components/SegmentedTabs';
 import { Button } from '../components/ui/button';
 import { Product, ProductDocument, ProductModule, ModuleType, ProductVersion } from '../types';
 import { productModuleApi, moduleTypeApi, productVersionApi } from '../services/api';
@@ -379,37 +380,17 @@ const ProductDetail: React.FC = () => {
                     </div>
                 </div>
 
-                {/* 标签页导航 */}
-                <div className="border-b border-gray-200 mb-6 no-print">
-                    <nav className="-mb-px flex space-x-8">
-                        <button
-                            onClick={() => setActiveTab('info')}
-                            className={`pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'info'
-                                ? 'border-primary-500 text-primary-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
-                        >
-                            基本信息
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('docs')}
-                            className={`pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'docs'
-                                ? 'border-primary-500 text-primary-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
-                        >
-                            技术文档 ({documents.length})
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('modules')}
-                            className={`pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'modules'
-                                ? 'border-primary-500 text-primary-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
-                        >
-                            模块配置
-                        </button>
-                    </nav>
+                {/* 标签页导航（滑块式） */}
+                <div className="mb-6 no-print">
+                    <SegmentedTabs
+                        items={[
+                            { key: 'info', label: '基本信息' },
+                            { key: 'docs', label: <>技术文档 ({documents.length})</> },
+                            { key: 'modules', label: '模块配置' },
+                        ]}
+                        value={activeTab}
+                        onChange={(v) => setActiveTab(v as any)}
+                    />
                 </div>
 
                 {/* 标签页内容 */}

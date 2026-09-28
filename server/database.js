@@ -425,6 +425,16 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+    // 系统设置表（键值对，如仪表盘开关）
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        skey VARCHAR(100) PRIMARY KEY,
+        svalue VARCHAR(500),
+        updated_by VARCHAR(100),
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     // 问题跟进日志表
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS issue_logs (
@@ -1057,6 +1067,79 @@ async function createTables() {
       }
     } catch (err) {
       console.warn('⚠️ device_documents.bundle_id 迁移警告:', err.message);
+    }
+
+    // ==================== 订单物流信息登记（一单一档） ====================
+    try {
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS order_logistics (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          order_no VARCHAR(255) NOT NULL COMMENT '订单号，对应 devices.name / device_bundles.bundle_code',
+          customer_id INT NULL COMMENT '冗余客户',
+          bundle_id INT NULL COMMENT '多合一订单关联 device_bundles.id，单台订单为 NULL',
+          plan_ship_date DATE NULL COMMENT '计划发货时间（订单信息表模板字段）',
+          actual_ship_date DATE NULL COMMENT '实际发货时间',
+          transport_mode VARCHAR(50) NULL COMMENT '运输方式：海运/空运/陆运',
+          packing_method VARCHAR(100) NULL COMMENT '包装方式：自由文本（木箱/纸箱/珍珠棉等）',
+          battery_removed TINYINT(1) NOT NULL DEFAULT 0 COMMENT '电池是否需要取出',
+          logistics_type VARCHAR(50) NULL COMMENT '物流方式：客户货代自提/货拉拉/快递物流/其他',
+          logistics_company VARCHAR(100) NULL COMMENT '物流公司/承运商',
+          logistics_no VARCHAR(100) NULL COMMENT '车牌号或运单号',
+          remark TEXT NULL COMMENT '订单补充/备注',
+          created_by VARCHAR(100) NULL,
+          updated_by VARCHAR(100) NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY unique_order_no (order_no),
+          FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+          FOREIGN KEY (bundle_id) REFERENCES device_bundles(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log('✅ order_logistics 表就绪');
+
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS order_logistics_batteries (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          logistics_id INT NOT NULL,
+          device_type VARCHAR(50) NOT NULL COMMENT '视觉器/上位机/服务器/其他',
+          quantity INT NOT NULL DEFAULT 1 COMMENT '数量',
+          battery_kind VARCHAR(50) NULL COMMENT '内置电池/纽扣电池/其他',
+          handling VARCHAR(50) NULL COMMENT '随机发货/单独邮寄/客户自购（单选）',
+          remark VARCHAR(255) NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (logistics_id) REFERENCES order_logistics(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log('✅ order_logistics_batteries 表就绪');
+
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS order_logistics_packages (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          logistics_id INT NOT NULL,
+          box_label VARCHAR(20) NOT NULL COMMENT '箱1/箱2/…',
+          length_cm DECIMAL(8,2) NULL,
+          width_cm DECIMAL(8,2) NULL,
+          height_cm DECIMAL(8,2) NULL,
+          weight_kg DECIMAL(8,2) NULL,
+          remark VARCHAR(255) NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (logistics_id) REFERENCES order_logistics(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log('✅ order_logistics_packages 表就绪');
+
+      // 箱规补充「装入设备」多选列（存量库幂等迁移）
+      try {
+        const [pkgDevCols] = await pool.execute("SHOW COLUMNS FROM order_logistics_packages LIKE 'device_ids'");
+        if (pkgDevCols.length === 0) {
+          await pool.execute("ALTER TABLE order_logistics_packages ADD COLUMN device_ids JSON NULL COMMENT '装入该箱的设备（生产序列号列表）'");
+          console.log('✅ order_logistics_packages.device_ids 字段添加成功');
+        }
+      } catch (err) {
+        console.warn('⚠️ order_logistics_packages.device_ids 迁移警告:', err.message);
+      }
+    } catch (err) {
+      console.warn('⚠️ 订单物流信息表创建警告:', err.message);
     }
 
     // Phase 8b: 补充历史同步版本的附件（幂等：每次启动检查并补充缺失的附件）

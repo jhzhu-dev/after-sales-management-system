@@ -13,7 +13,7 @@ import SearchableSelect from '../components/SearchableSelect';
 import Select from '../components/Select';
 import { Button } from '../components/ui/button';
 import { exportToExcel } from '../utils/exportUtils';
-import { formatDate, getStatusColor } from '../utils';
+import { formatDate, getStatusColor, getStatusChip } from '../utils';
 
 type ViewMode = 'devices' | 'bundles';
 
@@ -526,7 +526,6 @@ export default function Devices() {
     { key: 'customer_name', label: '客户' },
     { key: 'customer_short_name', label: '客户简称' },
     { key: 'remote_code', label: '远程码' },
-    { key: 'mechanical_version', label: '机械版本' },
     { key: 'factory_docs_complete', label: '出厂资料' },
     { key: 'status', label: '状态' },
     { key: 'open_issues', label: '待解决问题' },
@@ -790,14 +789,6 @@ export default function Devices() {
       width: '130px'
     },
     {
-      key: 'mechanical_version' as keyof Device,
-      title: '机械版本',
-      render: (value: string) => value
-        ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">{value}</span>
-        : <span className="text-gray-300">—</span>,
-      width: '90px'
-    },
-    {
       key: 'factory_docs_complete' as keyof Device,
       title: '出厂资料',
       render: (_: any, record: Device) => {
@@ -845,7 +836,7 @@ export default function Devices() {
       key: 'status' as keyof Device,
       title: <SortableHeader field="status" title="状态" />,
       render: (value: string) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
+        <span className={`chip ${getStatusChip(value)}`}>
           {value}
         </span>
       ),
@@ -853,7 +844,7 @@ export default function Devices() {
     },
     {
       key: 'open_issues' as keyof Device,
-      title: <SortableHeader field="open_issues" title="待解决问题" />,
+      title: <SortableHeader field="open_issues" title="待解决" />,
       render: (value: number) => (
         <div className={`text-sm font-medium ${value > 0 ? 'text-red-600' : 'text-gray-500'}`}>
           {value || 0}
@@ -1015,7 +1006,7 @@ export default function Devices() {
       render: (value: string, record: DeviceBundle) => {
         const status = (record as any).bundle_status || '生产中';
         return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+          <span className={`chip ${getStatusChip(status)}`}>
             {status}
           </span>
         );
@@ -1131,16 +1122,22 @@ export default function Devices() {
             <h1 className="text-2xl 3xl:text-3xl font-bold text-gray-900">设备管理</h1>
             {/* Tab 切换（无全局搜索词时显示） */}
             {!globalSearch && (
-            <div className="flex rounded-md border border-gray-300 overflow-hidden">
+            <div className="segmented relative">
+              {/* 滑块指示器：跟随选中项移动 */}
+              <span
+                aria-hidden
+                className="segmented-thumb"
+                style={{ transform: viewMode === 'devices' ? 'translateX(0)' : 'translateX(calc(100% + 8px))' }}
+              />
               <button
                 onClick={() => { setViewMode('devices'); setSearchParams(p => { p.set('view', 'devices'); return p; }, { replace: true }); }}
-                className={`px-3 py-1.5 text-sm font-medium ${viewMode === 'devices' ? 'bg-primary-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                className={`segmented-item relative z-10 ${viewMode === 'devices' ? 'segmented-item-active' : ''}`}
               >
                 单台设备列表
               </button>
               <button
                 onClick={() => { setViewMode('bundles'); setSearchParams(p => { p.set('view', 'bundles'); return p; }, { replace: true }); }}
-                className={`px-3 py-1.5 text-sm font-medium ${viewMode === 'bundles' ? 'bg-primary-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                className={`segmented-item relative z-10 ${viewMode === 'bundles' ? 'segmented-item-active' : ''}`}
               >
                 多合一设备列表
               </button>
@@ -1165,7 +1162,7 @@ export default function Devices() {
                 placeholder="全局搜索设备..."
                 value={globalSearch}
                 onChange={e => handleGlobalSearch(e.target.value)}
-                className="w-72 pl-4 pr-8 py-2.5 text-sm font-medium text-blue-900 placeholder:text-blue-400 bg-blue-50 border-2 border-primary-200 rounded-lg shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-primary-500"
+                className="apple-input w-72 h-10 py-0 font-medium text-blue-900 placeholder:text-blue-400 focus:ring-4 focus:ring-blue-100"
               />
               {globalSearch && (
                 <button
@@ -1211,7 +1208,7 @@ export default function Devices() {
               </div>
               <button
                 onClick={() => { handleFilterChange('type', ''); handleFilterChange('status', ''); }}
-                className="px-4 py-2 border border-gray-300 text-sm rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="px-4 py-2 text-sm rounded-xl glass border-border-strong text-foreground hover:bg-accent shadow-soft hover:shadow-soft-lg transition-all"
               >重置筛选</button>
               <span className="text-sm text-gray-500 ml-auto">共找到 {globalSearchResults.length} 台设备</span>
             </div>
@@ -1267,7 +1264,7 @@ export default function Devices() {
                         ) : <span className="text-gray-300">-</span>}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(d.status)}`}>
+                        <span className={`chip ${getStatusChip(d.status)}`}>
                           {d.status}
                         </span>
                       </td>
@@ -1411,7 +1408,6 @@ export default function Devices() {
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>订单号</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>产品名称</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>客户</th>
-                <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>机械版本</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>出厂资料</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>状态</th>
                 <th style={{padding:'4pt 6pt', textAlign:'left', fontWeight:'600'}}>创建时间</th>
@@ -1425,7 +1421,6 @@ export default function Devices() {
                   <td style={{padding:'3pt 6pt', fontWeight:'500'}}>{d.name}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.product_name || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.customer_name || '-'}</td>
-                  <td style={{padding:'3pt 6pt'}}>{d.mechanical_version || '-'}</td>
                   <td style={{padding:'3pt 6pt'}}>{factoryDocsLabel(d.factory_docs_complete)}</td>
                   <td style={{padding:'3pt 6pt'}}>{d.status}</td>
                   <td style={{padding:'3pt 6pt'}}>{new Date(d.created_at).toLocaleDateString('zh-CN')}</td>

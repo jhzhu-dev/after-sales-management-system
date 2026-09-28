@@ -65,23 +65,26 @@ export function formatRelativeTime(date: string | Date): string {
   }
 }
 
-// 获取状态颜色
+// 获取状态颜色（返回统一 chip 变体类，配合 .chip 使用）
 export function getStatusColor(status: string): string {
   const statusColors: Record<string, string> = {
-    '生产中': 'text-blue-600 bg-blue-100',
-    '已发货': 'text-orange-600 bg-orange-100',
-    '使用中(正常)': 'text-green-600 bg-green-100',
-    '使用中(异常)': 'text-red-600 bg-red-100',
-    '已停用': 'text-gray-500 bg-gray-100',
-    'open': 'text-blue-600 bg-blue-100',
-    'in_progress': 'text-orange-600 bg-orange-100',
-    'closed': 'text-gray-600 bg-gray-100',
-    '待处理': 'text-blue-600 bg-blue-100',
-    '处理中': 'text-orange-600 bg-orange-100',
-    '已解决': 'text-gray-600 bg-gray-100',
+    '生产中': 'chip-blue',
+    '已发货': 'chip-amber',
+    '使用中(正常)': 'chip-green',
+    '使用中(异常)': 'chip-red',
+    '已停用': 'chip-gray',
+    'open': 'chip-blue',
+    'in_progress': 'chip-amber',
+    'closed': 'chip-gray',
+    '待处理': 'chip-blue',
+    '处理中': 'chip-amber',
+    '已解决': 'chip-gray',
   };
-  return statusColors[status] || 'text-gray-600 bg-gray-100';
+  return statusColors[status] || 'chip-gray';
 }
+
+// 别名：状态 chip 类（与 getStatusColor 相同）
+export const getStatusChip = getStatusColor;
 
 // 获取严重性颜色
 export function getSeverityColor(severity: string): string {

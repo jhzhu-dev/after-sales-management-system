@@ -12,7 +12,7 @@ import Select from '../components/Select';
 import IssueForm from '../components/IssueForm';
 import ExportButton from '../components/ExportButton';
 import { exportToExcel } from '../utils/exportUtils';
-import { formatDate, getStatusColor, getSeverityColor } from '../utils';
+import { formatDate, getStatusColor, getStatusChip, getSeverityColor } from '../utils';
 
 export default function Issues() {
   const navigate = useNavigate();
@@ -645,7 +645,7 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
       title: <SortableHeader field="status" title="状态" />,
       width: '80px',
       render: (value: string) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
+        <span className={`chip ${getStatusChip(value)}`}>
           {value === 'open' ? '待处理' : value === 'in_progress' ? '处理中' : '已解决'}
         </span>
       )

@@ -110,6 +110,13 @@ router.get('/stats', async (req, res) => {
       GROUP BY d.product_line_id, pl.name ORDER BY count DESC
     `)).map(r => ({ line: r.line, count: Number(r.count) }));
 
+    /* 设备型号数量分布（按产品型号） */
+    const deviceModelDistribution = (await query(`
+      SELECT COALESCE(NULLIF(p.name,''),'未指定型号') AS model, COUNT(*) AS count
+      FROM devices d LEFT JOIN products p ON d.product_id = p.id
+      GROUP BY d.product_id, p.name ORDER BY count DESC LIMIT 15
+    `)).map(r => ({ model: r.model, count: Number(r.count) }));
+
     const abnormalDevices = await query(`
       SELECT d.id, d.name, COALESCE(c.name,'未指定') AS customer
       FROM devices d LEFT JOIN customers c ON d.customer_id = c.id
@@ -226,6 +233,7 @@ router.get('/stats', async (req, res) => {
         deviceStatusDistribution,
         deviceCustomerDistribution,
         deviceProductLineDistribution,
+        deviceModelDistribution,
         abnormalDevices,
         releaseCategoryDistribution,
         latestReleases,

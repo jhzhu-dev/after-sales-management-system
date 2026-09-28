@@ -16,7 +16,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
   action
 }) => {
   return (
-    <div className={`apple-card transition-shadow duration-200 hover:shadow-soft-lg ${className}`}>
+    <div className={`apple-card transition-shadow duration-200 hover:shadow-soft-lg flex flex-col ${className}`}>
       <div className="px-4 py-3 3xl:px-6 3xl:py-4 border-b border-gray-200/70">
         <div className="flex items-center justify-between">
           <div>
@@ -32,7 +32,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
           )}
         </div>
       </div>
-      <div className="p-4 3xl:p-6">
+      <div className="p-4 3xl:p-6 flex-1 min-h-0">
         {children}
       </div>
     </div>

@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { XMarkIcon, PlusIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
-import { Device, DeviceFormData, Customer, FeishuUser } from '../types';
-import { productLineApi, customerApi, productApi, productModuleApi, feishuApi } from '../services/api';
+import { Device, DeviceFormData, Customer } from '../types';
+import { productLineApi, customerApi, productApi, productModuleApi } from '../services/api';
 import { getModuleTypeOrder } from '../utils/moduleOrder';
-import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 import Select from './Select';
 import OrderImportPanel from './OrderImportPanel';
 
@@ -46,21 +45,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
 
-  // 飞书通知
-  const [feishuUsers, setFeishuUsers] = useState<FeishuUser[]>([]);
-  const [feishuEnabled, setFeishuEnabled] = useState(false);
-  const [notifyOpenIds, setNotifyOpenIds] = useState<string[]>([]);
-  const [pinnedOpenIds, setPinnedOpenIds] = useState<string[]>([]);
-  // 记录用户手动取消勾选的 id，避免模块改变时重新强制勾选
-  const manuallyRemovedRef = useRef<Set<string>>(new Set());
-
   useEffect(() => {
-    feishuApi.getUsers().then(res => {
-      if (res.success && res.data && res.data.length > 0) {
-        setFeishuUsers(res.data as FeishuUser[]);
-        setFeishuEnabled(true);
-      }
-    }).catch(() => {});
     fetchProductLines();
     fetchCustomers();
     if (device) {
@@ -271,46 +256,6 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
     );
   };
 
-  // 当选中模块变化时，重新计算置顶用户并自动勾选
-  useEffect(() => {
-    if (!feishuEnabled || feishuUsers.length === 0) return;
-
-    // 从当前选中的模块类型中收集关联的飞书用户（去重）
-    const newPinned: string[] = [];
-    selectedModuleTypeIds.forEach(typeId => {
-      const mt = moduleTypes.find(m => m.id === typeId);
-      if (mt?.feishu_user_open_id && !newPinned.includes(mt.feishu_user_open_id)) {
-        newPinned.push(mt.feishu_user_open_id);
-      }
-    });
-
-    // 找出新增的置顶用户（上一次没有）
-    const prevPinned = pinnedOpenIds;
-    const added = newPinned.filter(id => !prevPinned.includes(id));
-    // 找出移除的置顶用户（上一次有，现在没有）
-    const removed = prevPinned.filter(id => !newPinned.includes(id));
-
-    setPinnedOpenIds(newPinned);
-
-    setNotifyOpenIds(prev => {
-      let next = [...prev];
-      // 新增置顶用户且未被手动移除过：自动勾选
-      added.forEach(id => {
-        if (!next.includes(id) && !manuallyRemovedRef.current.has(id)) {
-          next.push(id);
-        }
-      });
-      // 移除置顶用户：从选中列表中移除（除非用户手动添加过）
-      removed.forEach(id => {
-        if (!manuallyRemovedRef.current.has(id)) {
-          next = next.filter(i => i !== id);
-        }
-      });
-      return next;
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedModuleTypeIds, moduleTypes, feishuEnabled, feishuUsers]);
-
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -370,8 +315,6 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
         password: formData.password?.trim() || null,
         notes: formData.notes?.trim() || null,
         selectedModuleTypeIds: selectedModuleTypeIds,
-        notify_open_ids: notifyOpenIds.filter(Boolean),
-        send_notify: feishuEnabled && notifyOpenIds.length > 0,
       };
     }
 
@@ -803,36 +746,6 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ device, onClose, onSubmit, onIm
                   <p className="text-xs text-primary-600 mt-0.5">已选 {selectedModuleTypeIds.length} 个模块</p>
                 )}
               </div>
-
-              {/* 飞书通知 */}
-              {feishuEnabled && (
-                <div className="col-span-3">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    通知同事填写版本号（飞书）
-                    {pinnedOpenIds.length > 0 && (
-                      <span className="ml-2 text-xs text-primary-600 font-normal">
-                        {pinnedOpenIds.length} 位模块关联负责人已置顶
-                      </span>
-                    )}
-                  </label>
-                  <FeishuMultiUserPicker
-                    users={feishuUsers}
-                    pinnedOpenIds={pinnedOpenIds}
-                    value={notifyOpenIds}
-                    onChange={(ids) => {
-                      pinnedOpenIds.forEach(id => {
-                        if (notifyOpenIds.includes(id) && !ids.includes(id)) {
-                          manuallyRemovedRef.current.add(id);
-                        }
-                        if (!notifyOpenIds.includes(id) && ids.includes(id)) {
-                          manuallyRemovedRef.current.delete(id);
-                        }
-                      });
-                      setNotifyOpenIds(ids);
-                    }}
-                  />
-                </div>
-              )}
             </div>
           )}
 

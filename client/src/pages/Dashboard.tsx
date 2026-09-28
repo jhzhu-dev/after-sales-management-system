@@ -146,13 +146,6 @@ export default function Dashboard() {
     onClick: () => navigate(`/issues/${i.id}`),
   }));
 
-  const assigneeItems: ActionListItem[] = stats.assigneeWorkload.map((a) => ({
-    id: a.assignee,
-    title: a.assignee,
-    meta: `${a.open_count} 个待办`,
-    badge: getBadge('处理中'),
-  }));
-
   const abnormalItems: ActionListItem[] = stats.abnormalDevices.map((d) => ({
     id: d.id,
     title: d.name || d.id,
@@ -279,7 +272,7 @@ export default function Dashboard() {
                       <XAxis dataKey="status" />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="count" fill="#3B82F6" />
+                      <Bar dataKey="count" fill="#3B82F6" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartCard>
@@ -291,7 +284,7 @@ export default function Dashboard() {
                       <XAxis dataKey="severity" />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="count">
+                      <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                         {stats.issueSeverityDistribution.map((entry: any, index: number) => (
                           <Cell key={index} fill={severityBarColor(entry.severity)} />
                         ))}
@@ -307,39 +300,15 @@ export default function Dashboard() {
                       <XAxis dataKey="category" />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="count" fill="#8B5CF6" />
+                      <Bar dataKey="count" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                </ChartCard>
-
-                <ChartCard title="负责人待办 Top5" description="当前未关闭问题的负责人负载">
-                  <ActionList items={assigneeItems} emptyText="暂无待办" />
                 </ChartCard>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 3xl:gap-6 mt-4">
                 <ChartCard title="最新高严重度问题" description="未关闭且高严重度，优先处理">
                   <ActionList items={highIssueItems} emptyText="暂无高严重度待办" />
-                </ChartCard>
-                <ChartCard title="售后效率" description="本月解决率与平均解决时长">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-gray-900">
-                        {stats.kpi.resolve_rate_this_month}%
-                      </div>
-                      <div className="mt-1 text-sm text-gray-500">本月解决率</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-gray-900">
-                        {stats.avgResolutionHours ?? '-'}
-                        <span className="text-lg text-gray-500"> 小时</span>
-                      </div>
-                      <div className="mt-1 text-sm text-gray-500">平均解决时长</div>
-                    </div>
-                  </div>
-                  <div className="mt-4 text-sm text-gray-500">
-                    本月新增 {stats.kpi.issues_created_this_month} · 已解决 {stats.kpi.issues_resolved_this_month}
-                  </div>
                 </ChartCard>
               </div>
             </>
@@ -379,7 +348,7 @@ export default function Dashboard() {
                     <XAxis type="number" allowDecimals={false} />
                     <YAxis type="category" dataKey="customer" width={90} />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#3B82F6" />
+                    <Bar dataKey="count" fill="#3B82F6" radius={[0, 6, 6, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartCard>
@@ -391,7 +360,29 @@ export default function Dashboard() {
                     <XAxis dataKey="line" />
                     <YAxis allowDecimals={false} />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#10B981" />
+                    <Bar dataKey="count" fill="#10B981" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <ChartCard title="设备型号数量分析" description="各型号（产品名称）设备保有量 Top15（含多合一成员设备）">
+                <ResponsiveContainer width="100%" height={Math.max(chartHeight, 360)}>
+                  <BarChart
+                    data={[...(stats.deviceModelDistribution || [])].sort((a, b) => a.count - b.count)}
+                    layout="vertical"
+                    margin={{ left: 8, right: 24, top: 4, bottom: 4 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} />
+                    <YAxis
+                      type="category"
+                      dataKey="model"
+                      width={170}
+                      interval={0}
+                      tickFormatter={(v: string) => (v.length > 14 ? v.slice(0, 14) + '…' : v)}
+                    />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#3B82F6" radius={[0, 6, 6, 0]} barSize={14} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartCard>
@@ -408,25 +399,27 @@ export default function Dashboard() {
           {sectionHeader('版本发布库', 'releases')}
           {expandedSections.releases && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 3xl:gap-6">
-              <ChartCard title="版本发布按产品/类型分布" description="版本发布库分类统计">
-                <ResponsiveContainer width="100%" height={chartHeight}>
-                  <PieChart>
-                    <Pie
-                      data={stats.releaseCategoryDistribution}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ category, count }) => `${category}: ${count}`}
-                      outerRadius={pieRadius}
-                      dataKey="count"
+              <ChartCard title="版本发布按产品/类型分布" description="版本发布库分类统计" className="h-full">
+                <div className="h-full min-h-[260px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[...stats.releaseCategoryDistribution].sort((a: any, b: any) => b.count - a.count)}
+                      layout="vertical"
+                      margin={{ left: 8, right: 24, top: 4, bottom: 4 }}
                     >
-                      {stats.releaseCategoryDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" allowDecimals={false} />
+                      <YAxis
+                        type="category"
+                        dataKey="category"
+                        width={150}
+                        tickFormatter={(v: string) => (v.length > 10 ? v.slice(0, 10) + '…' : v)}
+                      />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#8B5CF6" radius={[0, 6, 6, 0]} barSize={18} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </ChartCard>
 
               <ChartCard title="最新版本发布" description="最近发布的版本">
@@ -449,7 +442,7 @@ export default function Dashboard() {
                       <XAxis dataKey="status" />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="count" fill="#8B5CF6" />
+                      <Bar dataKey="count" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartCard>
@@ -461,7 +454,7 @@ export default function Dashboard() {
                       <XAxis dataKey="type" />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="count" fill="#8B5CF6" />
+                      <Bar dataKey="count" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartCard>
@@ -473,7 +466,7 @@ export default function Dashboard() {
                       <XAxis dataKey="urgency" />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="count">
+                      <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                         {stats.requirementUrgencyDistribution.map((entry: any, index: number) => (
                           <Cell key={index} fill={severityBarColor(entry.urgency)} />
                         ))}
@@ -491,7 +484,7 @@ export default function Dashboard() {
                       <XAxis dataKey="status" />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="count" fill="#14B8A6" />
+                      <Bar dataKey="count" fill="#14B8A6" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartCard>
@@ -503,7 +496,7 @@ export default function Dashboard() {
                       <XAxis dataKey="priority" />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="count">
+                      <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                         {stats.taskPriorityDistribution.map((entry: any, index: number) => (
                           <Cell key={index} fill={severityBarColor(entry.priority)} />
                         ))}
@@ -519,7 +512,7 @@ export default function Dashboard() {
                       <XAxis dataKey="decision" />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="count" fill="#F59E0B" />
+                      <Bar dataKey="count" fill="#F59E0B" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartCard>
@@ -546,7 +539,7 @@ export default function Dashboard() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-left text-gray-500 border-b border-gray-200">
+                      <tr className="text-left text-muted-foreground border-b border-border">
                         <th className="py-2 pr-4">分类</th>
                         <th className="py-2 pr-4">文章数</th>
                         <th className="py-2 pr-4">阅读次数</th>
@@ -555,8 +548,8 @@ export default function Dashboard() {
                     </thead>
                     <tbody>
                       {stats.kbCategoryDistribution.map((row) => (
-                        <tr key={row.category} className="border-b border-gray-100">
-                          <td className="py-2 pr-4 font-medium text-gray-900">{row.category}</td>
+                        <tr key={row.category} className="border-b border-border">
+                          <td className="py-2 pr-4 font-medium text-foreground">{row.category}</td>
                           <td className="py-2 pr-4">{row.count}</td>
                           <td className="py-2 pr-4">{row.views}</td>
                           <td className="py-2">{row.helpful}</td>
@@ -566,7 +559,7 @@ export default function Dashboard() {
                   </table>
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">暂无知识库数据</div>
+                <div className="text-center py-8 text-muted-foreground">暂无知识库数据</div>
               )}
             </ChartCard>
           )}

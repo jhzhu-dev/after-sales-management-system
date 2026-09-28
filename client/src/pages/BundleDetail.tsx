@@ -19,16 +19,19 @@ import {
   ExclamationTriangleIcon,
   TruckIcon
 } from '@heroicons/react/24/outline';
-import { DeviceBundle } from '../types';
-import { bundleApi, deviceApi } from '../services/api';
+import { DeviceBundle, FeishuUser } from '../types';
+import { bundleApi, deviceApi, moduleApi, feishuApi, productModuleApi } from '../services/api';
 import api from '../services/api';
 import Layout from '../components/Layout';
+import SegmentedTabs from '../components/SegmentedTabs';
 import { Button } from '../components/ui/button';
 import BundleForm from '../components/BundleForm';
 import ExportButton from '../components/ExportButton';
+import OrderLogisticsCard from '../components/OrderLogisticsCard';
+import ShipNotifyModal, { ShipNotifyItem } from '../components/ShipNotifyModal';
 import Select from '../components/Select';
 import { exportToExcel } from '../utils/exportUtils';
-import { formatDate, getStatusColor } from '../utils';
+import { formatDate, getStatusColor, getStatusChip } from '../utils';
 
 function isFactoryDocsComplete(value: boolean | number | undefined | null): boolean {
   return value === true || value === 1;
@@ -41,7 +44,7 @@ const BundleDetail: React.FC = () => {
 
   const [bundle, setBundle] = useState<DeviceBundle | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'devices' | 'documents'>('devices');
+  const [activeTab, setActiveTab] = useState<'devices' | 'documents' | 'logistics'>('devices');
   const [showBundleForm, setShowBundleForm] = useState(false);
 
   // 出厂资料状态
@@ -59,6 +62,11 @@ const BundleDetail: React.FC = () => {
   const [selectedDocIds, setSelectedDocIds] = useState<Set<number>>(new Set());
   const [batchDownloading, setBatchDownloading] = useState(false);
   const [shipping, setShipping] = useState(false);
+  // 发货确认弹窗（含成员设备版本完整度 + 飞书催填通知）
+  const [showShipModal, setShowShipModal] = useState(false);
+  const [shipItems, setShipItems] = useState<ShipNotifyItem[]>([]);
+  const [shipFeishuUsers, setShipFeishuUsers] = useState<FeishuUser[]>([]);
+  const [shipPinnedOpenIds, setShipPinnedOpenIds] = useState<string[]>([]);
   const [previewDoc, setPreviewDoc] = useState<{
     url: string; title: string; type: string;
     docId: number; originalName: string;
@@ -272,12 +280,7 @@ const BundleDetail: React.FC = () => {
       const response = await bundleApi.updateBundle(bundleId, { factory_docs_complete: next } as any);
       if (response.success) {
         await fetchBundle();
-        if (next) {
-          const synced = Number((response as any).data?.synced_ship_count || 0);
-          alert(synced > 0
-            ? `出厂资料已标记完善，${synced} 台成员设备已同步为已发货`
-            : '出厂资料已标记完善');
-        }
+        if (next) alert('出厂资料已标记完善，可在全部成员设备「生产中」时点击「发货」完成发货并催填版本号');
       }
     } catch (error) {
       console.error('更新出厂资料完善状态失败:', error);
@@ -285,19 +288,68 @@ const BundleDetail: React.FC = () => {
     }
   };
 
-  // 多合一设备发货：出厂资料完善且全部成员为生产中时，一键置为已发货
+  // 多合一设备发货：打开确认弹窗（加载成员设备模块版本完整度 + 模块关联负责人）
   const handleShipBundle = async () => {
     if (!bundle || shipping) return;
     const devices = bundle.devices || [];
     const allProduction = devices.length > 0 && devices.every((d: any) => d.status === '生产中');
     if (!allProduction) return;
-    if (!await confirmDialog(`确认将多合一设备「${bundle.bundle_code}」的全部 ${devices.length} 台设备标记为已发货吗？`)) return;
+    setShowShipModal(true);
+
+    feishuApi.getUsers().then(res => {
+      if (res.success && res.data) setShipFeishuUsers(res.data as FeishuUser[]);
+    }).catch(() => {});
+
+    try {
+      // 逐台加载成员设备的模块及版本填写情况（多合一最多 5 台）
+      const items: ShipNotifyItem[] = [];
+      // type_id → 关联负责人（针对未填版本号的模块）
+      const ownerByType = new Map<number, string>();
+      for (const d of devices as any[]) {
+        let mods: Array<{ name: string; versioned: boolean }> = [];
+        try {
+          const res = await moduleApi.getModules({ device_id: d.id, limit: 1000 });
+          if (res.success) {
+            mods = (res.data as any[]).map(m => ({
+              name: (m as any).module_type || `模块#${(m as any).type_id}`,
+              versioned: !!(m as any).current_version,
+            }));
+          }
+        } catch { /* 单台失败不阻塞整体 */ }
+        items.push({ id: d.id, label: d.nickname || d.name || undefined, modules: mods });
+        // 收集未填版本号模块的关联负责人（置顶预选）
+        if (d.product_id) {
+          try {
+            const pmRes = await productModuleApi.getProductModules(d.product_id);
+            if (pmRes.success) {
+              (pmRes.data as any[]).forEach(pm => {
+                const missing = mods.some(m => !m.versioned) ; // 粒度到设备级，无法精确匹配 type 时取全部负责人
+                if (missing && pm.feishu_user_open_id) ownerByType.set(pm.module_type_id, pm.feishu_user_open_id);
+              });
+            }
+          } catch { /* 忽略 */ }
+        }
+      }
+      setShipItems(items);
+      setShipPinnedOpenIds(Array.from(new Set(ownerByType.values())));
+    } catch {
+      setShipItems(devices.map((d: any) => ({ id: d.id, label: d.nickname || undefined, modules: [] })));
+      setShipPinnedOpenIds([]);
+    }
+  };
+
+  // 发货确认：执行整箱发货 + 飞书催填版本号
+  const handleShipConfirm = async (notifyOpenIds: string[]) => {
+    if (!bundle || shipping) return;
     setShipping(true);
     try {
-      const response = await bundleApi.shipBundle(bundle.id);
+      const response = await bundleApi.shipBundle(bundle.id, { notify_open_ids: notifyOpenIds });
       if (response.success) {
+        setShowShipModal(false);
         await fetchBundle();
-        alert(response.message || '多合一设备已发货');
+        alert(notifyOpenIds.length > 0
+          ? `多合一设备已发货，已通过飞书通知 ${notifyOpenIds.length} 位同事填写版本号`
+          : (response.message || '多合一设备已发货'));
       } else {
         alert(response.error || '发货失败');
       }
@@ -717,11 +769,11 @@ const BundleDetail: React.FC = () => {
                 onClick={handleShipBundle}
                 disabled={shipping || !isFactoryDocsComplete(bundle.factory_docs_complete)}
                 title={!isFactoryDocsComplete(bundle.factory_docs_complete) ? '出厂资料未完善，无法发货' : '将全部成员设备标记为已发货'}
-                className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
                   shipping
                     ? 'bg-gray-400 text-white cursor-wait'
                     : isFactoryDocsComplete(bundle.factory_docs_complete)
-                      ? 'bg-orange-500 text-white hover:bg-orange-600'
+                      ? 'bg-gradient-to-b from-amber-500 to-orange-600 text-white hover:from-amber-400 hover:to-orange-500 shadow-soft'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
@@ -729,21 +781,15 @@ const BundleDetail: React.FC = () => {
                 {shipping ? '发货中...' : '发货'}
               </button>
             )}
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
+            <Button variant="secondary" onClick={handlePrint}>
               <PrinterIcon className="h-4 w-4 mr-2" />
               打印
-            </button>
+            </Button>
             <Button onClick={() => setShowBundleForm(true)}><PencilIcon className="h-4 w-4" />编辑多合一设备</Button>
-            <button
-              onClick={handleDelete}
-              className="inline-flex items-center px-4 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
-            >
+            <Button variant="outline" className="text-red-600 border-red-500/40 hover:text-red-700" onClick={handleDelete}>
               <TrashIcon className="h-4 w-4 mr-2" />
               删除
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -779,7 +825,7 @@ const BundleDetail: React.FC = () => {
                   const counts: Record<string, number> = {};
                   bundle.devices!.forEach((d: any) => { counts[d.status] = (counts[d.status] || 0) + 1; });
                   return Object.entries(counts).map(([status, count]) => (
-                    <span key={status} className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+                    <span key={status} className={`chip ${getStatusChip(status)}`}>
                       {status} × {count}
                     </span>
                   ));
@@ -855,31 +901,20 @@ const BundleDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Tab 栏 */}
+        {/* 订单物流信息已移入「物流信息」标签页 */}
+
+        {/* Tab 栏（滑块式） */}
         <div className="bg-card rounded-2xl border border-border shadow-soft">
-          <div className="border-b border-gray-200 no-print">
-            <nav className="flex -mb-px">
-              <button
-                onClick={() => setActiveTab('devices')}
-                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'devices'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                成员设备 ({bundle.devices?.length || 0})
-              </button>
-              <button
-                onClick={() => setActiveTab('documents')}
-                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'documents'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                出厂资料 ({documents.length})
-              </button>
-            </nav>
+          <div className="p-3 border-b border-gray-200 no-print">
+            <SegmentedTabs
+              items={[
+                { key: 'devices', label: <>成员设备 ({bundle.devices?.length || 0})</> },
+                { key: 'documents', label: <>出厂资料 ({documents.length})</> },
+                { key: 'logistics', label: '物流信息' },
+              ]}
+              value={activeTab}
+              onChange={(v) => setActiveTab(v as any)}
+            />
           </div>
 
           <div className="p-4 3xl:p-6">
@@ -940,7 +975,7 @@ const BundleDetail: React.FC = () => {
                             <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{bundle.merchant_id || '-'}</td>
                             <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{bundle.merchant_password || '-'}</td>
                             <td className="px-4 py-3">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(device.status)}`}>
+                              <span className={`chip ${getStatusChip(device.status)}`}>
                                 {device.status}
                               </span>
                             </td>
@@ -971,6 +1006,11 @@ const BundleDetail: React.FC = () => {
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* 物流信息 Tab */}
+            {activeTab === 'logistics' && (
+              <OrderLogisticsCard embedded orderNo={bundle.bundle_code} customerName={bundle.customer_name || undefined} />
             )}
 
             {/* 出厂资料 Tab */}
@@ -1536,6 +1576,19 @@ const BundleDetail: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* 发货确认弹窗：成员设备版本完整度 + 飞书催填版本号 */}
+      {showShipModal && (
+        <ShipNotifyModal
+          title="确认发货（多合一设备）"
+          items={shipItems}
+          feishuUsers={shipFeishuUsers}
+          pinnedOpenIds={shipPinnedOpenIds}
+          loading={shipping}
+          onConfirm={handleShipConfirm}
+          onClose={() => setShowShipModal(false)}
+        />
       )}
     </Layout>
   );

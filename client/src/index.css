@@ -80,6 +80,8 @@ html.dark body {
 
 /* Apple 风格设计令牌 */
 :root {
+  /* 品牌强调渐变：主按钮 / 分段选中态共用同一色调 */
+  --accent-grad: linear-gradient(180deg, #3498db 0%, #2e86c1 100%);
   --apple-surface: rgba(255, 255, 255, 0.86);
   --apple-surface-strong: rgba(255, 255, 255, 0.94);
   --apple-surface-muted: rgba(255, 255, 255, 0.82);
@@ -142,6 +144,33 @@ html.dark {
 
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* ========== 全局排版统一：按钮 / 输入框 / 表格 ==========
+   元素选择器优先级低于 Tailwind 类，仅兜底未显式设置字号的控件；
+   统一基准：控件文字 14px / 行高 20px，表格 14px，徽章 12px（.chip）。 */
+button:not([class*='text-']),
+input[type='text'],
+input[type='search'],
+select {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+button {
+  font-family: inherit;
+  letter-spacing: 0.01em;
+}
+
+table {
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  line-height: 1.375rem;
 }
 
 /* ========== Apple 风格组件层 ========== */
@@ -211,6 +240,69 @@ html.dark {
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.18);
     background-color: var(--apple-surface);
   }
+
+  /* ========== 统一显示框（徽章/标签/提示框） ==========
+     形状、字号、字重、行高、内边距全局统一，颜色由调用方追加 */
+  .chip {
+    @apply inline-flex items-center justify-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium leading-5 whitespace-nowrap;
+  }
+
+  /* 状态色变体（玻璃质感）——与 .chip 共用基础规则，避免 @apply 自定义类（Tailwind v4 不支持） */
+  .chip, .chip-blue, .chip-green, .chip-amber, .chip-red, .chip-purple, .chip-gray {
+    @apply inline-flex items-center justify-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium leading-5 whitespace-nowrap;
+  }
+  .chip-blue    { color: #1d4ed8; background-color: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.30); }
+  .chip-green   { color: #047857; background-color: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.30); }
+  .chip-amber   { color: #b45309; background-color: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.35); }
+  .chip-red     { color: #b91c1c; background-color: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.30); }
+  .chip-purple  { color: #6d28d9; background-color: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.30); }
+  .chip-gray    { color: #475569; background-color: rgba(100, 116, 139, 0.12); border: 1px solid rgba(100, 116, 139, 0.28); }
+
+  html.dark .chip-blue    { color: #93c5fd; }
+  html.dark .chip-green   { color: #6ee7b7; }
+  html.dark .chip-amber   { color: #fcd34d; }
+  html.dark .chip-red     { color: #fca5a5; }
+  html.dark .chip-purple  { color: #c4b5fd; }
+  html.dark .chip-gray    { color: #cbd5e1; }
+
+  /* 统一分段选择器（列表页 Tab 切换等）：等宽两列网格，保证滑块与文字对齐 */
+  .segmented {
+    @apply grid grid-cols-2 rounded-xl;
+    background-color: var(--apple-surface-muted);
+    border: 1px solid var(--apple-border);
+    backdrop-filter: blur(var(--apple-blur));
+    box-shadow: var(--apple-shadow);
+  }
+
+  .segmented-item {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium leading-5 transition-all text-center;
+    color: var(--muted-foreground, #64748b);
+  }
+
+  .segmented-item:hover {
+    color: var(--foreground, #1c2833);
+    background-color: rgba(52, 152, 219, 0.08);
+  }
+
+  .segmented-item-active {
+    @apply text-white ring-1 ring-inset ring-white/25;
+    background-image: var(--accent-grad);
+    box-shadow: 0 4px 14px rgba(46, 134, 193, 0.28);
+  }
+
+  /* 滑块指示器：跟随选中项平滑移动（宽度=一半-容器内边距）；色调与主按钮一致 */
+  .segmented-thumb {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 8px);
+    border-radius: 0.5rem;
+    background-image: var(--accent-grad);
+    box-shadow: 0 4px 14px rgba(46, 134, 193, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+  }
 }
 
 /* 让卡片/弹窗等 bg-card 表面呈现毛玻璃（配合半透明 --card） */
@@ -218,6 +310,18 @@ html.dark {
 .bg-popover {
   backdrop-filter: blur(32px) saturate(190%);
   -webkit-backdrop-filter: blur(32px) saturate(190%);
+}
+
+/* 大号分段页签：放在 layer 外，优先级高于全局 button 字号兑底规则；
+   所有 SegmentedTabs（设备/多合一/产品详情/系统设置/版本发布中心）统一 18px */
+.segmented .segmented-item {
+  font-size: 17px;
+  line-height: 24px;
+  padding: 6px 12px;
+}
+.segmented .segmented-item svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* Tailwind v4 兼容：保留 flex-* 旧名称（flex-shrink/flex-grow 已改名） */
@@ -250,6 +354,30 @@ html.dark {
 :focus-visible {
   outline: 2px solid rgba(52, 152, 219, 0.65);
   outline-offset: 1px;
+}
+
+/* ========== 全局按钮悬停发光 ==========
+   仅作用于圆角操作按钮（rounded-xl/lg/2xl 或分段项），
+   不影响整行宽度的布局型按钮（分区折叠头、Tab 导航等）。 */
+button:hover:not(:disabled):not([disabled]):not([class*='cursor-wait']):not(.no-glow):where([class*='rounded-xl'], [class*='rounded-lg'], [class*='rounded-2xl'], .segmented-item) {
+  box-shadow:
+    var(--apple-shadow-lg),
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+    0 0 22px -2px rgba(52, 152, 219, 0.55),
+    0 0 34px -6px rgba(59, 130, 246, 0.35);
+}
+
+html.dark button:hover:not(:disabled):not([disabled]):not([class*='cursor-wait']):not(.no-glow):where([class*='rounded-xl'], [class*='rounded-lg'], [class*='rounded-2xl'], .segmented-item) {
+  box-shadow:
+    var(--apple-shadow-lg),
+    0 0 0 1px rgba(255, 255, 255, 0.10) inset,
+    0 0 24px -2px rgba(59, 130, 246, 0.60),
+    0 0 38px -6px rgba(99, 102, 241, 0.40);
+}
+
+/* 发光过渡 */
+button {
+  transition: box-shadow 0.2s ease, transform 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 /* 弹窗/对话框：背景轻度模糊（毛玻璃遮罩） */
@@ -1094,4 +1222,52 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   .text-gray-500 {
     color: #4b5563 !important;
   }
+}
+
+/* ========== Recharts 图表主题适配（深/浅色自动切换） ========== */
+/* Tooltip：跟随语义色，替代默认白底 */
+.recharts-default-tooltip {
+  background-color: var(--popover) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px;
+  box-shadow: var(--apple-shadow-lg);
+}
+.recharts-tooltip-label {
+  color: var(--popover-foreground) !important;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.recharts-tooltip-item {
+  color: var(--popover-foreground) !important;
+  padding: 1px 0 !important;
+}
+.recharts-tooltip-item-name {
+  color: var(--muted-foreground) !important;
+  margin-right: 6px;
+}
+.recharts-tooltip-item-value {
+  color: var(--popover-foreground) !important;
+  font-weight: 600;
+}
+/* 柱状图 hover 底衬：弱化为半透明 */
+.recharts-tooltip-cursor {
+  fill: rgba(148, 163, 184, 0.10) !important;
+}
+/* 坐标轴刻度文字 */
+.recharts-cartesian-axis-tick text {
+  fill: var(--muted-foreground);
+  font-size: 12px;
+}
+/* 网格线弱化 */
+.recharts-cartesian-grid line {
+  stroke: var(--border);
+}
+/* 饼图标签文字 */
+.recharts-pie-label-text {
+  fill: var(--foreground);
+  font-size: 12px;
+}
+/* 图例文字 */
+.recharts-legend-item-text {
+  color: var(--muted-foreground) !important;
 }

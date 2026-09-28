@@ -219,6 +219,15 @@ router.post('/:id/ship', async (req, res) => {
         );
       }
     });
+
+    // ── 飞书催填版本号通知（异步，整箱一条消息，不阻塞响应）──
+    const { notify_open_ids } = req.body;
+    const recipientIds = Array.isArray(notify_open_ids) ? notify_open_ids.filter(Boolean) : [];
+    if (recipientIds.length > 0) {
+      const feishuService = require('../services/feishu-service');
+      feishuService.sendBundleShipNotification(bundle, members.map(m => m.id), recipientIds);
+    }
+
     res.json({ success: true, message: `多合一设备已发货，共 ${members.length} 台设备已标记为已发货` });
   } catch (error) {
     console.error('多合一设备发货失败:', error);
@@ -577,28 +586,11 @@ router.put('/:id', [
       }
     }
 
-    // 出厂资料完善后，自动将成员设备（生产中状态）同步为已发货，与单台设备发货逻辑一致
-    let syncedShipCount = 0;
-    if (req.body.factory_docs_complete !== undefined) {
-      const complete = req.body.factory_docs_complete === true
-        || req.body.factory_docs_complete === 1
-        || req.body.factory_docs_complete === '1';
-      if (complete) {
-        const syncResult = await query(
-          `UPDATE devices SET status = '已发货', shipped_at = NOW(), updated_at = NOW()
-           WHERE bundle_id = ? AND status = '生产中'`,
-          [id]
-        );
-        syncedShipCount = syncResult.affectedRows || 0;
-      }
-    }
-
+    // 出厂资料完善不再自动置为已发货：发货统一走「发货」按钮（POST /:id/ship），
+    // 以便在发货确认弹窗中选择飞书催填版本号通知人
     res.json({
       success: true,
-      message: syncedShipCount > 0
-        ? `多合一设备更新成功，${syncedShipCount} 台成员设备已同步为已发货`
-        : '多合一设备更新成功',
-      data: { synced_ship_count: syncedShipCount }
+      message: '多合一设备更新成功'
     });
   } catch (error) {
     console.error('更新多合一设备失败:', error);

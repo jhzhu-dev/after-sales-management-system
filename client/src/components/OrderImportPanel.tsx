@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowUpTrayIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../context/AuthContext';
-import api, { orderImportApi, bundleApi, customerApi } from '../services/api';
+import api, { orderImportApi, bundleApi, customerApi, orderLogisticsApi } from '../services/api';
 
 interface PreviewDevice {
   fullName: string;
@@ -117,6 +117,33 @@ const OrderImportPanel: React.FC<OrderImportPanelProps> = ({ onClose, onDone }) 
     }
   };
 
+  // 解析计划发货时间为 YYYY-MM-DD（模板中可能是 2026-9-25 / 2026年9月25日 等写法）
+  const parsePlanDate = (s?: string): string | null => {
+    if (!s) return null;
+    const m = String(s).match(/(\d{4})[-/年.(]\s*(\d{1,2})[-/月.(]\s*(\d{1,2})/);
+    if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+    const d = new Date(String(s));
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    return null;
+  };
+
+  // 导入成功后自动把计划发货时间写入物流档案草稿（upsert，不覆盖已有物流信息）
+  const savePlanShipDateDraft = async (orderNo: string, customerId?: number) => {
+    const planDate = parsePlanDate(preview?.planShip);
+    if (!planDate) return;
+    try {
+      await orderLogisticsApi.create({
+        order_no: orderNo,
+        plan_ship_date: planDate,
+        customer_id: customerId || undefined,
+      });
+    } catch (e) {
+      console.warn('计划发货时间登记失败（不影响导入）:', e);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!preview || !customer) return;
     setError('');
@@ -157,6 +184,7 @@ const OrderImportPanel: React.FC<OrderImportPanelProps> = ({ onClose, onDone }) 
       if (res.success) {
         const bundleId = res.data?.id;
         await attachOrderAsFactoryDoc(bundleId || 0);
+        await savePlanShipDateDraft(preview.orderNo, customerId || undefined);
         setSuccessMsg(`已成功创建多合一「${preview.orderNo}」，包含 ${newDevices.length} 台设备，订单表已归档为出厂资料`);
         if (onDone) onDone(bundleId);
       } else {

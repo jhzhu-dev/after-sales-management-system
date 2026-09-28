@@ -212,6 +212,57 @@ function buildDeviceCard(device, mentionOpenIds, systemBaseUrl) {
 }
 
 /**
+ * 设备发货催填版本号卡片（单台设备）
+ */
+function buildShipCard(device, mentionOpenIds, systemBaseUrl) {
+  const ids = Array.isArray(mentionOpenIds)
+    ? mentionOpenIds.filter(Boolean)
+    : (mentionOpenIds ? [mentionOpenIds] : []);
+  const mentionPart = ids.map(id => `<at id="${id}"></at>`).join(' ');
+  const mentionLine = mentionPart ? `${mentionPart} 设备已发货，请尽快登记模块版本号\n` : '设备已发货，请相关同事尽快登记模块版本号\n';
+  const baseUrl = normalizeBaseUrl(systemBaseUrl) || 'http://localhost:3000';
+  return {
+    schema: '2.0',
+    body: { elements: [
+      {
+        tag: 'div',
+        text: {
+          tag: 'lark_md',
+          content: `${mentionLine}**序列号：** ${device.id || '-'}　**设备名：** ${device.name || '-'}\n**产品线：** ${device.product_line_name || '-'}　**型号：** ${device.product_model || '-'}\n**客户：** ${device.customer_name || '-'}\n[登记版本号](${baseUrl}/devices/${device.id})`,
+        },
+      },
+    ] },
+    header: { title: { tag: 'plain_text', content: '🚚 设备发货·版本号登记' }, template: 'orange' },
+  };
+}
+
+/**
+ * 多合一设备发货催填版本号卡片（整箱一条消息）
+ */
+function buildBundleShipCard(bundle, deviceIds, mentionOpenIds, systemBaseUrl) {
+  const ids = Array.isArray(mentionOpenIds)
+    ? mentionOpenIds.filter(Boolean)
+    : (mentionOpenIds ? [mentionOpenIds] : []);
+  const mentionPart = ids.map(id => `<at id="${id}"></at>`).join(' ');
+  const mentionLine = mentionPart ? `${mentionPart} 多合一设备已发货，请尽快登记各成员设备的模块版本号\n` : '多合一设备已发货，请相关同事尽快登记模块版本号\n';
+  const baseUrl = normalizeBaseUrl(systemBaseUrl) || 'http://localhost:3000';
+  const deviceLines = (Array.isArray(deviceIds) ? deviceIds : []).map(id => `· ${id}`).join('\n');
+  return {
+    schema: '2.0',
+    body: { elements: [
+      {
+        tag: 'div',
+        text: {
+          tag: 'lark_md',
+          content: `${mentionLine}**多合一设备：** ${bundle.bundle_code || bundle.id || '-'}　**名称：** ${bundle.name || '-'}\n**成员设备（${Array.isArray(deviceIds) ? deviceIds.length : 0} 台）：**\n${deviceLines}\n[登记版本号](${baseUrl}/bundles/${bundle.id})`,
+        },
+      },
+    ] },
+    header: { title: { tag: 'plain_text', content: '🚚 多合一设备发货·版本号登记' }, template: 'orange' },
+  };
+}
+
+/**
  * 升级任务通知卡片
  */
 function buildUpgradeCard(upgrade, mentionOpenId) {
@@ -278,6 +329,56 @@ async function sendDeviceNotification(device, notifyOpenIds) {
     }
   } catch (err) {
     console.error('[飞书] 发送设备通知失败:', err.message);
+  }
+}
+
+/**
+ * 发送设备发货催填版本号通知
+ * @param {object} device 含 product_line_name/product_model/customer_name 的设备行
+ * @param {string[]} notifyOpenIds
+ */
+async function sendShipNotification(device, notifyOpenIds) {
+  try {
+    const config = await getConfig();
+    const chatId = resolveChatId(config);
+    if (!config || !chatId) return;
+    const systemBaseUrl = await getSystemBaseUrl();
+    const ids = Array.isArray(notifyOpenIds) ? notifyOpenIds.filter(Boolean) : [];
+    if (ids.length === 0) return;
+    const card = buildShipCard(device, ids, systemBaseUrl);
+    const messageId = await sendGroupMessage(chatId, card);
+    if (messageId) {
+      await query(
+        'INSERT INTO feishu_notifications (message_id, type, ref_id, notify_open_ids) VALUES (?, ?, ?, ?)',
+        [messageId, 'device_ship', String(device.id), JSON.stringify(ids)]
+      ).catch(e => console.warn('[飞书] 写入通知日志失败:', e.message));
+    }
+  } catch (err) {
+    console.error('[飞书] 发送发货通知失败:', err.message);
+  }
+}
+
+/**
+ * 发送多合一设备发货催填版本号通知（整箱一条消息）
+ */
+async function sendBundleShipNotification(bundle, deviceIds, notifyOpenIds) {
+  try {
+    const config = await getConfig();
+    const chatId = resolveChatId(config);
+    if (!config || !chatId) return;
+    const systemBaseUrl = await getSystemBaseUrl();
+    const ids = Array.isArray(notifyOpenIds) ? notifyOpenIds.filter(Boolean) : [];
+    if (ids.length === 0) return;
+    const card = buildBundleShipCard(bundle, deviceIds, ids, systemBaseUrl);
+    const messageId = await sendGroupMessage(chatId, card);
+    if (messageId) {
+      await query(
+        'INSERT INTO feishu_notifications (message_id, type, ref_id, notify_open_ids) VALUES (?, ?, ?, ?)',
+        [messageId, 'bundle_ship', String(bundle.id), JSON.stringify(ids)]
+      ).catch(e => console.warn('[飞书] 写入通知日志失败:', e.message));
+    }
+  } catch (err) {
+    console.error('[飞书] 发送多合一发货通知失败:', err.message);
   }
 }
 
@@ -465,6 +566,8 @@ module.exports = {
   sendGroupMessage,
   sendIssueNotification,
   sendDeviceNotification,
+  sendShipNotification,
+  sendBundleShipNotification,
   sendIssueUpdateNotification,
   sendUpgradeNotification,
 };
