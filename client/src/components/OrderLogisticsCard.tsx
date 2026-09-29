@@ -159,10 +159,10 @@ const OrderLogisticsCard: React.FC<OrderLogisticsCardProps> = ({ orderNo, custom
                   <thead className="bg-muted backdrop-blur border-b border-border">
                     <tr>
                       <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground uppercase tracking-wider">箱号</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground uppercase tracking-wider">长(mm)</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground uppercase tracking-wider">宽(mm)</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground uppercase tracking-wider">高(mm)</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground uppercase tracking-wider">重量(kg)</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground normal-case tracking-wider">长(mm)</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground normal-case tracking-wider">宽(mm)</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground normal-case tracking-wider">高(mm)</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground normal-case tracking-wider">重量(kg)</th>
                       <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground uppercase tracking-wider">装入设备</th>
                       <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground uppercase tracking-wider">备注</th>
                     </tr>
