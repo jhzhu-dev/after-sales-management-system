@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   XMarkIcon,
@@ -77,6 +77,25 @@ const CreatableSelect: React.FC<{
   );
 };
 
+/** 数字输入 + 常驻单位后缀（如 mm/kg）：单位固定显示在输入框内，输入后仍可见 */
+const UnitInput: React.FC<{
+  value: number | string | null | undefined;
+  onChange: (v: number | '') => void;
+  placeholder: string;
+  unit: string;
+}> = ({ value, onChange, placeholder, unit }) => (
+  <div className="relative w-28 shrink-0">
+    <input
+      type="number" min={0} step="0.01"
+      value={value ?? ''}
+      onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+      placeholder={placeholder}
+      className={`${inputCls} pr-9`}
+    />
+    <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">{unit}</span>
+  </div>
+);
+
 const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, customerName, onClose, onSaved }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -101,6 +120,17 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
   const [checking, setChecking] = useState(false);
   // 箱规「装入设备」下拉展开的行下标
   const [pkgDevOpen, setPkgDevOpen] = useState<number | null>(null);
+  const pkgDevRef = useRef<HTMLDivElement | null>(null);
+
+  // 装入设备下拉：点击面板外任意位置自动收起
+  useEffect(() => {
+    if (pkgDevOpen === null) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (pkgDevRef.current && !pkgDevRef.current.contains(e.target as Node)) setPkgDevOpen(null);
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
+    return () => document.removeEventListener('mousedown', onDocMouseDown);
+  }, [pkgDevOpen]);
 
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -412,34 +442,10 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
                     placeholder={`箱${i + 1}`}
                     className={`${inputCls} w-24 shrink-0`}
                   />
-                  <input
-                    type="number" min={0} step="0.01"
-                    value={p.length_cm ?? ''}
-                    onChange={e => updatePackage(i, { length_cm: e.target.value === '' ? '' : Number(e.target.value) })}
-                    placeholder="长(cm)"
-                    className={`${inputCls} w-28 shrink-0`}
-                  />
-                  <input
-                    type="number" min={0} step="0.01"
-                    value={p.width_cm ?? ''}
-                    onChange={e => updatePackage(i, { width_cm: e.target.value === '' ? '' : Number(e.target.value) })}
-                    placeholder="宽(cm)"
-                    className={`${inputCls} w-28 shrink-0`}
-                  />
-                  <input
-                    type="number" min={0} step="0.01"
-                    value={p.height_cm ?? ''}
-                    onChange={e => updatePackage(i, { height_cm: e.target.value === '' ? '' : Number(e.target.value) })}
-                    placeholder="高(cm)"
-                    className={`${inputCls} w-28 shrink-0`}
-                  />
-                  <input
-                    type="number" min={0} step="0.01"
-                    value={p.weight_kg ?? ''}
-                    onChange={e => updatePackage(i, { weight_kg: e.target.value === '' ? '' : Number(e.target.value) })}
-                    placeholder="重量(kg)"
-                    className={`${inputCls} w-28 shrink-0`}
-                  />
+                  <UnitInput value={p.length_cm} onChange={v => updatePackage(i, { length_cm: v })} placeholder="长" unit="mm" />
+                  <UnitInput value={p.width_cm} onChange={v => updatePackage(i, { width_cm: v })} placeholder="宽" unit="mm" />
+                  <UnitInput value={p.height_cm} onChange={v => updatePackage(i, { height_cm: v })} placeholder="高" unit="mm" />
+                  <UnitInput value={p.weight_kg} onChange={v => updatePackage(i, { weight_kg: v })} placeholder="重量" unit="kg" />
                   <input
                     type="text" value={p.remark || ''}
                     onChange={e => updatePackage(i, { remark: e.target.value })}
@@ -453,7 +459,7 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
                 {/* 装入设备多选：相机等多台设备时勾选每箱装入的设备 */}
                 {checkDevices.length > 0 && (
                   <div className="flex flex-wrap gap-2 items-center md:pl-1">
-                    <div className="relative">
+                    <div className="relative" ref={pkgDevRef}>
                       <button
                         type="button"
                         onClick={() => setPkgDevOpen(pkgDevOpen === i ? null : i)}
@@ -468,7 +474,7 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
                               <input
                                 type="checkbox"
                                 checked={(p.device_ids || []).includes(d.id)}
-                                onChange={() => togglePackageDevice(i, d.id)}
+                                onChange={() => { togglePackageDevice(i, d.id); setPkgDevOpen(null); }}
                                 className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
                               />
                               <span className="font-mono text-primary-600">{d.id}</span>
@@ -515,14 +521,12 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
                 onChange={e => setLogisticsCompany(e.target.value)}
                 placeholder="承运商（货拉拉 / 跨越…）"
                 className={inputCls}
-                disabled={logisticsType === '客户货代自提'}
               />
               <input
                 type="text" value={logisticsNo}
                 onChange={e => setLogisticsNo(e.target.value)}
                 placeholder="车牌号 / 运单号"
                 className={inputCls}
-                disabled={logisticsType === '客户货代自提'}
               />
             </div>
           </div>
