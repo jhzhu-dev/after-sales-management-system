@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   XMarkIcon,
@@ -118,20 +118,6 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
   const [shipDevices, setShipDevices] = useState(true);
   const [shipCheck, setShipCheck] = useState<OrderLogisticsShipCheckResult | null>(null);
   const [checking, setChecking] = useState(false);
-  // 箱规「装入设备」下拉展开的行下标
-  const [pkgDevOpen, setPkgDevOpen] = useState<number | null>(null);
-  const pkgDevRef = useRef<HTMLDivElement | null>(null);
-
-  // 装入设备下拉：点击面板外任意位置自动收起
-  useEffect(() => {
-    if (pkgDevOpen === null) return;
-    const onDocMouseDown = (e: MouseEvent) => {
-      if (pkgDevRef.current && !pkgDevRef.current.contains(e.target as Node)) setPkgDevOpen(null);
-    };
-    document.addEventListener('mousedown', onDocMouseDown);
-    return () => document.removeEventListener('mousedown', onDocMouseDown);
-  }, [pkgDevOpen]);
-
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [serverError, setServerError] = useState('');
@@ -177,7 +163,6 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
             height_cm: p.height_cm ?? '',
             weight_kg: p.weight_kg ?? '',
             remark: p.remark || '',
-            device_ids: Array.isArray(p.device_ids) ? p.device_ids.map(String) : [],
           })));
           setLogisticsType(r.logistics_type || '');
           setLogisticsCompany(r.logistics_company || '');
@@ -211,14 +196,7 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
   const addBattery = () =>
     setBatteries(prev => [...prev, { device_type: '视觉器', quantity: 1, battery_kind: null, handling: null, remark: '' }]);
   const addPackage = () =>
-    setPackages(prev => [...prev, { box_label: `箱${prev.length + 1}`, length_cm: '', width_cm: '', height_cm: '', weight_kg: '', remark: '', device_ids: [] }]);
-
-  const togglePackageDevice = (idx: number, deviceId: string) =>
-    setPackages(prev => prev.map((p, i) => {
-      if (i !== idx) return p;
-      const cur = p.device_ids || [];
-      return { ...p, device_ids: cur.includes(deviceId) ? cur.filter(x => x !== deviceId) : [...cur, deviceId] };
-    }));
+    setPackages(prev => [...prev, { box_label: `箱${prev.length + 1}`, length_cm: '', width_cm: '', height_cm: '', weight_kg: '', remark: '' }]);
 
   const validate = (): boolean => {
     const ne: { [key: string]: string } = {};
@@ -456,45 +434,6 @@ const OrderLogisticsForm: React.FC<OrderLogisticsFormProps> = ({ orderNo, custom
                     <TrashIcon className="h-4 w-4" />
                   </button>
                 </div>
-                {/* 装入设备多选：相机等多台设备时勾选每箱装入的设备 */}
-                {checkDevices.length > 0 && (
-                  <div className="flex flex-wrap gap-2 items-center md:pl-1">
-                    <div className="relative" ref={pkgDevRef}>
-                      <button
-                        type="button"
-                        onClick={() => setPkgDevOpen(pkgDevOpen === i ? null : i)}
-                        className="px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:border-primary-400 bg-white"
-                      >
-                        装入设备 ({(p.device_ids || []).length}) ▾
-                      </button>
-                      {pkgDevOpen === i && (
-                        <div className="absolute left-0 top-full mt-1 w-80 bg-popover rounded-lg border border-border shadow-soft-lg max-h-44 overflow-y-auto z-30 p-1">
-                          {checkDevices.map(d => (
-                            <label key={d.id} className="flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-gray-50 rounded">
-                              <input
-                                type="checkbox"
-                                checked={(p.device_ids || []).includes(d.id)}
-                                onChange={() => { togglePackageDevice(i, d.id); setPkgDevOpen(null); }}
-                                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
-                              />
-                              <span className="font-mono text-primary-600">{d.id}</span>
-                              {d.notes && <span className="text-gray-500 truncate">{d.notes}</span>}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {(p.device_ids || []).map(id => (
-                      <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary-50 text-primary-700 border border-primary-200">
-                        {id}
-                        <button type="button" onClick={() => togglePackageDevice(i, id)} className="text-primary-400 hover:text-red-500">×</button>
-                      </span>
-                    ))}
-                    {(p.device_ids || []).length === 0 && (
-                      <span className="text-xs text-gray-400">未勾选则表示该箱未指定设备</span>
-                    )}
-                  </div>
-                )}
                 </div>
               ))}
               {packages.length > 0 && (

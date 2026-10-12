@@ -130,9 +130,6 @@ function normalizePackages(list) {
     const label = isBlank(p.box_label) ? `箱${i + 1}` : String(p.box_label).trim().slice(0, 20);
     const remark = isBlank(p.remark) ? null : String(p.remark).trim();
     if (remark && remark.length > 255) throw new Error(`第 ${i + 1} 行箱规备注过长`);
-    // 装入设备：生产序列号列表（去重；与订单下设备的交集在事务内校验）
-    const rawIds = Array.isArray(p.device_ids) ? p.device_ids : [];
-    const deviceIds = [...new Set(rawIds.map(x => String(x).trim()).filter(Boolean))];
     return {
       box_label: label,
       length_cm: num(p.length_cm),
@@ -140,7 +137,6 @@ function normalizePackages(list) {
       height_cm: num(p.height_cm),
       weight_kg: num(p.weight_kg),
       remark,
-      device_ids: deviceIds,
     };
   });
 }
@@ -160,20 +156,12 @@ async function replaceChildren(conn, logisticsId, batteries, packages) {
     await conn.query('DELETE FROM order_logistics_packages WHERE logistics_id = ?', [logisticsId]);
     for (const p of packages) {
       await conn.query(
-        `INSERT INTO order_logistics_packages (logistics_id, box_label, length_cm, width_cm, height_cm, weight_kg, remark, device_ids)
-         VALUES (?,?,?,?,?,?,?,?)`,
-        [logisticsId, p.box_label, p.length_cm, p.width_cm, p.height_cm, p.weight_kg, p.remark, JSON.stringify(p.device_ids || [])]
+        `INSERT INTO order_logistics_packages (logistics_id, box_label, length_cm, width_cm, height_cm, weight_kg, remark)
+         VALUES (?,?,?,?,?,?,?)`,
+        [logisticsId, p.box_label, p.length_cm, p.width_cm, p.height_cm, p.weight_kg, p.remark]
       );
     }
   }
-}
-
-// 箱规装入设备：仅保留订单下真实存在的设备（宽松交集，防止设备已删/已移出导致保存失败）
-async function filterPackageDevices(orderNo, packages, conn) {
-  if (!Array.isArray(packages) || packages.length === 0) return packages;
-  const devices = await getOrderDevices(orderNo, conn);
-  const valid = new Set(devices.map(d => String(d.id)));
-  return packages.map(p => ({ ...p, device_ids: (p.device_ids || []).filter(id => valid.has(id)) }));
 }
 
 async function loadFull(id) {
@@ -357,9 +345,6 @@ router.post('/', validateSave, async (req, res) => {
         id = ins.insertId;
       }
 
-      // 箱规装入设备与订单下设备取交集
-      packages = await filterPackageDevices(orderNo, packages, conn);
-
       await replaceChildren(conn, id, batteries, packages);
 
       let shipResult = null;
@@ -412,8 +397,6 @@ router.put('/:id', validateSave, async (req, res) => {
         const setSql = Object.keys(fields).map(k => `${k} = ?`).join(', ');
         await conn.query(`UPDATE order_logistics SET ${setSql} WHERE id = ?`, [...Object.values(fields), current.id]);
       }
-      packages = await filterPackageDevices(current.order_no, packages, conn);
-
       await replaceChildren(conn, current.id, batteries, packages);
       let shipResult = null;
       if (req.body.ship_devices === true) {

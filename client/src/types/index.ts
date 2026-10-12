@@ -808,8 +808,6 @@ export interface OrderLogisticsPackage {
   height_cm?: number | string | null;
   weight_kg?: number | string | null;
   remark?: string | null;
-  /** 装入该箱的设备（生产序列号列表）；为空表示未指定 */
-  device_ids?: string[] | null;
 }
 
 export interface OrderLogisticsDeviceShipStatus {

@@ -1128,15 +1128,15 @@ async function createTables() {
       `);
       console.log('✅ order_logistics_packages 表就绪');
 
-      // 箱规补充「装入设备」多选列（存量库幂等迁移）
+      // 装入设备功能已移除：删除 order_logistics_packages.device_ids 字段（幂等）
       try {
         const [pkgDevCols] = await pool.execute("SHOW COLUMNS FROM order_logistics_packages LIKE 'device_ids'");
-        if (pkgDevCols.length === 0) {
-          await pool.execute("ALTER TABLE order_logistics_packages ADD COLUMN device_ids JSON NULL COMMENT '装入该箱的设备（生产序列号列表）'");
-          console.log('✅ order_logistics_packages.device_ids 字段添加成功');
+        if (pkgDevCols.length > 0) {
+          await pool.execute('ALTER TABLE order_logistics_packages DROP COLUMN device_ids');
+          console.log('✅ order_logistics_packages.device_ids 字段已删除');
         }
       } catch (err) {
-        console.warn('⚠️ order_logistics_packages.device_ids 迁移警告:', err.message);
+        console.warn('⚠️ 删除 order_logistics_packages.device_ids 字段警告:', err.message);
       }
     } catch (err) {
       console.warn('⚠️ 订单物流信息表创建警告:', err.message);

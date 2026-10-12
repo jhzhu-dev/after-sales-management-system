@@ -60,12 +60,6 @@ const OrderLogisticsCard: React.FC<OrderLogisticsCardProps> = ({ orderNo, custom
   const packages = record?.packages || [];
   const totalWeight = packages.reduce((s, p) => s + (Number(p.weight_kg) || 0), 0);
 
-  // 装入设备展示：尽量带出设备描述（备注/产品名称）
-  const deviceLabel = (id: string) => {
-    const d = (record?.devices || []).find(x => x.id === id);
-    return d?.notes ? `${id}（${d.notes}）` : id;
-  };
-
   return (
     <div className={embedded ? '' : 'bg-card rounded-2xl border border-border shadow-soft p-5'}>
       <div className="flex items-center justify-between mb-4">
@@ -163,7 +157,6 @@ const OrderLogisticsCard: React.FC<OrderLogisticsCardProps> = ({ orderNo, custom
                       <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground normal-case tracking-wider">宽(mm)</th>
                       <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground normal-case tracking-wider">高(mm)</th>
                       <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground normal-case tracking-wider">重量(kg)</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground uppercase tracking-wider">装入设备</th>
                       <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground uppercase tracking-wider">备注</th>
                     </tr>
                   </thead>
@@ -175,11 +168,6 @@ const OrderLogisticsCard: React.FC<OrderLogisticsCardProps> = ({ orderNo, custom
                         <td className="px-4 py-2 text-sm text-gray-900">{p.width_cm ?? '-'}</td>
                         <td className="px-4 py-2 text-sm text-gray-900">{p.height_cm ?? '-'}</td>
                         <td className="px-4 py-2 text-sm text-gray-900">{p.weight_kg ?? '-'}</td>
-                        <td className="px-4 py-2 text-sm text-gray-900">
-                          {(p.device_ids || []).length > 0
-                            ? (p.device_ids || []).map(deviceLabel).join('、')
-                            : <span className="text-gray-400">未指定</span>}
-                        </td>
                         <td className="px-4 py-2 text-sm text-gray-500">{p.remark || '-'}</td>
                       </tr>
                     ))}
