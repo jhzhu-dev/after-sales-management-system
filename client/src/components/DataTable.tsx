@@ -32,6 +32,8 @@ interface DataTableProps<T> {
   /** 卡片底部提示条（如「已显示 x / y 条」） */
   footer?: React.ReactNode;
   fixedLayout?: boolean;
+  /** 自适应列宽：按内容测量表格自然宽度，超出容器时整体等比缩小字号使所有列完整显示；缩到下限仍放不下时回退为横向滚动 */
+  autoFit?: boolean;
   selectable?: boolean;
   selectedKeys?: Array<string | number>;
   onSelectionChange?: (keys: Array<string | number>) => void;
@@ -51,6 +53,7 @@ export default function DataTable<T extends Record<string, any>>({
   fill = false,
   footer,
   fixedLayout = false,
+  autoFit = false,
   selectable = false,
   selectedKeys = [],
   onSelectionChange
@@ -61,6 +64,7 @@ export default function DataTable<T extends Record<string, any>>({
   }>({ key: null, direction: 'asc' });
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const onLoadMoreRef = useRef(onLoadMore);
   useLayoutEffect(() => { onLoadMoreRef.current = onLoadMore; });
@@ -84,6 +88,48 @@ export default function DataTable<T extends Record<string, any>>({
       onLoadMoreRef.current?.();
     }
   }, [data, onLoadMore]);
+
+  // autoFit：在 zoom=1 下测量表格自然宽度（所有列按内容完整展开），
+  // 超出容器时整体等比缩小字号（zoom 连带按钮/徽章等固定字号元素），
+  // 缩到 MIN_ZOOM 仍放不下则保持最小字号并回退为横向滚动。
+  // zoom 后无需宽度补偿：min-w-full + 自动布局会按 min(自然宽度, 容器) 精确铺满
+  useLayoutEffect(() => {
+    if (!autoFit) return;
+    const container = scrollRef.current;
+    const table = tableRef.current;
+    if (!container || !table) return;
+    const MIN_ZOOM = 0.8;
+
+    const fit = () => {
+      const avail = container.clientWidth;
+      if (avail <= 0) return;
+      table.style.setProperty('zoom', '1');
+      table.style.width = 'max-content';
+      table.style.minWidth = '0';
+      const natural = table.getBoundingClientRect().width;
+      table.style.width = '';
+      table.style.minWidth = '';
+      if (natural <= avail) {
+        table.style.removeProperty('zoom');
+      } else {
+        table.style.setProperty('zoom', String(Math.max(MIN_ZOOM, avail / natural)));
+      }
+    };
+
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(container);
+    // 网页字体加载完成后文字度量会变化，需要重新测量
+    let cancelled = false;
+    document.fonts?.ready.then(() => { if (!cancelled) fit(); });
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+      table.style.removeProperty('zoom');
+      table.style.width = '';
+      table.style.minWidth = '';
+    };
+  }, [autoFit, data, columns]);
 
   const handleSort = (key: keyof T) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -158,7 +204,7 @@ export default function DataTable<T extends Record<string, any>>({
         )}
         style={(scrollable || onLoadMore) && !fill ? { maxHeight: 'calc(100vh - 240px)' } : undefined}
       >
-        <table className="min-w-full divide-y divide-border">
+        <table ref={tableRef} className="min-w-full divide-y divide-border">
           <thead className="bg-muted backdrop-blur border-b border-border sticky top-0 z-10">
             <tr>
               {selectable && (

@@ -388,11 +388,12 @@ const BundleDetail: React.FC = () => {
     {
       key: 'id',
       title: '生产序列号',
+      noShrink: true,
       render: (_, device) => (
         <span className="text-primary-600 font-mono font-medium">{device.id}</span>
       )
     },
-    { key: 'device_code', title: '设备编码', render: (v) => v || '-' },
+    { key: 'device_code', title: '设备编码', noShrink: true, render: (v) => v || '-' },
     {
       key: 'remote_code',
       title: '远程码',
@@ -1006,7 +1007,7 @@ const BundleDetail: React.FC = () => {
                   rowKey="id"
                   onRowClick={(device) => navigate(`/devices/${device.id}?from=bundle&bundleId=${id}`)}
                   columns={deviceColumns}
-                  fixedLayout
+                  autoFit
                   compact
                 />
               </div>
