@@ -5,6 +5,7 @@ export interface Attachment {
   name: string;       // 用于文件类型判断（含扩展名的原始文件名）
   title?: string;     // 可选显示标题（用户填写的文档标题）
   url: string;
+  downloadUrl?: string; // attachment 头的下载链接（视频等 inline 预览的文件提供）
   ossPath?: string;
   size?: number;
 }
@@ -19,7 +20,7 @@ function getFileType(name: string): 'image' | 'pdf' | 'video' | 'other' {
   const ext = name.split('.').pop()?.toLowerCase() || '';
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) return 'image';
   if (ext === 'pdf') return 'pdf';
-  if (['mp4', 'webm', 'ogg', 'mov', 'avi', 'm4v'].includes(ext)) return 'video';
+  if (['mp4', 'webm', 'ogv', 'ogg', 'mov', 'avi', 'mkv', 'm4v', 'wmv', 'flv', 'mpg', 'mpeg', '3gp'].includes(ext)) return 'video';
   return 'other';
 }
 
@@ -80,7 +81,7 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachments, initia
               <ArrowTopRightOnSquareIcon className="h-5 w-5" />
             </a>
             <a
-              href={att.url}
+              href={att.downloadUrl || att.url}
               download={att.name}
               className="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-blue-50 rounded"
               title="下载"

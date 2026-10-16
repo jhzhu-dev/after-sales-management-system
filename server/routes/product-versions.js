@@ -505,7 +505,7 @@ router.get('/documents/:docId/preview', async (req, res) => {
 
         if (ossService.isOSSPath(document.file_path)) {
             try {
-                const signedUrl = await ossService.getSignedUrl(document.file_path, 3600);
+                const signedUrl = await ossService.getSignedUrl(document.file_path, 3600, document.name);
                 return res.json({ success: true, data: { url: signedUrl, name: document.name, file_type: document.file_type } });
             } catch (ossError) {
                 console.error('获取OSS签名URL失败:', ossError);
@@ -521,6 +521,9 @@ router.get('/documents/:docId/preview', async (req, res) => {
         const mimeTypes = {
             'pdf': 'application/pdf',
             'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'bmp': 'image/bmp', 'webp': 'image/webp',
+            'mp4': 'video/mp4', 'webm': 'video/webm', 'ogv': 'video/ogg', 'ogg': 'video/ogg', 'mov': 'video/quicktime',
+            'avi': 'video/x-msvideo', 'mkv': 'video/x-matroska', 'm4v': 'video/x-m4v', 'wmv': 'video/x-ms-wmv',
+            'mpg': 'video/mpeg', 'mpeg': 'video/mpeg', '3gp': 'video/3gpp',
             'txt': 'text/plain',
             'doc': 'application/msword', 'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'xls': 'application/vnd.ms-excel', 'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

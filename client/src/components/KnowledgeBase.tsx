@@ -50,6 +50,7 @@ interface FormData {
 interface PendingAttachment {
   name: string;
   url: string;
+  downloadUrl?: string;
   ossPath: string | null;
   size: number;
 }
@@ -147,6 +148,7 @@ export default function KnowledgeBase({ productLines }: Props) {
     const existingAtts: PendingAttachment[] = (a.attachments || []).map(att => ({
       name: att.name,
       url: att.url,
+      downloadUrl: att.downloadUrl,
       ossPath: att.ossPath || null,
       size: att.size || 0,
     }));
@@ -466,7 +468,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                       const ext = att.name.split('.').pop()?.toLowerCase() || '';
                       const isImg = ['jpg','jpeg','png','gif','webp','bmp','svg'].includes(ext);
                       const isPdf = ext === 'pdf';
-                      const isVideo = ['mp4','webm','mov','avi'].includes(ext);
+                      const isVideo = ['mp4','webm','ogv','ogg','mov','avi','mkv','m4v','wmv','flv','mpg','mpeg','3gp'].includes(ext);
                       const canPreview = isImg || isPdf || isVideo;
                       return (
                         <li key={i} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded px-3 py-1.5 text-sm">
@@ -474,7 +476,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                           {canPreview ? (
                             <button
                               onClick={() => {
-                                const atts: Attachment[] = (detail.attachments || []).map(a => ({ name: a.name, url: a.url, size: a.size }));
+                                const atts: Attachment[] = (detail.attachments || []).map(a => ({ name: a.name, url: a.url, downloadUrl: (a as any).downloadUrl, size: a.size }));
                                 setPreviewAtts(atts);
                                 setPreviewIdx(i);
                               }}
@@ -484,7 +486,7 @@ export default function KnowledgeBase({ productLines }: Props) {
                             <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-primary-700 hover:underline truncate flex-1">{att.name}</a>
                           )}
                           <span className="text-gray-400 text-xs flex-shrink-0">{att.size ? formatFileSize(att.size) : ''}</span>
-                          <a href={att.url} download={att.name} className="text-gray-400 hover:text-primary-600 flex-shrink-0" title="下载">
+                          <a href={att.downloadUrl || att.url} download={att.name} className="text-gray-400 hover:text-primary-600 flex-shrink-0" title="下载">
                             <ArrowUpTrayIcon className="h-3.5 w-3.5 rotate-180" />
                           </a>
                         </li>
@@ -622,7 +624,7 @@ export default function KnowledgeBase({ productLines }: Props) {
               {/* 附件上传 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  附件 <span className="text-gray-400 font-normal text-xs">（选填，支持图片、PDF、日志等）</span>
+                  附件 <span className="text-gray-400 font-normal text-xs">（选填，支持图片、视频、PDF、日志等）</span>
                 </label>
                 <div
                   className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-primary-400 hover:bg-blue-50 transition-colors"

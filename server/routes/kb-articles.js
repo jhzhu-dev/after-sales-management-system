@@ -38,6 +38,7 @@ const kbUpload = multer({ storage: kbUploadStorage, limits: { fileSize: 500 * 10
 })();
 
 // ─── 辅助：刷新附件签名 URL ──────────────────────────────────────────────────
+// 视频等媒体文件的 url 使用 inline 头（可在线播放），并额外生成 attachment 头的 downloadUrl
 async function refreshAttachments(attachments) {
   if (!attachments || !ossService.enabled) return attachments;
   try {
@@ -48,12 +49,28 @@ async function refreshAttachments(attachments) {
       if (ossPath) {
         try {
           const freshUrl = await ossService.getSignedUrl(ossPath, 3600 * 24 * 7, att.name);
-          return { ...att, ossPath, url: freshUrl };
+          const extra = {};
+          if (ossService.isMediaFile(att.name)) {
+            try {
+              extra.downloadUrl = await ossService.getSignedUrl(ossPath, 3600 * 24 * 7, att.name, { disposition: 'attachment' });
+            } catch (_) {}
+          }
+          return { ...att, ossPath, url: freshUrl, ...extra };
         } catch (_) { return att; }
       }
       return att;
     }));
   } catch (_) { return attachments; }
+}
+
+// ─── 辅助：为媒体附件补一个 attachment 头的下载链接 ─────────────────────────
+async function withDownloadUrl(att) {
+  if (!ossService.enabled || !ossService.isMediaFile(att.name)) return att;
+  try {
+    return { ...att, downloadUrl: await ossService.getSignedUrl(att.ossPath, 3600 * 24 * 7, att.name, { disposition: 'attachment' }) };
+  } catch (_) {
+    return att;
+  }
 }
 
 // GET /api/kb-articles
@@ -137,14 +154,19 @@ router.post('/upload-attachment', kbUpload.array('files', 10), async (req, res) 
       }
 
       let url = filePath;
+      let downloadUrl = null;
       if (filePath.startsWith('oss://')) {
         try { url = await ossService.getSignedUrl(filePath, 3600 * 24 * 7, originalName); }
         catch (e) { url = filePath; }
+        if (ossService.isMediaFile(originalName)) {
+          try { downloadUrl = await ossService.getSignedUrl(filePath, 3600 * 24 * 7, originalName, { disposition: 'attachment' }); }
+          catch (e) { downloadUrl = null; }
+        }
       } else {
         url = `/uploads/kb-attachments/${path.basename(filePath)}`;
       }
 
-      results.push({ name: originalName, url, ossPath: filePath.startsWith('oss://') ? filePath : null, size: file.size });
+      results.push({ name: originalName, url, ...(downloadUrl ? { downloadUrl } : {}), ossPath: filePath.startsWith('oss://') ? filePath : null, size: file.size });
     }
 
     res.json({ success: true, data: results });
@@ -201,13 +223,13 @@ router.post('/', [
             const newOssPath = `oss://${ossService.bucket}/${newOssKey}`;
             await ossService.moveObject(att.ossPath, newOssPath);
             const freshUrl = await ossService.getSignedUrl(newOssPath, 3600 * 24 * 7, att.name);
-            movedAttachments.push({ ...att, ossPath: newOssPath, url: freshUrl });
+            movedAttachments.push(await withDownloadUrl({ ...att, ossPath: newOssPath, url: freshUrl }));
           } catch (err) {
             console.error('移动知识库附件失败:', err.message);
             movedAttachments.push(att);
           }
         } else {
-          movedAttachments.push(att);
+          movedAttachments.push(await withDownloadUrl(att));
         }
       }
       await query('UPDATE kb_articles SET attachments = ? WHERE id = ?', [JSON.stringify(movedAttachments), articleId]);
@@ -252,13 +274,13 @@ router.put('/:id', async (req, res) => {
               const newOssPath = `oss://${ossService.bucket}/${newOssKey}`;
               await ossService.moveObject(att.ossPath, newOssPath);
               const freshUrl = await ossService.getSignedUrl(newOssPath, 3600 * 24 * 7, att.name);
-              movedAttachments.push({ ...att, ossPath: newOssPath, url: freshUrl });
+              movedAttachments.push(await withDownloadUrl({ ...att, ossPath: newOssPath, url: freshUrl }));
             } catch (err) {
               console.error('移动知识库附件失败:', err.message);
               movedAttachments.push(att);
             }
           } else {
-            movedAttachments.push(att);
+            movedAttachments.push(await withDownloadUrl(att));
           }
         }
         updates.attachments = movedAttachments;

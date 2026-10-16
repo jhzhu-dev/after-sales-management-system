@@ -137,7 +137,7 @@ export interface IssueLog {
   issue_id: number;
   content: string;
   operator?: string;
-  attachments?: Array<{ name: string; url: string; ossPath: string; size: number }>;
+  attachments?: Array<{ name: string; url: string; downloadUrl?: string; ossPath: string; size: number }>;
   created_at: string;
 }
 
@@ -534,7 +534,7 @@ export interface KbArticle {
   product_line_id?: number | null;
   product_line_name?: string | null;
   tags?: string[] | null;
-  attachments?: Array<{ name: string; url: string; ossPath?: string | null; size?: number }> | null;
+  attachments?: Array<{ name: string; url: string; downloadUrl?: string; ossPath?: string | null; size?: number }> | null;
   is_pinned: boolean;
   view_count: number;
   helpful_count: number;

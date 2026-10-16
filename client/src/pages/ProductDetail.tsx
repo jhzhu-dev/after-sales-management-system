@@ -858,10 +858,10 @@ const ProductDetail: React.FC = () => {
                                                     type="file"
                                                     className="hidden"
                                                     onChange={handleFileSelect}
-                                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z,.png,.jpg,.jpeg,.gif,.dwg,.dxf,.step,.stp,.igs,.stl"
+                                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z,.png,.jpg,.jpeg,.gif,.mp4,.mov,.avi,.mkv,.webm,.m4v,.wmv,.mpg,.mpeg,.3gp,.dwg,.dxf,.step,.stp,.igs,.stl"
                                                 />
                                             </label>
-                                            <p className="mt-2 text-xs text-gray-400">支持 PDF、Office、图片、压缩包、CAD 等格式，最大 50MB</p>
+                                            <p className="mt-2 text-xs text-gray-400">支持 PDF、Office、图片、视频、压缩包、CAD 等格式，最大 500MB</p>
                                         </>
                                     )}
                                 </div>

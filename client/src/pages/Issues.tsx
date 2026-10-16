@@ -958,8 +958,27 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                                       {/* 图片附件 */}
                                       {ci.attachments && ci.attachments.length > 0 && (
                                         <div className="flex flex-wrap gap-2 mt-2">
-                                          {ci.attachments.map((att: any, aIdx: number) => (
-                                            isBrowserSafeAttachmentUrl(att.url) ? (
+                                          {ci.attachments.map((att: any, aIdx: number) => {
+                                            const attExt = (att.name || '').split('.').pop()?.toLowerCase() || '';
+                                            const attIsVideo = ['mp4','webm','ogv','ogg','mov','avi','mkv','m4v','wmv','flv','mpg','mpeg','3gp'].includes(attExt);
+                                            if (attIsVideo && isBrowserSafeAttachmentUrl(att.url)) {
+                                              return (
+                                                <a
+                                                  key={aIdx}
+                                                  href={att.url}
+                                                  target="_blank"
+                                                  rel="noreferrer"
+                                                  title={att.name}
+                                                  className="w-20 h-20 rounded border border-gray-200 bg-gray-800 flex flex-col items-center justify-center gap-1 hover:border-primary-400 transition-colors"
+                                                >
+                                                  <svg className="w-6 h-6 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14 8l4-2v8l-4-2V8z" />
+                                                  </svg>
+                                                  <span className="text-[10px] text-gray-300 px-1 truncate max-w-full">{att.name}</span>
+                                                </a>
+                                              );
+                                            }
+                                            return isBrowserSafeAttachmentUrl(att.url) ? (
                                               <a key={aIdx} href={att.url} target="_blank" rel="noreferrer" title={att.name}>
                                                 <img
                                                   src={att.url}
@@ -975,8 +994,8 @@ const [productLines, setProductLines] = useState<Array<{id: number, name: string
                                               >
                                                 {att.name || '附件不可预览'}
                                               </div>
-                                            )
-                                          ))}
+                                            );
+                                          })}
                                         </div>
                                       )}
                                     </div>

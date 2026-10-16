@@ -48,7 +48,7 @@ const SOPChecklistSection: React.FC<Props> = ({ items, onChange, disabled = fals
     if (!item) return;
 
     const newAttachments = Array.from(files)
-      .filter(f => f.type.startsWith('image/'))
+      .filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'))
       .map(f => ({
         name: f.name,
         url: URL.createObjectURL(f),
@@ -121,24 +121,42 @@ const SOPChecklistSection: React.FC<Props> = ({ items, onChange, disabled = fals
               <div className="mt-2 ml-8">
                 {item.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-2">
-                    {item.attachments.map((att, aIdx) => (
-                      <div key={aIdx} className="relative group">
-                        <img
-                          src={(att as any).url || att.url}
-                          alt={att.name}
-                          className="w-16 h-16 object-cover rounded border border-gray-200"
-                        />
-                        {!disabled && (
-                          <button
-                            type="button"
-                            onClick={() => removeAttachment(item.id, aIdx)}
-                            className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                    {item.attachments.map((att, aIdx) => {
+                      const isVideo = ((att as any).url || att.url || '').match(/\.(mp4|webm|ogv|ogg|mov|avi|mkv|m4v|wmv|flv|mpg|mpeg|3gp)$/i) || att.name.match(/\.(mp4|webm|ogv|ogg|mov|avi|mkv|m4v|wmv|flv|mpg|mpeg|3gp)$/i);
+                      return (
+                        <div key={aIdx} className="relative group">
+                          {isVideo ? (
+                            <a
+                              href={(att as any).url || att.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={att.name}
+                              className="w-16 h-16 rounded border border-gray-200 bg-gray-800 flex flex-col items-center justify-center gap-0.5 hover:border-primary-400 transition-colors"
+                            >
+                              <svg className="w-5 h-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14 8l4-2v8l-4-2V8z" />
+                              </svg>
+                              <span className="text-[9px] text-gray-300 leading-none">视频</span>
+                            </a>
+                          ) : (
+                            <img
+                              src={(att as any).url || att.url}
+                              alt={att.name}
+                              className="w-16 h-16 object-cover rounded border border-gray-200"
+                            />
+                          )}
+                          {!disabled && (
+                            <button
+                              type="button"
+                              onClick={() => removeAttachment(item.id, aIdx)}
+                              className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -146,7 +164,7 @@ const SOPChecklistSection: React.FC<Props> = ({ items, onChange, disabled = fals
                   <>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,video/*"
                       multiple
                       className="hidden"
                       ref={el => { fileInputRefs.current[item.id] = el; }}
@@ -157,7 +175,7 @@ const SOPChecklistSection: React.FC<Props> = ({ items, onChange, disabled = fals
                       onClick={() => fileInputRefs.current[item.id]?.click()}
                       className="text-xs text-primary-600 hover:text-primary-700 border border-primary-200 rounded px-2 py-1 hover:bg-blue-50 transition-colors"
                     >
-                      + 上传图片佐证
+                      + 上传图片/视频佐证
                     </button>
                   </>
                 )}

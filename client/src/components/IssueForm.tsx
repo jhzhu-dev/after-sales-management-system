@@ -678,7 +678,7 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
               <p className="text-sm text-gray-500">
                 {uploadingCount > 0
                   ? `上传中... (${uploadingCount} 个文件)`
-                  : '点击选择文件，支持图片、PDF、文档等，单文件最大 50MB'}
+                  : '点击选择文件，支持图片、视频、PDF、文档等，单文件最大 500MB'}
               </p>
             </div>
             {attachments.length > 0 && (

@@ -1,6 +1,12 @@
 const OSS = require('ali-oss');
 const path = require('path');
 
+// 可在浏览器内联播放的媒体扩展名（视频/音频）
+const MEDIA_PREVIEW_EXTENSIONS = [
+  'mp4', 'webm', 'ogv', 'ogg', 'mov', 'avi', 'mkv', 'm4v', 'wmv', 'flv', 'mpg', 'mpeg', '3gp',
+  'mp3', 'wav', 'm4a', 'aac', 'flac',
+];
+
 /**
  * 阿里云OSS服务封装
  * 文件按产品线组织存储在 oss://els-pub-04/static/After-sales management system/{产品线名称}/
@@ -111,13 +117,29 @@ class OSSService {
   }
 
   /**
+   * 判断文件名是否为可内联播放的媒体文件（视频/音频）
+   * 浏览器会拒绝在 <video>/<audio> 中加载带 Content-Disposition: attachment 的资源，
+   * 因此媒体文件的签名 URL 必须使用 inline 头才能在线播放
+   * @param {string} fileName - 文件名（或包含扩展名的对象 key）
+   * @returns {boolean}
+   */
+  isMediaFile(fileName) {
+    if (!fileName) return false;
+    const ext = String(fileName).split('.').pop().toLowerCase();
+    return MEDIA_PREVIEW_EXTENSIONS.includes(ext);
+  }
+
+  /**
    * 生成带签名的下载URL
    * @param {string} filePath - OSS文件路径 (格式: oss://bucket/path/to/file)
    * @param {number} expiresInSeconds - URL有效期（秒），默认1小时
    * @param {string|null} fileName - 下载时使用的文件名（原始文件名），为空则不指定
+   * @param {Object} options - 可选项
+   * @param {string} options.disposition - 强制指定 Content-Disposition 类型（'inline' | 'attachment'），
+   *   缺省时按扩展名自动判断：视频/音频 → inline（支持在线播放），其余 → attachment（触发下载）
    * @returns {Promise<string>} 签名URL
    */
-  async getSignedUrl(filePath, expiresInSeconds = 3600, fileName = null) {
+  async getSignedUrl(filePath, expiresInSeconds = 3600, fileName = null, options = {}) {
     if (!this.enabled) {
       throw new Error('OSS服务未启用');
     }
@@ -131,15 +153,23 @@ class OSSService {
 
       const [, bucket, objectName] = ossPathMatch;
 
+      // 决定 disposition 类型：显式指定优先，否则按扩展名自动判断
+      let dispositionType;
+      if (options.disposition === 'inline' || options.disposition === 'attachment') {
+        dispositionType = options.disposition;
+      } else {
+        dispositionType = this.isMediaFile(fileName || objectName) ? 'inline' : 'attachment';
+      }
+
       // 构建 Content-Disposition，携带原始文件名
       // 同时包含 filename（ASCII 降级，浏览器兼容性好）和 filename*（RFC 5987，正确支持中文）
       // OSS 会将此值 URL 编码后追加到签名 URL 的 response-content-disposition 参数中
-      let disposition = 'attachment';
+      let disposition = dispositionType;
       if (fileName) {
         // ASCII 安全的降级名称（去掉非 ASCII 字符）用于 filename=
         const asciiName = fileName.replace(/[^\x20-\x7E]/g, '_');
         const rfc5987Name = encodeURIComponent(fileName);
-        disposition = `attachment; filename="${asciiName}"; filename*=UTF-8''${rfc5987Name}`;
+        disposition = `${dispositionType}; filename="${asciiName}"; filename*=UTF-8''${rfc5987Name}`;
       }
 
       // 生成签名URL

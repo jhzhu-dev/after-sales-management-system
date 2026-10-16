@@ -508,18 +508,20 @@ const DeviceDetail: React.FC = () => {
     const ext = (originalName || '').split('.').pop()?.toLowerCase() || '';
     const isPreviewableImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
     const isPreviewablePdf = ext === 'pdf';
-    if (!isPreviewableImage && !isPreviewablePdf) {
+    const isPreviewableVideo = ['mp4', 'webm', 'ogv', 'ogg', 'mov', 'avi', 'mkv', 'm4v', 'wmv', 'flv', 'mpg', 'mpeg', '3gp'].includes(ext);
+    if (!isPreviewableImage && !isPreviewablePdf && !isPreviewableVideo) {
       setPreviewDoc({ url: '', title: originalName, type: 'other', docId, originalName, catDocs, catIndex, loading: false });
       return;
     }
+    const previewType = isPreviewableImage ? 'image' : isPreviewablePdf ? 'pdf' : 'video';
     setPreviewDoc(prev => {
-      const base = { url: '', title: originalName, type: isPreviewableImage ? 'image' : 'pdf', docId, originalName, catDocs, catIndex, loading: true };
+      const base = { url: '', title: originalName, type: previewType, docId, originalName, catDocs, catIndex, loading: true };
       return prev ? { ...prev, ...base } : base;
     });
     try {
       const { data: result } = await api.get(`/device-documents/${docId}/preview`);
       if (result.success) {
-        setPreviewDoc({ url: result.data.url, title: result.data.title || originalName, type: isPreviewableImage ? 'image' : 'pdf', docId, originalName, catDocs, catIndex, loading: false });
+        setPreviewDoc({ url: result.data.url, title: result.data.title || originalName, type: previewType, docId, originalName, catDocs, catIndex, loading: false });
       } else {
         setPreviewDoc(prev => prev ? { ...prev, loading: false, type: 'other' } : null);
       }
@@ -2344,6 +2346,17 @@ const DeviceDetail: React.FC = () => {
                     className="w-full border-0"
                     style={{ height: 'calc(92vh - 160px)' }}
                   />
+                ) : previewDoc.type === 'video' ? (
+                  <video
+                    key={previewDoc.url}
+                    src={previewDoc.url}
+                    controls
+                    autoPlay
+                    className="max-w-full max-h-full rounded"
+                    style={{ maxHeight: 'calc(92vh - 160px)' }}
+                  >
+                    您的浏览器不支持视频播放
+                  </video>
                 ) : (
                   <div className="flex flex-col items-center gap-4 py-16">
                     <DocumentIcon className="h-16 w-16 text-gray-500" />
@@ -2378,6 +2391,7 @@ const DeviceDetail: React.FC = () => {
                     const tExt = (d.original_name || '').split('.').pop()?.toLowerCase() || '';
                     const tIsImg = ['jpg','jpeg','png','gif','bmp','webp','svg'].includes(tExt);
                     const tIsPdf = tExt === 'pdf';
+                    const tIsVideo = ['mp4','webm','ogv','ogg','mov','avi','mkv','m4v','wmv','flv','mpg','mpeg','3gp'].includes(tExt);
                     return (
                       <button
                         key={d.id}
@@ -2390,9 +2404,10 @@ const DeviceDetail: React.FC = () => {
                         {tIsImg ? (
                           <img src={`/api/device-documents/${d.id}/download`} loading="lazy" className="w-full h-full object-cover" alt={d.title} />
                         ) : (
-                          <div className={`w-full h-full flex flex-col items-center justify-center gap-0.5 ${ tIsPdf ? 'bg-red-900' : 'bg-gray-700' }`}>
+                          <div className={`w-full h-full flex flex-col items-center justify-center gap-0.5 ${ tIsPdf ? 'bg-red-900' : tIsVideo ? 'bg-indigo-900' : 'bg-gray-700' }`}>
                             <DocumentIcon className="h-5 w-5 text-gray-300" />
                             {tIsPdf && <span className="text-xs text-red-300 font-bold leading-none">PDF</span>}
+                            {tIsVideo && <span className="text-xs text-indigo-300 font-bold leading-none">视频</span>}
                           </div>
                         )}
                       </button>
