@@ -108,6 +108,7 @@ const DeviceDetail: React.FC = () => {
   const [sopTemplate, setSopTemplate] = useState<SOPTemplate | null>(null);
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [versionSubmitting, setVersionSubmitting] = useState(false);
+  const [checklistUploadPct, setChecklistUploadPct] = useState<number | null>(null);
   const [shipping, setShipping] = useState(false);
   // 发货确认弹窗（含版本完整度 + 飞书催填通知）
   const [showShipModal, setShowShipModal] = useState(false);
@@ -338,7 +339,14 @@ const DeviceDetail: React.FC = () => {
 
       for (let w = 0; w < batches.length; w += PARALLEL_BATCHES) {
         const windowBatches = batches.slice(w, w + PARALLEL_BATCHES);
-        const windowResults = await Promise.all(windowBatches.map(async batch => {
+        // 每批的字节级上传百分比，用于平滑的整体进度
+        const batchPct = windowBatches.map(() => 0);
+        const updateOverall = () => {
+          const inFlight = batchPct.reduce((s, p) => s + p, 0) / 100;
+          const progress = Math.min(99, Math.round(((completedBatches + inFlight) / batches.length) * 100));
+          setBgUpload(prev => prev ? { ...prev, progress } : prev);
+        };
+        const windowResults = await Promise.all(windowBatches.map(async (batch, bi) => {
           const formData = new FormData();
           batch.forEach(file => formData.append('files', file));
           batch.forEach(file => {
@@ -352,7 +360,12 @@ const DeviceDetail: React.FC = () => {
           formData.append('category', category);
           if (uploadedBy) formData.append('uploaded_by', uploadedBy);
           try {
-            const { data: result } = await api.post('/device-documents/upload', formData, { timeout: 0 });
+            const { data: result } = await api.post('/device-documents/upload', formData, {
+              timeout: 0,
+              onUploadProgress: (ev: { loaded: number; total?: number }) => {
+                if (ev.total) { batchPct[bi] = (ev.loaded / ev.total) * 100; updateOverall(); }
+              }
+            });
             return result;
           } catch (err) {
             return { success: false, errors: batch.map(f => ({ name: f.name })) };
@@ -705,6 +718,9 @@ const DeviceDetail: React.FC = () => {
       setVersionSubmitting(true);
       let finalChecklist = checklist;
       if (checklist && checklist.length > 0) {
+        const pendingFiles = checklist.flatMap(item => item.attachments.filter((att: any) => att._file));
+        setChecklistUploadPct(pendingFiles.length > 0 ? 0 : null);
+        const uploadedCount = { n: 0 };
         finalChecklist = await Promise.all(
           checklist.map(async item => {
             if (item.attachments.length === 0) return item;
@@ -717,9 +733,17 @@ const DeviceDetail: React.FC = () => {
                       moduleType: selectedModuleForVersion?.module_type,
                       fromVersion: (selectedModuleForVersion as any)?.current_version ?? undefined,
                       toVersion: version_number,
+                    }, p => {
+                      // 单文件字节进度 + 已完成文件数 → 整体百分比
+                      const perFile = 100 / Math.max(1, pendingFiles.length);
+                      const pct = Math.min(100, Math.round(((uploadedCount.n + p / 100) * perFile)));
+                      setChecklistUploadPct(pct);
                     });
+                    uploadedCount.n += 1;
+                    setChecklistUploadPct(Math.min(100, Math.round((uploadedCount.n / Math.max(1, pendingFiles.length)) * 100)));
                     return { name: result.name, url: result.url, size: result.size };
                   } catch (e) {
+                    uploadedCount.n += 1;
                     // 上传失败则保留原始名称，去掉无效 blob url
                     return { name: att.name, url: '', size: att.size };
                   }
@@ -730,6 +754,7 @@ const DeviceDetail: React.FC = () => {
             return { ...item, attachments: uploadedAttachments };
           })
         );
+        setChecklistUploadPct(null);
       }
 
       if (selectedModuleForVersion) {
@@ -1835,7 +1860,7 @@ const DeviceDetail: React.FC = () => {
                   className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {versionSubmitting
-                    ? '上传中...'
+                    ? (checklistUploadPct !== null ? `上传佐证中 ${checklistUploadPct}%` : '上传中...')
                     : checklistItems.filter(i => i.required && i.status === 'pending').length > 0
                       ? `${checklistItems.filter(i => i.required && i.status === 'pending').length} 项待确认`
                       : '确认并保存记录'

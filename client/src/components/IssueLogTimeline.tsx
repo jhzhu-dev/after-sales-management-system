@@ -4,6 +4,7 @@ import { IssueLog } from '../types';
 import { ClockIcon, UserIcon, PlusIcon, XMarkIcon, PaperClipIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import api from '../services/api';
 import AttachmentViewer, { Attachment } from './AttachmentViewer';
+import UploadProgress from './UploadProgress';
 
 interface IssueLogTimelineProps {
   issueId: string;
@@ -29,6 +30,7 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
   const [submitting, setSubmitting] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploadingCount, setUploadingCount] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewAtts, setPreviewAtts] = useState<Attachment[]>([]);
   const [previewIdx, setPreviewIdx] = useState(0);
@@ -64,13 +66,15 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
       let attachments: UploadedAttachment[] = [];
       if (pendingFiles.length > 0) {
         setUploadingCount(pendingFiles.length);
+        setUploadProgress(0);
         const fd = new FormData();
         fd.append('issue_id', issueId);
         pendingFiles.forEach(f => fd.append('files', f));
-        const { data: uploadData } = await api.post('/issue-logs/upload-attachment', fd, { timeout: 0 });
+        const { data: uploadData } = await api.post('/issue-logs/upload-attachment', fd, { timeout: 0, onUploadProgress: ev => { if (ev.total) setUploadProgress(Math.round((ev.loaded / ev.total) * 100)); } });
         if (!uploadData.success) throw new Error(uploadData.error || '附件上传失败');
         attachments = uploadData.data || [];
         setUploadingCount(0);
+        setUploadProgress(null);
       }
 
       // 创建处理记录
@@ -98,6 +102,7 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
     } finally {
       setSubmitting(false);
       setUploadingCount(0);
+      setUploadProgress(null);
     }
   };
 
@@ -186,6 +191,9 @@ const IssueLogTimeline: React.FC<IssueLogTimelineProps> = ({ issueId, issueStatu
                 <ArrowUpTrayIcon className="h-5 w-5 mx-auto text-blue-400 mb-1" />
                 <p className="text-xs text-primary-500">点击选择附件（支持多选）</p>
               </div>
+              {uploadingCount > 0 && uploadProgress !== null && (
+                <UploadProgress progress={uploadProgress} className="mt-2" />
+              )}
               {pendingFiles.length > 0 && (
                 <ul className="mt-2 space-y-1">
                   {pendingFiles.map((file, i) => (

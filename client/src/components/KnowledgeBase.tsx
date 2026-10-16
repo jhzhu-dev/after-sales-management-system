@@ -16,6 +16,7 @@ import { StarIcon } from '@heroicons/react/24/solid';
 import { kbArticleApi, moduleTypeApi } from '../services/api';
 import { KbArticle } from '../types';
 import AttachmentViewer, { Attachment } from './AttachmentViewer';
+import UploadProgress from './UploadProgress';
 import Select from './Select';
 import { confirmDialog } from './DialogHost';
 
@@ -94,6 +95,7 @@ export default function KnowledgeBase({ productLines }: Props) {
   const [saving, setSaving] = useState(false);
   const [pendingAtts, setPendingAtts] = useState<PendingAttachment[]>([]);
   const [uploadingCount, setUploadingCount] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewAtts, setPreviewAtts] = useState<Attachment[]>([]);
   const [previewIdx, setPreviewIdx] = useState(0);
@@ -190,8 +192,9 @@ export default function KnowledgeBase({ productLines }: Props) {
   const handleAttachmentUpload = async (files: File[]) => {
     if (!files.length) return;
     setUploadingCount(c => c + files.length);
+    setUploadProgress(0);
     try {
-      const result = await kbArticleApi.uploadAttachment(files);
+      const result = await kbArticleApi.uploadAttachment(files, p => setUploadProgress(p));
       if (result.success) {
         setPendingAtts(prev => [...prev, ...result.data]);
       } else {
@@ -201,6 +204,7 @@ export default function KnowledgeBase({ productLines }: Props) {
       alert('上传失败，请检查网络连接');
     } finally {
       setUploadingCount(c => c - files.length);
+      setUploadProgress(null);
     }
   };
 
@@ -516,14 +520,15 @@ export default function KnowledgeBase({ productLines }: Props) {
       {/* 新增 / 编辑弹窗 */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50 p-4">
-          <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-popover/90 backdrop-blur z-10">
+          <div className="bg-popover rounded-2xl border border-border shadow-soft-lg max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
               <h2 className="text-lg font-bold text-gray-900">{editId ? '编辑词条' : '新增知识词条'}</h2>
               <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
               {/* 标题 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -539,8 +544,8 @@ export default function KnowledgeBase({ productLines }: Props) {
                 {errs.title && <p className="text-red-500 text-xs mt-1">{errs.title}</p>}
               </div>
 
-              {/* 分类 + 产品线 */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* 分类 + 产品线 + 标签 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">分类</label>
                   <Select
@@ -561,35 +566,47 @@ export default function KnowledgeBase({ productLines }: Props) {
                     className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary-500/40"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    标签 <span className="text-gray-400 font-normal text-xs">（用 / 分隔）</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.tags}
+                    onChange={e => f('tags', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                    placeholder="如：屏幕/断电/底盘"
+                  />
+                </div>
               </div>
 
-              {/* 问题现象 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  问题现象 <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  rows={3}
-                  value={form.symptom}
-                  onChange={e => f('symptom', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 resize-none ${errs.symptom ? 'border-red-400' : 'border-gray-300'}`}
-                  placeholder="描述什么情况下会出现此问题..."
-                />
-                {errs.symptom && <p className="text-red-500 text-xs mt-1">{errs.symptom}</p>}
-              </div>
-
-              {/* 原因分析（选填） */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  原因分析 <span className="text-gray-400 font-normal text-xs">（选填）</span>
-                </label>
-                <textarea
-                  rows={2}
-                  value={form.cause}
-                  onChange={e => f('cause', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 resize-none"
-                  placeholder="分析造成此问题的原因..."
-                />
+              {/* 问题现象 + 原因分析 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    问题现象 <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    rows={6}
+                    value={form.symptom}
+                    onChange={e => f('symptom', e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 resize-none ${errs.symptom ? 'border-red-400' : 'border-gray-300'}`}
+                    placeholder="描述什么情况下会出现此问题..."
+                  />
+                  {errs.symptom && <p className="text-red-500 text-xs mt-1">{errs.symptom}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    原因分析 <span className="text-gray-400 font-normal text-xs">（选填）</span>
+                  </label>
+                  <textarea
+                    rows={6}
+                    value={form.cause}
+                    onChange={e => f('cause', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 resize-none"
+                    placeholder="分析造成此问题的原因..."
+                  />
+                </div>
               </div>
 
               {/* 解决方案 */}
@@ -598,27 +615,13 @@ export default function KnowledgeBase({ productLines }: Props) {
                   解决方案 <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  rows={5}
+                  rows={7}
                   value={form.solution}
                   onChange={e => f('solution', e.target.value)}
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 resize-none font-mono ${errs.solution ? 'border-red-400' : 'border-gray-300'}`}
                   placeholder={"1. 检查连接线是否牢固\n2. 重启设备，观察是否恢复\n3. 若仍无效，执行 xxx 命令"}
                 />
                 {errs.solution && <p className="text-red-500 text-xs mt-1">{errs.solution}</p>}
-              </div>
-
-              {/* 标签 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  标签 <span className="text-gray-400 font-normal text-xs">（用 / 分隔）</span>
-                </label>
-                <input
-                  type="text"
-                  value={form.tags}
-                  onChange={e => f('tags', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-                  placeholder="如：屏幕/断电/底盘"
-                />
               </div>
 
               {/* 附件上传 */}
@@ -640,6 +643,9 @@ export default function KnowledgeBase({ productLines }: Props) {
                   <p className="text-xs text-primary-500">
                     {uploadingCount > 0 ? `上传中 (${uploadingCount})…` : '点击或拖拽上传附件'}
                   </p>
+                  {uploadingCount > 0 && uploadProgress !== null && (
+                    <UploadProgress progress={uploadProgress} className="mt-2 px-4" />
+                  )}
                 </div>
                 <input
                   ref={fileInputRef}
@@ -669,27 +675,29 @@ export default function KnowledgeBase({ productLines }: Props) {
                   </ul>
                 )}
               </div>
+              </div>
 
-              {/* 置顶 */}
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={form.is_pinned}
-                  onChange={e => f('is_pinned', e.target.checked)}
-                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
-                />
-                <span className="text-sm text-gray-700">置顶此词条</span>
-              </label>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  取消
-                </button>
-                <Button type="submit" disabled={saving}>{saving ? '保存中...' : (editId ? '更新词条' : '创建词条')}</Button>
+              {/* 底部操作栏 */}
+              <div className="flex items-center justify-between px-6 py-3 border-t flex-shrink-0">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={form.is_pinned}
+                    onChange={e => f('is_pinned', e.target.checked)}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500/40"
+                  />
+                  <span className="text-sm text-gray-700">置顶此词条</span>
+                </label>
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    取消
+                  </button>
+                  <Button type="submit" disabled={saving}>{saving ? '保存中...' : (editId ? '更新词条' : '创建词条')}</Button>
+                </div>
               </div>
             </form>
           </div>

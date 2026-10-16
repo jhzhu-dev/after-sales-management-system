@@ -6,6 +6,7 @@ import Layout from '../components/Layout';
 import SectionCard from '../components/SectionCard';
 import { Button } from '../components/ui/button';
 import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
+import UploadProgress from '../components/UploadProgress';
 import CustomerRequirementForm from '../components/CustomerRequirementForm';
 import { customerRequirementApi } from '../services/api';
 import { CustomerRequirement, CustomerRequirementFormData, CustomerRequirementAttachment } from '../types';
@@ -52,6 +53,7 @@ const CustomerRequirementDetail: React.FC = () => {
 
   // 附件
   const [uploadingStatus, setUploadingStatus] = useState('');
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [previewAtt, setPreviewAtt] = useState<Attachment[]>([]);
   const [previewIdx, setPreviewIdx] = useState(0);
 
@@ -119,17 +121,19 @@ const CustomerRequirementDetail: React.FC = () => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     setUploadingStatus(status);
+    setUploadProgress(0);
     const fd = new FormData();
     fd.append('status', status);
     files.forEach(f => fd.append('files', f));
     try {
-      const res = await customerRequirementApi.uploadAttachments(reqId, fd);
+      const res = await customerRequirementApi.uploadAttachments(reqId, fd, p => setUploadProgress(p));
       if (res.success) fetchDetail();
       else alert(res.error || '上传失败');
     } catch (e: any) {
       alert(e?.response?.data?.error || '上传失败');
     } finally {
       setUploadingStatus('');
+      setUploadProgress(null);
     }
   };
 
@@ -350,11 +354,16 @@ const CustomerRequirementDetail: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     <span className={`text-sm font-medium ${done ? 'text-primary-700' : 'text-gray-500'}`}>{s}</span>
                     {done && (
-                      <label className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50 cursor-pointer">
-                        <ArrowUpTrayIcon className="h-3 w-3 mr-1" />
-                        {uploadingStatus === s ? '上传中...' : '上传'}
-                        <input type="file" multiple className="hidden" onChange={e => handleUploadForStatus(s, e)} disabled={uploadingStatus === s} />
-                      </label>
+                      <div className="flex flex-col items-end">
+                        <label className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50 cursor-pointer">
+                          <ArrowUpTrayIcon className="h-3 w-3 mr-1" />
+                          {uploadingStatus === s ? `上传中...${uploadProgress !== null ? ` ${Math.round(uploadProgress)}%` : ''}` : '上传'}
+                          <input type="file" multiple className="hidden" onChange={e => handleUploadForStatus(s, e)} disabled={uploadingStatus === s} />
+                        </label>
+                        {uploadingStatus === s && uploadProgress !== null && (
+                          <UploadProgress progress={uploadProgress} className="mt-1 w-28" />
+                        )}
+                      </div>
                     )}
                   </div>
                   {atts.length === 0 ? (

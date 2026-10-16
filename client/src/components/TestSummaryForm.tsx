@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowUpTrayIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { testTaskApi } from '../services/api';
+import UploadProgress from './UploadProgress';
 
 interface TestSummaryFormProps {
   taskId: number;
@@ -10,7 +11,7 @@ interface TestSummaryFormProps {
 const TestSummaryForm: React.FC<TestSummaryFormProps> = ({ taskId, onSubmitted }) => {
   const [testSummary, setTestSummary] = useState('');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [uploadedCount, setUploadedCount] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -28,12 +29,13 @@ const TestSummaryForm: React.FC<TestSummaryFormProps> = ({ taskId, onSubmitted }
 
     setSubmitting(true);
     setMsg('');
+    setUploadProgress(0);
     try {
       // 上传反馈单附件
       const fd = new FormData();
       fd.append('category', '测试反馈单');
       pendingFiles.forEach(f => fd.append('files', f));
-      const upRes = await testTaskApi.uploadAttachments(taskId, fd);
+      const upRes = await testTaskApi.uploadAttachments(taskId, fd, p => setUploadProgress(p));
       if (!upRes.success) throw new Error(upRes.error);
 
       // 提交总结
@@ -43,16 +45,15 @@ const TestSummaryForm: React.FC<TestSummaryFormProps> = ({ taskId, onSubmitted }
       setMsg('测试总结提交成功，任务已进入「已测试」');
       setTestSummary('');
       setPendingFiles([]);
-      setUploadedCount(0);
+      setUploadProgress(null);
       onSubmitted();
     } catch (e: any) {
       setMsg(e?.response?.data?.error || e?.message || '提交失败');
     } finally {
       setSubmitting(false);
+      setUploadProgress(null);
     }
   };
-
-  if (uploadedCount) return <div className="text-sm text-gray-500">正在上传附件 {uploadedCount}...</div>;
 
   return (
     <div className="bg-card rounded-2xl border border-border shadow-soft p-6">
@@ -87,6 +88,12 @@ const TestSummaryForm: React.FC<TestSummaryFormProps> = ({ taskId, onSubmitted }
         )}
       </div>
 
+      {submitting && uploadProgress !== null && (
+        <div className="mt-3">
+          <UploadProgress progress={uploadProgress} label="正在上传附件" />
+        </div>
+      )}
+
       <div className="mt-4 flex justify-end">
         <button
           onClick={handleSubmit}
@@ -94,7 +101,7 @@ const TestSummaryForm: React.FC<TestSummaryFormProps> = ({ taskId, onSubmitted }
           className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
         >
           <CheckCircleIcon className="h-4 w-4 mr-1" />
-          {submitting ? '提交中...' : '提交总结'}
+          {submitting ? (uploadProgress !== null && uploadProgress < 100 ? `上传附件中 ${Math.round(uploadProgress)}%` : '提交中...') : '提交总结'}
         </button>
       </div>
     </div>

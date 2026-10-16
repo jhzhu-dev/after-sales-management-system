@@ -8,6 +8,7 @@ import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
 import TestTaskForm from '../components/TestTaskForm';
 import TestSummaryForm from '../components/TestSummaryForm';
 import Select from '../components/Select';
+import UploadProgress from '../components/UploadProgress';
 import { testTaskApi } from '../services/api';
 import { TestTask, TestTaskFormData } from '../types';
 import { formatDate, getUrgencyColor } from '../utils';
@@ -37,6 +38,7 @@ const TestTaskDetail: React.FC = () => {
   // 附件
   const [category, setCategory] = useState('测试反馈单');
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [previewAtt, setPreviewAtt] = useState<Attachment[]>([]);
   const [previewIdx, setPreviewIdx] = useState(0);
 
@@ -73,17 +75,19 @@ const TestTaskDetail: React.FC = () => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     setUploading(true);
+    setUploadProgress(0);
     const fd = new FormData();
     fd.append('category', category);
     files.forEach(f => fd.append('files', f));
     try {
-      const res = await testTaskApi.uploadAttachments(taskId, fd);
+      const res = await testTaskApi.uploadAttachments(taskId, fd, p => setUploadProgress(p));
       if (res.success) fetchDetail();
       else alert(res.error || '上传失败');
     } catch (e: any) {
       alert(e?.response?.data?.error || '上传失败');
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -248,11 +252,14 @@ const TestTaskDetail: React.FC = () => {
               <Select value={category} onChange={v => setCategory(v)} options={[{ value: '测试反馈单', label: '测试反馈单' }, { value: '测试报告', label: '测试报告' }, { value: '其他', label: '其他' }]} className="px-2 py-1.5 border border-border rounded-xl text-sm" />
               <label className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
                 <ArrowUpTrayIcon className="h-4 w-4 mr-1" />
-                {uploading ? '上传中...' : '上传附件'}
+                {uploading ? `上传中...${uploadProgress !== null ? ` ${Math.round(uploadProgress)}%` : ''}` : '上传附件'}
                 <input type="file" multiple className="hidden" onChange={handleUpload} disabled={uploading} />
               </label>
             </div>
           </div>
+          {uploading && uploadProgress !== null && (
+            <UploadProgress progress={uploadProgress} className="mb-3" />
+          )}
           {(!data.attachments || data.attachments.length === 0) ? (
             <p className="text-sm text-gray-500">暂无附件</p>
           ) : (

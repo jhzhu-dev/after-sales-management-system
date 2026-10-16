@@ -24,6 +24,7 @@ import { Button } from '../components/ui/button';
 import SegmentedTabs from '../components/SegmentedTabs';
 import VersionReleaseForm from '../components/VersionReleaseForm';
 import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
+import UploadProgress from '../components/UploadProgress';
 import api, { versionReleaseApi, moduleTypeApi, productLineApi } from '../services/api';
 import { VersionRelease } from '../types';
 
@@ -44,6 +45,7 @@ const ReleaseLibrary: React.FC = () => {
     const [previewAttachments, setPreviewAttachments] = useState<Attachment[]>([]);
     const [previewIndex, setPreviewIndex] = useState(0);
     const [productLines, setProductLines] = useState<{ id: number; name: string }[]>([]);
+    const [attachmentUploadPct, setAttachmentUploadPct] = useState<number | null>(null);
     const [existingCategories, setExistingCategories] = useState<string[]>([]);
     const [activeCategory, setActiveCategory] = useState<string>('');
     const [activeProductId, setActiveProductId] = useState<number | null>(null);
@@ -169,12 +171,15 @@ const ReleaseLibrary: React.FC = () => {
             if (releaseId && files && files.length > 0) {
                 const fd = new FormData();
                 files.forEach(f => fd.append('files', f));
+                setAttachmentUploadPct(0);
                 try {
-                    await api.post(`/version-releases/${releaseId}/attachments`, fd, { timeout: 0 });
+                    await api.post(`/version-releases/${releaseId}/attachments`, fd, { timeout: 0, onUploadProgress: (ev: { loaded: number; total?: number }) => { if (ev.total) setAttachmentUploadPct(Math.round((ev.loaded / ev.total) * 100)); } });
                     setSuccessMessage(prev => (prev || '') + `，已上传${files.length}个附件`);
                 } catch (uploadErr) {
                     console.error('附件上传失败:', uploadErr);
                     setSuccessMessage(prev => (prev || '') + '，但附件上传失败');
+                } finally {
+                    setAttachmentUploadPct(null);
                 }
             }
             
@@ -906,6 +911,14 @@ const ReleaseLibrary: React.FC = () => {
                 </div>
             )}
         </Layout>
+
+        {/* 附件上传进度悬浮条 */}
+        {attachmentUploadPct !== null && (
+            <div className="fixed bottom-6 right-6 z-50 bg-card rounded-2xl border border-border shadow-2xl w-72 p-4">
+                <p className="text-sm font-semibold text-gray-900 mb-2">正在上传版本附件…</p>
+                <UploadProgress progress={attachmentUploadPct} />
+            </div>
+        )}
 
         {/* 附件预览 */}
         {previewAttachments.length > 0 && (

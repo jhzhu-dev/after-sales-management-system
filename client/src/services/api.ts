@@ -33,6 +33,16 @@ import {
   OrderLogisticsShipCheckResult
 } from '../types';
 
+// 上传进度回调（0-100 百分比）
+export type UploadProgressHandler = (percent: number) => void;
+
+const onUploadProgress = (cb?: UploadProgressHandler) =>
+  cb
+    ? (e: { loaded: number; total?: number }) => {
+        if (e.total) cb(Math.round((e.loaded / e.total) * 100));
+      }
+    : undefined;
+
 // 创建axios实例
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
@@ -513,10 +523,11 @@ export const productVersionApi = {
     api.get(`/product-versions/${versionId}/documents`).then(res => res.data),
 
   // 上传版本文档
-  uploadDocuments: (versionId: number, formData: FormData): Promise<ApiResponse<any>> =>
+  uploadDocuments: (versionId: number, formData: FormData, onProgress?: UploadProgressHandler): Promise<ApiResponse<any>> =>
     api.post(`/product-versions/${versionId}/documents`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 0, // 不限超时，支持大文件上传
+      onUploadProgress: onUploadProgress(onProgress),
     }).then(res => res.data),
 
   // 删除版本文档
@@ -548,10 +559,10 @@ export const kbArticleApi = {
     api.delete(`/kb-articles/${id}`).then(res => res.data),
   markHelpful: (id: number): Promise<any> =>
     api.post(`/kb-articles/${id}/helpful`).then(res => res.data),
-  uploadAttachment: (files: File[]): Promise<any> => {
+  uploadAttachment: (files: File[], onProgress?: UploadProgressHandler): Promise<any> => {
     const fd = new FormData();
     files.forEach(f => fd.append('files', f));
-    return api.post('/kb-articles/upload-attachment', fd, { timeout: 0 }).then(res => res.data);
+    return api.post('/kb-articles/upload-attachment', fd, { timeout: 0, onUploadProgress: onUploadProgress(onProgress) }).then(res => res.data);
   },
 };
 
@@ -570,7 +581,8 @@ export const sopTemplateApi = {
 // 检查项附件图片上传
 export const uploadChecklistImage = (
   file: File,
-  options?: { moduleId?: number; moduleType?: string; fromVersion?: string; toVersion?: string }
+  options?: { moduleId?: number; moduleType?: string; fromVersion?: string; toVersion?: string },
+  onProgress?: UploadProgressHandler
 ): Promise<{ url: string; name: string; size: number }> => {
   const form = new FormData();
   form.append('file', file);
@@ -581,6 +593,7 @@ export const uploadChecklistImage = (
   return api.post('/versions/upload-checklist-image', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 0, // 不限超时，支持大文件上传
+    onUploadProgress: onUploadProgress(onProgress),
   }).then(res => res.data.data);
 };
 
@@ -661,8 +674,8 @@ export const customerRequirementApi = {
     api.put(`/customer-requirements/${id}`, data).then(res => res.data),
   changeStatus: (id: number, data: { status: string; operator: string; reason: string; publish_version?: string; publish_time?: string; deprecated_reason?: string }): Promise<ApiResponse<any>> =>
     api.put(`/customer-requirements/${id}/status`, data).then(res => res.data),
-  uploadAttachments: (id: number, formData: FormData): Promise<ApiResponse<any>> =>
-    api.post(`/customer-requirements/${id}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 0 }).then(res => res.data),
+  uploadAttachments: (id: number, formData: FormData, onProgress?: UploadProgressHandler): Promise<ApiResponse<any>> =>
+    api.post(`/customer-requirements/${id}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 0, onUploadProgress: onUploadProgress(onProgress) }).then(res => res.data),
   deleteAttachment: (attId: number): Promise<ApiResponse<void>> =>
     api.delete(`/customer-requirements/attachments/${attId}`).then(res => res.data),
   downloadAttachmentUrl: (attId: number): string =>
@@ -683,8 +696,8 @@ export const testTaskApi = {
     api.put(`/test-tasks/${id}/summary`, data).then(res => res.data),
   decision: (id: number, data: { status: string; upgrade_decision?: string; decision_note?: string }): Promise<ApiResponse<any>> =>
     api.put(`/test-tasks/${id}/decision`, data).then(res => res.data),
-  uploadAttachments: (id: number, formData: FormData): Promise<ApiResponse<any>> =>
-    api.post(`/test-tasks/${id}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 0 }).then(res => res.data),
+  uploadAttachments: (id: number, formData: FormData, onProgress?: UploadProgressHandler): Promise<ApiResponse<any>> =>
+    api.post(`/test-tasks/${id}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 0, onUploadProgress: onUploadProgress(onProgress) }).then(res => res.data),
   deleteAttachment: (attId: number): Promise<ApiResponse<void>> =>
     api.delete(`/test-tasks/attachments/${attId}`).then(res => res.data),
   downloadAttachmentUrl: (attId: number): string =>

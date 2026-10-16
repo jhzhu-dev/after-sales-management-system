@@ -8,6 +8,7 @@ import FeishuMultiUserPicker from './FeishuMultiUserPicker';
 import Select from './Select';
 import ButtonGroup from './ButtonGroup';
 import IssueImportPanel from './IssueImportPanel';
+import UploadProgress from './UploadProgress';
 import { getSeverityColor, getStatusColor } from '../utils';
 
 interface UploadedAttachment {
@@ -47,6 +48,7 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
   const [uploadingCount, setUploadingCount] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 飞书通知状态
@@ -655,13 +657,14 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
                   if (!files.length) return;
                   e.target.value = '';
                   setUploadingCount(c => c + files.length);
+                  setUploadProgress(0);
                   try {
                     const fd = new FormData();
                     files.forEach(f => fd.append('files', f));
                     if (formData.device_id) fd.append('device_id', formData.device_id);
                     const selModule = modules.find(m => String(m.id) === String(formData.module_id));
                     if (selModule) fd.append('module_name', selModule.name);
-                    const { data: result } = await api.post('/issues/upload-attachment', fd, { timeout: 0 });
+                    const { data: result } = await api.post('/issues/upload-attachment', fd, { timeout: 0, onUploadProgress: ev => { if (ev.total) setUploadProgress(Math.round((ev.loaded / ev.total) * 100)); } });
                     if (result.success) {
                       setAttachments(prev => [...prev, ...result.data]);
                     } else {
@@ -671,6 +674,7 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
                     alert('上传失败，请检查网络连接');
                   } finally {
                     setUploadingCount(c => c - files.length);
+                    setUploadProgress(null);
                   }
                 }}
               />
@@ -680,6 +684,9 @@ export default function IssueForm({ issue, onClose, onSubmit, onImported }: Issu
                   ? `上传中... (${uploadingCount} 个文件)`
                   : '点击选择文件，支持图片、视频、PDF、文档等，单文件最大 500MB'}
               </p>
+              {uploadingCount > 0 && uploadProgress !== null && (
+                <UploadProgress progress={uploadProgress} className="mt-2 px-6" />
+              )}
             </div>
             {attachments.length > 0 && (
               <ul className="mt-2 space-y-1.5">

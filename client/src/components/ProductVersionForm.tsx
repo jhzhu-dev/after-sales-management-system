@@ -4,6 +4,7 @@ import { XMarkIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, DocumentIcon, TrashIcon,
 import { ProductVersion, ProductVersionFormData, ProductVersionDocument } from '../types';
 import { productVersionApi } from '../services/api';
 import AttachmentViewer, { Attachment } from './AttachmentViewer';
+import UploadProgress from './UploadProgress';
 import Select from './Select';
 import { confirmDialog } from './DialogHost';
 
@@ -36,6 +37,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
     });
 
     const [loading, setLoading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     // 文件上传
@@ -147,7 +149,8 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                 const fd = new FormData();
                 uploadFiles.forEach(file => fd.append('files', file));
                 fd.append('category', uploadCategory);
-                await productVersionApi.uploadDocuments(versionId, fd);
+                setUploadProgress(0);
+                await productVersionApi.uploadDocuments(versionId, fd, p => setUploadProgress(p));
             }
 
             onSuccess();
@@ -158,6 +161,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
             alert(msg);
         } finally {
             setLoading(false);
+            setUploadProgress(null);
         }
     };
 
@@ -363,6 +367,11 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                     </div>
 
                     {/* Submit */}
+                    {loading && uploadProgress !== null && (
+                        <div className="pt-4">
+                            <UploadProgress progress={uploadProgress} label="正在上传附件" />
+                        </div>
+                    )}
                     <div className="flex justify-end space-x-3 pt-4 border-t">
                         <button
                             type="button"
@@ -371,7 +380,7 @@ const ProductVersionForm: React.FC<ProductVersionFormProps> = ({ productId, vers
                         >
                             取消
                         </button>
-                        <Button type="submit" disabled={loading}>{loading ? '保存中...' : (version ? '更新' : '创建')}</Button>
+                        <Button type="submit" disabled={loading}>{loading ? (uploadProgress !== null && uploadProgress < 100 ? `上传附件中 ${Math.round(uploadProgress)}%` : '保存中...') : (version ? '更新' : '创建')}</Button>
                     </div>
                 </form>
             </div>

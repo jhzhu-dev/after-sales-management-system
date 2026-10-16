@@ -550,7 +550,14 @@ const BundleDetail: React.FC = () => {
 
       for (let w = 0; w < batches.length; w += PARALLEL_BATCHES) {
         const windowBatches = batches.slice(w, w + PARALLEL_BATCHES);
-        const windowResults = await Promise.all(windowBatches.map(async batch => {
+        // 每批的字节级上传百分比，用于平滑的整体进度
+        const batchPct = windowBatches.map(() => 0);
+        const updateOverall = () => {
+          const inFlight = batchPct.reduce((s, p) => s + p, 0) / 100;
+          const progress = Math.min(99, Math.round(((completedBatches + inFlight) / batches.length) * 100));
+          setBgUpload(prev => prev ? { ...prev, progress } : prev);
+        };
+        const windowResults = await Promise.all(windowBatches.map(async (batch, bi) => {
           const formData = new FormData();
           batch.forEach(file => {
             formData.append('files', file);
@@ -564,7 +571,12 @@ const BundleDetail: React.FC = () => {
           formData.append('category', category);
           if (uploadedBy) formData.append('uploaded_by', uploadedBy);
           try {
-            const { data: result } = await api.post('/device-documents/upload', formData, { timeout: 0 });
+            const { data: result } = await api.post('/device-documents/upload', formData, {
+              timeout: 0,
+              onUploadProgress: (ev: { loaded: number; total?: number }) => {
+                if (ev.total) { batchPct[bi] = (ev.loaded / ev.total) * 100; updateOverall(); }
+              }
+            });
             return result;
           } catch (err) {
             return { success: false, errors: batch.map(f => ({ name: f.name })) };

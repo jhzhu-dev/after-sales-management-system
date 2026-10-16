@@ -9,6 +9,7 @@ import { productModuleApi, moduleTypeApi, productVersionApi } from '../services/
 import api from '../services/api';
 import { PlusIcon, TrashIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, DocumentIcon, XMarkIcon, PrinterIcon, CheckCircleIcon, PencilIcon, EyeIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import ProductVersionForm from '../components/ProductVersionForm';
+import UploadProgress from '../components/UploadProgress';
 import AttachmentViewer, { Attachment } from '../components/AttachmentViewer';
 import Select from '../components/Select';
 
@@ -43,6 +44,7 @@ const ProductDetail: React.FC = () => {
     const [uploadDocType, setUploadDocType] = useState<string>('规格书');
     const [uploadBy, setUploadBy] = useState('');
     const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
     const [dragOver, setDragOver] = useState(false);
 
     useEffect(() => {
@@ -237,6 +239,7 @@ const ProductDetail: React.FC = () => {
         }
 
         setUploading(true);
+        setUploadProgress(0);
         try {
             const formData = new FormData();
             formData.append('file', uploadFile);
@@ -249,7 +252,8 @@ const ProductDetail: React.FC = () => {
 
             const { data } = await api.post('/product-documents/upload', formData, {
                 timeout: 0, // 不限超时，支持大文件上传
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (ev) => { if (ev.total) setUploadProgress(Math.round((ev.loaded / ev.total) * 100)); }
             });
 
             if (data.success) {
@@ -263,6 +267,7 @@ const ProductDetail: React.FC = () => {
             alert('上传文档失败，请重试');
         } finally {
             setUploading(false);
+            setUploadProgress(null);
         }
     };
 
@@ -906,6 +911,13 @@ const ProductDetail: React.FC = () => {
                                 </div>
                             </div>
 
+                            {/* 上传进度 */}
+                            {uploading && uploadProgress !== null && (
+                                <div className="px-6 pb-2">
+                                    <UploadProgress progress={uploadProgress} />
+                                </div>
+                            )}
+
                             {/* 弹窗底部按钮 */}
                             <div className="px-4 py-3 3xl:px-6 3xl:py-4 border-t border-gray-200 flex justify-end space-x-3">
                                 <button
@@ -926,7 +938,7 @@ const ProductDetail: React.FC = () => {
                                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                             </svg>
-                                            上传中...
+                                            上传中...{uploadProgress !== null ? ` ${Math.round(uploadProgress)}%` : ''}
                                         </>
                                     ) : (
                                         <>
